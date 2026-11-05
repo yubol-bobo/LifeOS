@@ -406,7 +406,7 @@
 .board-xp {
   font-size: 10.5px;
   font-weight: 750;
-  color: var(--c-spirit);
+  color: var(--p-violet);
   padding: 0 4px;
   margin-top: -6px;
 }
@@ -514,7 +514,7 @@
   padding: 28px 32px;
   border-radius: 30px;
   background:
-    radial-gradient(circle at 0% 0%, color-mix(in oklab, var(--c-wealth) 14%, transparent), transparent 55%),
+    radial-gradient(circle at 0% 0%, color-mix(in oklab, var(--p-jade) 14%, transparent), transparent 55%),
     var(--surface);
   box-shadow: var(--shadow-lg);
 }
@@ -522,7 +522,7 @@
 .earn-hero.is-live {
   box-shadow:
     var(--shadow-lg),
-    inset 0 0 0 2px color-mix(in oklab, var(--c-wealth) 45%, transparent);
+    inset 0 0 0 2px color-mix(in oklab, var(--p-jade) 45%, transparent);
 }
 
 .earn-ring {
@@ -542,7 +542,7 @@
 }
 
 .is-live .earn-ring .ring-fill {
-  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--c-wealth) 70%, transparent));
+  filter: drop-shadow(0 0 6px color-mix(in oklab, var(--p-jade) 70%, transparent));
 }
 
 .earn-label {

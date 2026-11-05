@@ -37,13 +37,19 @@
   --warn: #e09b12;
   --danger: #e0473c;
 
-  /* attributes — validated categorical palette (fixed order) */
-  --c-mind: #3f7be0;
-  --c-body: #eb6834;
-  --c-wealth: #1ba677;
-  --c-craft: #e09b12;
-  --c-bond: #e2689a;
-  --c-spirit: #7a5ae6;
+  /* identity palette — attribute & project colors (fixed order, validated pairs) */
+  --p-blue: #3f7be0;
+  --p-orange: #eb6834;
+  --p-jade: #1ba677;
+  --p-amber: #e09b12;
+  --p-pink: #e2689a;
+  --p-violet: #7a5ae6;
+  --p-teal: #1497a8;
+  --p-red: #d9443b;
+  --p-lime: #5e9e2c;
+  --p-indigo: #5161d6;
+  --p-slate: #6b7686;
+  --p-brown: #a26a3c;
 
   /* wallpaper */
   --wall-a: #ffd6c2;
@@ -101,12 +107,18 @@
   --gold: #f5bd4f;
   --gold-deep: #b9800c;
 
-  --c-mind: #4a8df0;
-  --c-body: #e0612e;
-  --c-wealth: #1e9e72;
-  --c-craft: #b87c08;
-  --c-bond: #d9578a;
-  --c-spirit: #8c6cf2;
+  --p-blue: #4a8df0;
+  --p-orange: #e0612e;
+  --p-jade: #1e9e72;
+  --p-amber: #b87c08;
+  --p-pink: #d9578a;
+  --p-violet: #8c6cf2;
+  --p-teal: #1a9fb2;
+  --p-red: #e05247;
+  --p-lime: #5fa232;
+  --p-indigo: #6672ee;
+  --p-slate: #8590a2;
+  --p-brown: #b07848;
 
   --wall-a: #3a1f3f;
   --wall-b: #15265a;

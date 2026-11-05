@@ -1,4 +1,5 @@
 import { addDays, dayKey } from '../lib/date';
+import { filledSeries, netWorth } from './assets';
 import type { Attr, Difficulty, MilestoneSize, PaperStatus, State } from './types';
 
 /* ------------------------------------------------------------------ */
@@ -89,7 +90,7 @@ export function streakOf(completions: State['completions'], today = dayKey()) {
 export function metrics(s: State) {
   let xp = 0;
   let coins = 0;
-  const attrXp: Record<Attr, number> = { mind: 0, body: 0, wealth: 0, craft: 0, bond: 0, spirit: 0 };
+  const attrXp: Record<Attr, number> = Object.fromEntries(s.attributes.map((a) => [a.id, 0]));
   let perfectDays = 0;
   let rewardsRedeemed = 0;
   for (const e of s.events) {
@@ -123,6 +124,9 @@ export function metrics(s: State) {
     i10: cites.filter((c) => c >= 10).length,
     focusHours: focusMs / 3_600_000,
     earned,
+    netWorth: netWorth(s, filledSeries(s).at(-1)?.snap),
+    checkins: s.snapshots.length,
+    moodDays: Object.keys(s.moods ?? {}).length,
     trackerEntries: s.trackers.reduce((a, t) => a + t.entries.length, 0),
   };
 }
@@ -181,6 +185,9 @@ export const ACHIEVEMENTS: Achievement[] = [
   A('level-15', 'rocket', 'silver', ['远行', '达到 15 级'], ['Lift Off', 'Reach level 15'], 15, (m) => m.level.level),
   A('level-30', 'orbit', 'mythic', ['轨道之上', '达到 30 级'], ['In Orbit', 'Reach level 30'], 30, (m) => m.level.level),
   A('reward-1', 'gift', 'bronze', ['犒劳自己', '在商店兑换第一个奖励'], ['Treat Yourself', 'Redeem your first reward'], 1, (m) => m.rewardsRedeemed),
+  A('assets-4', 'wallet', 'bronze', ['理财新手', '完成 4 次资产盘点'], ['Bookkeeper', 'Do 4 asset check-ins'], 4, (m) => m.checkins),
+  A('assets-26', 'landmark', 'gold', ['半年对账', '完成 26 次资产盘点'], ['Half-Year Ledger', 'Do 26 asset check-ins'], 26, (m) => m.checkins),
+  A('mood-30', 'smile', 'silver', ['情绪觉察', '记录 30 天心情'], ['Self-Aware', 'Log your mood on 30 days'], 30, (m) => m.moodDays),
   A('tracker-30', 'activity', 'silver', ['数据控', '记录 30 条追踪数据'], ['Quantified Self', 'Log 30 tracker entries'], 30, (m) => m.trackerEntries),
 ];
 

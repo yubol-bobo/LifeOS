@@ -1,5 +1,98 @@
-export type Attr = 'mind' | 'body' | 'wealth' | 'craft' | 'bond' | 'spirit';
-export const ATTRS: Attr[] = ['mind', 'body', 'wealth', 'craft', 'bond', 'spirit'];
+import type { AppId } from '../os/apps';
+
+/** Attribute ids are user-defined; the six defaults keep their historic ids. */
+export type Attr = string;
+
+export type PaletteKey = 'blue' | 'orange' | 'jade' | 'amber' | 'pink' | 'violet' | 'teal' | 'red' | 'lime' | 'indigo' | 'slate' | 'brown';
+
+export interface AttrDef {
+  id: Attr;
+  zh: string;
+  en: string;
+  icon: string;
+  color: PaletteKey;
+}
+
+/** "Working for" — clients, projects, employers. Each may carry its own rate. */
+export interface Project {
+  id: string;
+  name: string;
+  color: PaletteKey;
+  rate?: number;
+}
+
+export interface PayConfig {
+  mode: 'hour' | 'day' | 'month' | 'year';
+  amount: number;
+  hoursPerDay: number;
+  daysPerWeek: number;
+}
+
+export interface UiPrefs {
+  dock: AppId[]; // order
+  hidden: AppId[]; // hidden from the dock (still reachable via Spotlight)
+  widgets: string[]; // hidden desktop widgets
+}
+
+export interface MoodEntry {
+  v: 1 | 2 | 3 | 4 | 5;
+  note?: string;
+  ts: number;
+}
+
+export interface Wellness {
+  water: number;
+  breaks: number;
+  pomos: number;
+  pomoMin: number;
+}
+
+export type PetKind = 'mochi' | 'bolt' | 'nova';
+
+export interface PetConfig {
+  enabled: boolean;
+  kind: PetKind;
+  name: string;
+  waterMin: number; // 0 = off
+  sitMin: number; // 0 = off
+  pomoWork: number;
+  pomoBreak: number;
+  sound: boolean;
+  sysNotify: boolean;
+  roam: 'calm' | 'lively';
+}
+
+export type AccountKind = 'cash' | 'bank' | 'invest' | 'retire' | 'crypto' | 'property' | 'debt' | 'other';
+
+export interface Account {
+  id: string;
+  name: string;
+  kind: AccountKind;
+  currency: string;
+  color: PaletteKey;
+  archived?: boolean;
+}
+
+/** One check-in: the balance of every account at a moment. Debts are stored as positive owed amounts. */
+export interface Snapshot {
+  date: string;
+  ts: number;
+  balances: Record<string, number>;
+}
+
+export interface AssetConfig {
+  base: string; // reporting currency
+  rates: Record<string, number>; // 1 unit of currency = rate × base
+  cadence: 'off' | 'daily' | 'weekly' | 'monthly';
+  ratesAt?: number;
+}
+
+export interface PomoState {
+  phase: 'work' | 'break';
+  startedAt: number;
+  endsAt: number;
+  pausedLeft?: number; // ms left while paused
+}
 
 export type Lang = 'zh' | 'en';
 export type ThemePref = 'light' | 'dark' | 'system';
@@ -48,7 +141,7 @@ export interface Step {
  * so nothing here needs manual upkeep except `manual` KRs.
  */
 export type KrKind = 'quests' | 'focus' | 'tracker' | 'metric' | 'manual';
-export type KrMetric = 'citations' | 'hIndex' | 'papers' | 'earned' | 'level' | 'streak';
+export type KrMetric = 'citations' | 'hIndex' | 'papers' | 'earned' | 'level' | 'streak' | 'netWorth';
 
 export interface KeyResult {
   id: string;
@@ -108,6 +201,7 @@ export interface WorkSession {
   attr: Attr;
   goalId?: string;
   questId?: string;
+  projectId?: string;
 }
 
 export interface ActiveSession {
@@ -119,6 +213,7 @@ export interface ActiveSession {
   pausedAt?: number;
   goalId?: string;
   questId?: string;
+  projectId?: string;
 }
 
 export interface Tracker {
@@ -140,7 +235,7 @@ export interface Reward {
   redeemed: number;
 }
 
-export type EventKind = 'quest' | 'perfect' | 'milestone' | 'step' | 'focus' | 'paper' | 'tracker' | 'reward' | 'achievement';
+export type EventKind = 'quest' | 'perfect' | 'milestone' | 'step' | 'focus' | 'paper' | 'tracker' | 'reward' | 'achievement' | 'mood' | 'wellness' | 'assets';
 
 /** Single ledger for XP & coins. Idempotent by `ref`. */
 export interface XpEvent {
@@ -171,4 +266,15 @@ export interface State {
   rewards: Reward[];
   events: XpEvent[];
   achievements: Record<string, number>;
+  attributes: AttrDef[];
+  projects: Project[];
+  pay: PayConfig;
+  ui: UiPrefs;
+  moods: Record<string, MoodEntry>;
+  wellness: Record<string, Wellness>;
+  pet: PetConfig;
+  pomo: PomoState | null;
+  accounts: Account[];
+  snapshots: Snapshot[];
+  assets: AssetConfig;
 }

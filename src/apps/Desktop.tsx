@@ -1,14 +1,14 @@
 import { useMemo, type ReactNode } from 'react';
-import { addDays, dayKey, daysBetween, lastNDays, lifeProgress } from '../lib/date';
-import { money, num } from '../lib/format';
+import { addDays, dayKey, daysBetween, lastNDays, lifeProgress, parseDay } from '../lib/date';
+import { compact, money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { open } from '../os/router';
 import { useLiveSession } from '../os/live';
 import Planet from '../scene/Planet';
-import { ATTR_META, useMetrics } from '../store/hooks';
+import { useMetrics } from '../store/hooks';
+import { useAttrs } from '../store/attrs';
 import { attrLevel, levelTitle, QUEST_XP } from '../store/rules';
 import { actions, useStore } from '../store/store';
-import { ATTRS } from '../store/types';
 import { Heatmap, Radar, Sparkline } from '../ui/charts';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, CheckBubble, Chip, Ring } from '../ui/kit';
@@ -19,6 +19,9 @@ import { GoalTag } from './goals';
 import { useStatusLabel } from './Research';
 import type { PaperStatus } from '../store/types';
 import { QuickAdd } from './Quests';
+import { MoodPicker } from './Mood';
+import { MoodFace } from '../ui/MoodFace';
+import { checkinDue, filledSeries } from '../store/assets';
 
 export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const L = useL();
@@ -27,6 +30,10 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const m = useMetrics();
   const live = useLiveSession(200);
   const statusLabel = useStatusLabel();
+  const attrs = useAttrs();
+  const hide = new Set(s.ui.widgets);
+  const assetSeries = useMemo(() => filledSeries(s), [s.snapshots, s.accounts, s.assets]); // eslint-disable-line react-hooks/exhaustive-deps
+  const assetDelta = assetSeries.length > 1 ? assetSeries.at(-1)!.total - assetSeries.at(-2)!.total : null;
   const today = dayKey();
   const lp = lifeProgress(s.profile.birthDate, s.profile.lifeExpectancy);
   const hour = new Date().getHours();
@@ -68,6 +75,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   return (
     <div className={`desktop ${hidden ? 'is-hidden' : ''}`} aria-hidden={hidden}>
       {/* ---------- hero / planet ---------- */}
+      {!hide.has('hero') && (
       <section className="widget w-hero">
         <div className="hero-text">
           <p className="eyebrow">{new Date().toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
@@ -114,8 +122,10 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
           </div>
         </div>
       </section>
+      )}
 
       {/* ---------- today's quests ---------- */}
+      {!hide.has('quests') && (
       <section className="widget w-quests">
         <WidgetHead icon="list-checks" title={L('今日任务', "Today's quests")} onOpen={() => open('quests')}>
           <span className="num muted">
@@ -144,8 +154,10 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
         )}
         <QuickAdd compact />
       </section>
+      )}
 
       {/* ---------- life progress ---------- */}
+      {!hide.has('life') && (
       <section className="widget w-life">
         <WidgetHead icon="hourglass" title={L('人生进度', 'Life progress')} onOpen={() => open('roadmap')} />
         <div className="life-rows">
@@ -167,8 +179,10 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
           {L(`${lp.age.toFixed(1)} 岁 · 已度过 ${num(lp.weeksLived)} 周 · 今年还剩 ${lp.daysLeftYear} 天`, `Age ${lp.age.toFixed(1)} · ${num(lp.weeksLived)} weeks lived · ${lp.daysLeftYear} days left this year`)}
         </p>
       </section>
+      )}
 
       {/* ---------- earn ---------- */}
+      {!hide.has('earn') && (
       <section className={`widget w-earn ${live ? 'is-live' : ''}`}>
         <WidgetHead icon="timer" title={L('时薪计', 'Wage timer')} onOpen={() => open('earn')} />
         <div className="earn-mini">
@@ -200,22 +214,26 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
           </Button>
         )}
       </section>
+      )}
 
       {/* ---------- attributes ---------- */}
+      {!hide.has('attrs') && (
       <section className="widget w-attrs">
         <WidgetHead icon="sparkles" title={L('属性', 'Attributes')} onOpen={() => open('trophies')} />
         <Radar
           size={250}
-          axes={ATTRS.map((a) => ({
+          axes={attrs.list.map(({ id: a }) => ({
             key: a,
-            label: lang === 'zh' ? ATTR_META[a].zh : ATTR_META[a].en,
-            value: m.attrXp[a],
-            display: `Lv.${attrLevel(m.attrXp[a])}`,
+            label: attrs.label(a),
+            value: (m.attrXp[a] ?? 0),
+            display: `Lv.${attrLevel((m.attrXp[a] ?? 0))}`,
           }))}
         />
       </section>
+      )}
 
       {/* ---------- research ---------- */}
+      {!hide.has('research') && (
       <section className="widget w-research">
         <WidgetHead icon="graduation" title={L('学术', 'Research')} onOpen={() => open('research')} />
         <div className="research-mini">
@@ -248,8 +266,10 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
           })}
         </div>
       </section>
+      )}
 
       {/* ---------- goals ---------- */}
+      {!hide.has('goals') && (
       <section className="widget w-next">
         <WidgetHead icon="flag" title={L('目标进度', 'Goals')} onOpen={() => open('roadmap')} />
         {goals.length ? (
@@ -284,8 +304,57 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
           <p className="muted">{L('设定一个目标，并给它加上关键结果——之后的每个任务、每次专注都会自动推动它。', 'Set a goal and give it key results — every quest and focus session will then move it automatically.')}</p>
         )}
       </section>
+      )}
 
       {/* ---------- activity ---------- */}
+      {!hide.has('mood') && (
+      <section className="widget w-mood">
+        <WidgetHead icon="smile" title={L('今天心情', 'Mood today')} onOpen={() => open('mood')} />
+        <MoodPicker size={36} />
+        <div className="mood-week">
+          {lastNDays(7).map((d) => (
+            <span key={d} title={d}>
+              {s.moods[d] ? <MoodFace v={s.moods[d].v} size={20} /> : <i />}
+              <small>{L('一二三四五六日'[(parseDay(d).getDay() + 6) % 7], 'MTWTFSS'[(parseDay(d).getDay() + 6) % 7])}</small>
+            </span>
+          ))}
+        </div>
+      </section>
+      )}
+
+      {!hide.has('assets') && (
+      <section className="widget w-assets">
+        <WidgetHead icon="landmark" title={L('净资产', 'Net worth')} onOpen={() => open('assets')} />
+        {assetSeries.length ? (
+          <>
+            <div className="research-mini">
+              <div>
+                <div className="big-num num">{compact(assetSeries.at(-1)!.total)}</div>
+                <div className="muted">
+                  {s.assets.base}
+                  {assetDelta != null && (
+                    <span className={`num ${assetDelta >= 0 ? 'pos' : 'neg'}`}> {(assetDelta >= 0 ? '+' : '−') + compact(Math.abs(assetDelta))}</span>
+                  )}
+                </div>
+              </div>
+              <Sparkline values={assetSeries.slice(-14).map((x) => x.total)} tone="wealth" width={120} height={44} />
+            </div>
+            <Button size="sm" variant={checkinDue(s) ? 'primary' : 'soft'} icon="wallet" onClick={() => window.dispatchEvent(new Event('lifeos:asset-checkin'))} style={{ marginTop: 14 }}>
+              {checkinDue(s) ? L('该盘点了 · 记录此刻', 'Check-in due · record now') : L('记录此刻', 'Record balances')}
+            </Button>
+          </>
+        ) : (
+          <>
+            <p className="muted small">{L('添加账户，定期记录余额，看见资产的长期变化。', 'Add accounts and check in regularly to see your wealth over time.')}</p>
+            <Button size="sm" icon="plus" onClick={() => open('assets')} style={{ marginTop: 12 }}>
+              {L('添加账户', 'Add accounts')}
+            </Button>
+          </>
+        )}
+      </section>
+      )}
+
+      {!hide.has('heat') && (
       <section className="widget w-heat">
         <WidgetHead icon="calendar" title={L('经验热力图', 'XP activity')}>
           <span className="muted num">
@@ -312,8 +381,10 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
           <span>{L('多', 'More')}</span>
         </div>
       </section>
+      )}
 
       {/* ---------- weekly review ---------- */}
+      {!hide.has('review') && (
       <section className="widget w-log">
         <WidgetHead icon="sparkles" title={L('本周回顾', 'This week')} />
         <div className="review-stats">
@@ -329,7 +400,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
           </div>
           <div>
             <span className="muted small">{L('主属性', 'Top stat')}</span>
-            <strong>{review.topAttr ? (lang === 'zh' ? ATTR_META[review.topAttr].zh : ATTR_META[review.topAttr].en) : '—'}</strong>
+            <strong>{review.topAttr ? attrs.label(review.topAttr) : '—'}</strong>
           </div>
         </div>
         <ul className="insights">
@@ -344,6 +415,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
           {review.insights.length === 0 && <li className="muted">{L('多记录几天，这里会自动生成洞察。', 'Log a few more days and insights will appear here.')}</li>}
         </ul>
       </section>
+      )}
     </div>
   );
 }

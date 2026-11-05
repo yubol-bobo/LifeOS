@@ -3,7 +3,7 @@ import { dayKey, daysBetween, lifeProgress, parseDay } from '../lib/date';
 import { uid } from '../lib/id';
 import { num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
-import { ATTR_META } from '../store/hooks';
+import { useAttrs } from '../store/attrs';
 import { MILESTONE_XP } from '../store/rules';
 import { actions, useStore } from '../store/store';
 import type { Milestone, MilestoneSize } from '../store/types';
@@ -104,7 +104,7 @@ export function Roadmap() {
 
 function MilestoneItem({ m, onEdit }: { m: Milestone; onEdit: () => void }) {
   const L = useL();
-  const lang = useLang();
+  const attrs = useAttrs();
   const today = dayKey();
   const s = useStore((x) => x);
   const mx = useMetrics();
@@ -128,7 +128,7 @@ function MilestoneItem({ m, onEdit }: { m: Milestone; onEdit: () => void }) {
         <strong className="tl-title">{m.title}</strong>
         {m.note && <p className="tl-note">{m.note}</p>}
         <div className="tl-meta">
-          <Chip tone={m.attr}>{lang === 'zh' ? ATTR_META[m.attr].zh : ATTR_META[m.attr].en}</Chip>
+          <Chip tone={m.attr}>{attrs.label(m.attr)}</Chip>
           <Chip icon={m.size === 'epic' ? 'mountain' : 'flag'}>
             {{ small: L('小目标', 'Small'), big: L('大目标', 'Big'), epic: L('史诗', 'Epic') }[m.size]} · {MILESTONE_XP[m.size]} XP
           </Chip>
@@ -317,7 +317,6 @@ function LifeWeeks() {
 
 function MilestoneEditor({ value, onClose }: { value: Partial<Milestone> | null; onClose: () => void }) {
   const L = useL();
-  const lang = useLang();
   const [d, setD] = useState<Partial<Milestone>>({});
   const [key, setKey] = useState<string | undefined>('__');
   const k = value ? (value.id ?? 'new') : undefined;
@@ -390,7 +389,7 @@ function MilestoneEditor({ value, onClose }: { value: Partial<Milestone> | null;
           />
         </Field>
         <Field label={L('属性', 'Attribute')}>
-          <AttrPicker value={m.attr} onChange={(a) => setD({ ...m, attr: a })} lang={lang} />
+          <AttrPicker value={m.attr} onChange={(a) => setD({ ...m, attr: a })} />
         </Field>
         <KrBuilder krs={m.krs ?? []} onChange={(krs) => setD({ ...m, krs })} />
         <Field label={L('拆解步骤（每步 +15 XP）', 'Steps (+15 XP each)')}>
@@ -487,7 +486,7 @@ function KrBuilder({ krs, onChange }: { krs: KeyResult[]; onChange: (k: KeyResul
         )}
         {kind === 'metric' && (
           <select className="input" value={metric} onChange={(e) => setMetric(e.target.value as KrMetric)} aria-label={L('指标', 'Metric')}>
-            {(['citations', 'hIndex', 'papers', 'earned', 'level', 'streak'] as KrMetric[]).map((x) => (
+            {(['citations', 'hIndex', 'papers', 'earned', 'netWorth', 'level', 'streak'] as KrMetric[]).map((x) => (
               <option key={x} value={x}>
                 {metricName(x)}
               </option>

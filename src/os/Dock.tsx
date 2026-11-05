@@ -18,6 +18,8 @@ export function Dock({ app }: { app: AppId }) {
   });
   const running = useStore((s) => !!s.active);
   const reduce = useStore((s) => s.profile.reduceMotion);
+  const ui = useStore((s) => s.ui);
+  const apps = ui.dock.filter((id) => !ui.hidden.includes(id) || id === app).map((id) => APPS.find((a) => a.id === id)!).filter(Boolean);
 
   return (
     <nav
@@ -27,12 +29,12 @@ export function Dock({ app }: { app: AppId }) {
       onPointerLeave={() => setMx(null)}
     >
       <div className="dock" ref={ref}>
-        {APPS.map((a, i) => {
+        {apps.map((a, i) => {
           const scale = magnify(ref.current?.children[i] as HTMLElement | undefined, mx);
           const badge = a.id === 'quests' && pending > 0 ? pending : undefined;
           return (
             <div key={a.id} className="dock-slot" style={{ '--s': scale } as CSSProperties}>
-              {i === APPS.length - 1 && <span className="dock-sep" />}
+              {a.id === 'settings' && i > 0 && <span className="dock-sep" />}
               <button
                 className={`dock-item ${app === a.id ? 'is-open' : ''}`}
                 onClick={() => open(a.id)}

@@ -3,11 +3,12 @@ import { addDays, dayKey, lastNDays, parseDay } from '../lib/date';
 import { smart } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { open } from '../os/router';
-import { ATTR_META, useMetrics } from '../store/hooks';
+import { useMetrics } from '../store/hooks';
+import { useAttrs } from '../store/attrs';
 import { isScheduled } from '../store/links';
 import { QUEST_XP } from '../store/rules';
 import { actions, useStore } from '../store/store';
-import { ATTRS, type Attr, type Difficulty, type Quest } from '../store/types';
+import type { Attr, Difficulty, Quest } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, Card, CheckBubble, Chip, Empty, Field, Modal, Segmented, Stat } from '../ui/kit';
 import { GoalTag } from './goals';
@@ -27,6 +28,7 @@ export function Quests() {
   const lang = useLang();
   const s = useStore((x) => x);
   const m = useMetrics();
+  const attrs = useAttrs();
   const [day, setDay] = useState(dayKey());
   const [edit, setEdit] = useState<Partial<Quest> | null>(null);
   const isToday = day === dayKey();
@@ -118,7 +120,7 @@ export function Quests() {
         <div className="quest-main">
           <span className="quest-title">{q.title}</span>
           <span className="quest-meta">
-            <Chip tone={q.attr}>{lang === 'zh' ? ATTR_META[q.attr].zh : ATTR_META[q.attr].en}</Chip>
+            <Chip tone={q.attr}>{attrs.label(q.attr)}</Chip>
             <span className="num muted">+{QUEST_XP[q.difficulty]} XP</span>
             {q.days?.length ? <span className="muted small">{q.days.map((d) => WEEKDAYS[d][lang === 'zh' ? 0 : 1]).join(lang === 'zh' ? '' : ' ')}</span> : null}
             {tracker && (
@@ -287,7 +289,7 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
           </Field>
         )}
         <Field label={L('提升属性', 'Attribute')}>
-          <AttrPicker value={d.attr} onChange={(a) => set({ attr: a })} lang={lang} />
+          <AttrPicker value={d.attr} onChange={(a) => set({ attr: a })} />
         </Field>
 
         <div className="link-box">
@@ -337,13 +339,14 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
   );
 }
 
-export function AttrPicker({ value, onChange, lang }: { value: Attr; onChange: (a: Attr) => void; lang: 'zh' | 'en' }) {
+export function AttrPicker({ value, onChange }: { value: Attr; onChange: (a: Attr) => void }) {
+  const attrs = useAttrs();
   return (
     <div className="attr-pick">
-      {ATTRS.map((a) => (
-        <button type="button" key={a} className={`attr-opt ${value === a ? 'is-on' : ''}`} style={{ '--tone': `var(--c-${a})` } as CSSProperties} onClick={() => onChange(a)}>
-          <Icon name={ATTR_META[a].icon} size={16} />
-          {lang === 'zh' ? ATTR_META[a].zh : ATTR_META[a].en}
+      {attrs.list.map((a) => (
+        <button type="button" key={a.id} className={`attr-opt ${value === a.id ? 'is-on' : ''}`} style={{ '--tone': `var(--c-${a.id})` } as CSSProperties} onClick={() => onChange(a.id)}>
+          <Icon name={a.icon} size={16} />
+          <span>{attrs.label(a.id)}</span>
         </button>
       ))}
     </div>

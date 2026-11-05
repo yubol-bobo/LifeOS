@@ -16,8 +16,21 @@ let seq = 1;
 const subs = new Set<() => void>();
 const emit = () => subs.forEach((f) => f());
 
+/* ---------------- app event bus (the desktop pet listens to this) ---------------- */
+
+export type AppEvent = { type: 'xp'; amount: string } | { type: 'notice'; tone: Tone; title: string };
+const busSubs = new Set<(e: AppEvent) => void>();
+export function onAppEvent(f: (e: AppEvent) => void) {
+  busSubs.add(f);
+  return () => {
+    busSubs.delete(f);
+  };
+}
+const emitApp = (e: AppEvent) => busSubs.forEach((f) => f(e));
+
 export function notify(n: Omit<Notice, 'id' | 'ts'>, ttl = 4800) {
   const item: Notice = { ...n, id: seq++, ts: Date.now() };
+  emitApp({ type: 'notice', tone: n.tone ?? 'info', title: n.title });
   notices = [...notices.slice(-3), item];
   emit();
   window.setTimeout(() => dismiss(item.id), ttl);
@@ -54,6 +67,7 @@ window.addEventListener('pointerdown', (e) => (lastPointer = { x: e.clientX, y: 
 
 export function burst(text: string, tone: Tone = 'accent') {
   const b = { id: seq++, ...lastPointer, text, tone };
+  emitApp({ type: 'xp', amount: text });
   bursts = [...bursts, b];
   bsubs.forEach((f) => f());
   window.setTimeout(() => {

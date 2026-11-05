@@ -6,6 +6,8 @@ import {
   Monitor, Moon, Mountain, Music, Orbit, Pause, Pencil, Pizza, Plane, Play, Plus, Power, Quote, RefreshCw, Rocket,
   Route, Scale, Search, Send, Settings, ShoppingBag, Sigma, Sparkles, Square, Star, Store, Sun, Target, Telescope,
   Timer, Trash2, TrendingDown, TrendingUp, Trophy, Tv, Upload, Users, Wallet, X, Zap,
+  Palette, Code, Camera, Globe, Sprout, Briefcase, Languages, Droplets, PawPrint, Hand, Cookie, LocateFixed, Eye, EyeOff,
+  GripVertical, ArrowUp, ArrowDown, Volume2, VolumeX, Smile, NotebookPen, Utensils, Armchair, BellRing,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -24,6 +26,10 @@ const MAP: Record<string, LucideIcon> = {
   'shopping-bag': ShoppingBag, sigma: Sigma, sparkles: Sparkles, square: Square, star: Star, store: Store,
   sun: Sun, target: Target, telescope: Telescope, timer: Timer, trash: Trash2, 'trending-up': TrendingUp, 'trending-down': TrendingDown,
   trophy: Trophy, tv: Tv, upload: Upload, users: Users, wallet: Wallet, x: X, zap: Zap,
+  palette: Palette, code: Code, camera: Camera, globe: Globe, sprout: Sprout, briefcase: Briefcase, languages: Languages,
+  droplets: Droplets, paw: PawPrint, hand: Hand, cookie: Cookie, locate: LocateFixed, eye: Eye, 'eye-off': EyeOff,
+  grip: GripVertical, 'arrow-up': ArrowUp, 'arrow-down': ArrowDown, volume: Volume2, 'volume-off': VolumeX, smile: Smile,
+  notebook: NotebookPen, utensils: Utensils, armchair: Armchair, 'bell-ring': BellRing,
 };
 
 export const REWARD_ICONS = ['coffee', 'film', 'gamepad', 'pizza', 'cake', 'plane', 'shopping-bag', 'music', 'bed', 'tv', 'headphones', 'gift'];

@@ -1,10 +1,10 @@
 import type { CSSProperties } from 'react';
 import { num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
-import { ATTR_META, useMetrics } from '../store/hooks';
+import { useMetrics } from '../store/hooks';
+import { useAttrs } from '../store/attrs';
 import { ACHIEVEMENTS, attrLevel, LEVEL_TITLES, levelTitle, TIER_LABEL } from '../store/rules';
 import { useStore } from '../store/store';
-import { ATTRS } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { Bar, Card, Ring } from '../ui/kit';
 
@@ -12,6 +12,7 @@ export function Trophies() {
   const L = useL();
   const lang = useLang();
   const m = useMetrics();
+  const attrs = useAttrs();
   const unlocked = useStore((s) => s.achievements);
   const count = Object.keys(unlocked).length;
   const nextTitle = LEVEL_TITLES.find((t) => t[0] > m.level.level);
@@ -41,19 +42,19 @@ export function Trophies() {
         </Card>
         <Card title={L('属性', 'Attributes')} icon="sparkles">
           <div className="attr-grid">
-            {ATTRS.map((a) => {
-              const xp = m.attrXp[a];
+            {attrs.list.map(({ id: a }) => {
+              const xp = m.attrXp[a] ?? 0;
               const lv = attrLevel(xp);
               const lo = 40 * (lv - 1) ** 2;
               const hi = 40 * lv ** 2;
               return (
                 <div className="attr-card" key={a} style={{ '--tone': `var(--c-${a})` } as CSSProperties}>
                   <span className="attr-ic">
-                    <Icon name={ATTR_META[a].icon} size={18} />
+                    <Icon name={attrs.icon(a)} size={18} />
                   </span>
                   <div className="attr-body">
                     <div className="attr-top">
-                      <strong>{lang === 'zh' ? ATTR_META[a].zh : ATTR_META[a].en}</strong>
+                      <strong>{attrs.label(a)}</strong>
                       <span className="num">Lv.{lv}</span>
                     </div>
                     <Bar value={(xp - lo) / (hi - lo)} tone={a} height={7} />

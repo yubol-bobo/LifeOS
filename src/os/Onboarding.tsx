@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useL, useLang } from '../lib/i18n';
 import { demoState } from '../store/demo';
 import { actions, getState } from '../store/store';
+import { defaultRates } from '../store/assets';
+import type { PayConfig } from '../store/types';
 import { Button, Field, Segmented } from '../ui/kit';
 
 /** First-run setup assistant. */
@@ -11,10 +13,13 @@ export function Onboarding() {
   const [name, setName] = useState('');
   const [birth, setBirth] = useState('1998-01-01');
   const [rate, setRate] = useState(40);
+  const [mode, setMode] = useState<PayConfig['mode']>('hour');
   const [currency, setCurrency] = useState('USD');
 
   const startFresh = () => {
-    actions.onboard({ name: name.trim() || L('旅人', 'Traveler'), birthDate: birth, hourlyRate: rate, currency });
+    actions.onboard({ name: name.trim() || L('旅人', 'Traveler'), birthDate: birth, currency });
+    actions.setPay({ mode, amount: rate });
+    actions.setAssets({ base: currency, rates: defaultRates(currency) });
     const zh = lang === 'zh';
     // A gentle starter kit so the desktop isn't empty.
     const starter: [string, string, 'mind' | 'body' | 'spirit' | 'craft'][] = [
@@ -72,7 +77,7 @@ export function Onboarding() {
             <Field label={L('出生日期', 'Birth date')} hint={L('用于计算人生进度', 'Used for life progress')}>
               <input className="input" type="date" value={birth} onChange={(e) => setBirth(e.target.value)} />
             </Field>
-            <Field label={L('时薪', 'Hourly rate')}>
+            <Field label={<span className="pay-mode-label"><select value={mode} onChange={(e) => setMode(e.target.value as PayConfig['mode'])} aria-label={L('收入方式', 'Pay type')}><option value="hour">{L('时薪', 'Hourly pay')}</option><option value="day">{L('日薪', 'Daily pay')}</option><option value="month">{L('月薪', 'Monthly pay')}</option><option value="year">{L('年薪', 'Yearly pay')}</option></select></span>}>
               <div className="input-group">
                 <input className="input" type="number" min={0} value={rate} onChange={(e) => setRate(+e.target.value)} />
                 <select className="input" value={currency} onChange={(e) => setCurrency(e.target.value)}>

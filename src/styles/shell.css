@@ -239,10 +239,10 @@
   border-radius: 999px;
   color: #fff;
   font-weight: 700;
-  background: linear-gradient(180deg, color-mix(in oklab, var(--c-wealth) 75%, white), var(--c-wealth));
+  background: linear-gradient(180deg, color-mix(in oklab, var(--p-jade) 75%, white), var(--p-jade));
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    0 3px 8px -3px color-mix(in oklab, var(--c-wealth) 70%, transparent);
+    0 3px 8px -3px color-mix(in oklab, var(--p-jade) 70%, transparent);
 }
 
 .mb-live.is-paused {
@@ -649,7 +649,7 @@
 .w-earn.is-live {
   box-shadow:
     var(--shadow-lg),
-    inset 0 0 0 2px color-mix(in oklab, var(--c-wealth) 55%, transparent);
+    inset 0 0 0 2px color-mix(in oklab, var(--p-jade) 55%, transparent);
 }
 
 /* research widget */
@@ -975,8 +975,8 @@
 }
 
 .dock-dot.is-live {
-  background: var(--c-wealth);
-  box-shadow: 0 0 6px var(--c-wealth);
+  background: var(--p-jade);
+  box-shadow: 0 0 6px var(--p-jade);
   animation: pulse 1.4s ease-in-out infinite;
 }
 
@@ -1038,7 +1038,7 @@
   --t: var(--good);
 }
 .tone-info .notice-ic {
-  --t: var(--c-mind);
+  --t: var(--p-blue);
 }
 .tone-warn .notice-ic {
   --t: var(--warn);
@@ -1609,7 +1609,7 @@
 
 .pipeline-mini b {
   font-size: 17px;
-  color: var(--c-spirit);
+  color: var(--p-violet);
 }
 
 .pipeline-mini .is-zero b {

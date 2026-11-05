@@ -22,6 +22,7 @@ export function useKrText() {
   const L = useL();
   const trackers = useStore((s) => s.trackers);
   const currency = useStore((s) => s.profile.currency);
+  const base = useStore((s) => s.assets.base);
   const metricName = (m?: KrMetric) =>
     ({
       citations: L('总引用', 'Citations'),
@@ -30,6 +31,7 @@ export function useKrText() {
       earned: L('时薪计累计收入', 'Wage-timer earnings'),
       level: L('等级', 'Level'),
       streak: L('最长连胜（天）', 'Best streak (days)'),
+      netWorth: L('净资产', 'Net worth'),
     })[m ?? 'citations'];
 
   const label = (kr: KeyResult | null) => {
@@ -48,7 +50,7 @@ export function useKrText() {
             ? L(`${t.name}降到 ${num(kr.target, 1)} ${t.unit}`, `${t.name} down to ${num(kr.target, 1)} ${t.unit}`)
             : L(`${t.name}达到 ${num(kr.target, 1)} ${t.unit}`, `${t.name} reaches ${num(kr.target, 1)} ${t.unit}`);
       case 'metric':
-        return kr.metric === 'earned' ? `${metricName(kr.metric)} ≥ ${money(kr.target, currency, 0)}` : `${metricName(kr.metric)} ≥ ${num(kr.target)}`;
+        return kr.metric === 'earned' || kr.metric === 'netWorth' ? `${metricName(kr.metric)} ≥ ${money(kr.target, kr.metric === 'netWorth' ? base : currency, 0)}` : `${metricName(kr.metric)} ≥ ${num(kr.target)}`;
       default:
         return kr.title || L('自定义指标', 'Custom metric');
     }
@@ -56,7 +58,10 @@ export function useKrText() {
 
   const value = (p: KrProgress) => {
     const kr = p.kr;
-    if (kr?.kind === 'metric' && kr.metric === 'earned') return `${money(p.value, currency, 0)} / ${money(p.target, currency, 0)}`;
+    if (kr?.kind === 'metric' && (kr.metric === 'earned' || kr.metric === 'netWorth')) {
+      const c = kr.metric === 'netWorth' ? base : currency;
+      return `${money(p.value, c, 0)} / ${money(p.target, c, 0)}`;
+    }
     const d = kr?.kind === 'focus' || kr?.kind === 'tracker' ? 1 : 0;
     return `${num(p.value, d)} / ${num(p.target, d)}`;
   };

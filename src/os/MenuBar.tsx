@@ -16,6 +16,8 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
   const currency = useStore((s) => s.profile.currency);
   const live = useLiveSession(250);
   const def = appById(app);
+  const petOn = useStore((s) => s.pet.enabled);
+  const pomo = useStore((s) => s.pomo);
   const [menu, setMenu] = useState(false);
 
   const time = now.toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' });
@@ -77,6 +79,17 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
             <i style={{ width: `${m.level.progress * 100}%` }} />
           </span>
         </button>
+        {petOn && (
+          <button className="mb-icon" onClick={() => window.dispatchEvent(new Event('lifeos:pet-locate'))} aria-label={L('找到宠物', 'Find my pet')} title={L('找到宠物', 'Find my pet')}>
+            <Icon name="paw" size={15} />
+          </button>
+        )}
+        {pomo && (
+          <span className="mb-item mb-pomo" title={L('番茄钟', 'Pomodoro')}>
+            <span className="tomato sm" />
+            <PomoLeft endsAt={pomo.endsAt} pausedLeft={pomo.pausedLeft} />
+          </span>
+        )}
         <button className="mb-icon" onClick={() => actions.profile({ theme: dark ? 'light' : 'dark' })} aria-label={L('切换主题', 'Toggle theme')}>
           <Icon name={dark ? 'sun' : 'moon'} size={15} />
         </button>
@@ -90,4 +103,10 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
       </div>
     </header>
   );
+}
+
+function PomoLeft({ endsAt, pausedLeft }: { endsAt: number; pausedLeft?: number }) {
+  useClock(1000);
+  const left = Math.max(0, pausedLeft ?? endsAt - Date.now());
+  return <span className="num">{`${String(Math.floor(left / 60000)).padStart(2, '0')}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}`}</span>;
 }

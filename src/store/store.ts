@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import { dayKey } from '../lib/date';
 import { uid } from '../lib/id';
 import { burst, notify } from '../os/notify';
@@ -15,9 +15,16 @@ import {
   levelTitle,
   metrics,
 } from './rules';
+import { DEFAULT_DOCK, PINNED, type AppId } from '../os/apps';
+import { DEFAULT_ATTRS, hourlyFrom } from './defaults';
+import { defaultRates } from './assets';
 import { readyGoals, scheduledDailies } from './links';
 import type {
   Attr,
+  AttrDef,
+  Account,
+  MoodEntry,
+  Project,
   EventKind,
   Milestone,
   Paper,
@@ -60,16 +67,45 @@ export function defaultState(): State {
     rewards: [],
     events: [],
     achievements: {},
+    attributes: DEFAULT_ATTRS.map((a) => ({ ...a })),
+    projects: [],
+    pay: { mode: 'hour', amount: 40, hoursPerDay: 8, daysPerWeek: 5 },
+    ui: { dock: [...DEFAULT_DOCK], hidden: [], widgets: [] },
+    moods: {},
+    wellness: {},
+    pet: { enabled: true, kind: 'mochi', name: zh ? '团子' : 'Mochi', waterMin: 60, sitMin: 50, pomoWork: 25, pomoBreak: 5, sound: true, sysNotify: false, roam: 'lively' },
+    pomo: null,
+    accounts: [],
+    snapshots: [],
+    assets: { base: 'USD', rates: defaultRates('USD'), cadence: 'weekly' },
   };
+}
+
+/** Bring an older or partial save up to the current shape. */
+export function migrate(parsed: Partial<State>): State {
+  const d = defaultState();
+  const s: State = {
+    ...d,
+    ...parsed,
+    profile: { ...d.profile, ...parsed.profile },
+    scholar: { ...d.scholar, ...parsed.scholar },
+    pay: { ...d.pay, amount: parsed.profile?.hourlyRate ?? d.pay.amount, ...parsed.pay },
+    ui: { ...d.ui, ...parsed.ui },
+    pet: { ...d.pet, ...parsed.pet },
+    assets: { ...d.assets, ...parsed.assets },
+    attributes: parsed.attributes?.length ? parsed.attributes : d.attributes,
+  };
+  // New apps appear in the dock automatically.
+  for (const id of DEFAULT_DOCK) if (!s.ui.dock.includes(id)) s.ui.dock.splice(Math.max(0, s.ui.dock.length - 1), 0, id);
+  s.ui.dock = s.ui.dock.filter((id) => DEFAULT_DOCK.includes(id));
+  return s;
 }
 
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return defaultState();
-    const parsed = JSON.parse(raw) as Partial<State>;
-    const d = defaultState();
-    return { ...d, ...parsed, profile: { ...d.profile, ...parsed.profile }, scholar: { ...d.scholar, ...parsed.scholar } };
+    return migrate(JSON.parse(raw) as Partial<State>);
   } catch {
     return defaultState();
   }
@@ -99,14 +135,35 @@ window.addEventListener('beforeunload', () => {
 
 export const getState = () => state;
 
+function shallowEqual(a: unknown, b: unknown) {
+  if (Object.is(a, b)) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const ka = Object.keys(a as object);
+  const kb = Object.keys(b as object);
+  if (ka.length !== kb.length) return false;
+  return ka.every((k) => Object.is((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]));
+}
+
+const subscribe = (f: () => void) => {
+  subs.add(f);
+  return () => {
+    subs.delete(f);
+  };
+};
+
+/**
+ * Subscribe to a slice of state. Results are compared shallowly, so selectors that
+ * build a fresh array/object (e.g. a `.filter`) don't cause render loops.
+ */
 export function useStore<T>(sel: (s: State) => T): T {
-  return useSyncExternalStore(
-    (f) => {
-      subs.add(f);
-      return () => subs.delete(f);
-    },
-    () => sel(state),
-  );
+  const last = useRef<{ v: T } | null>(null);
+  return useSyncExternalStore(subscribe, () => {
+    const v = sel(state);
+    if (last.current && shallowEqual(last.current.v, v)) return last.current.v;
+    last.current = { v };
+    return v;
+  });
 }
 
 const tr = (zh: string, en: string) => (state.profile.lang === 'zh' ? zh : en);
@@ -277,6 +334,177 @@ export const actions = {
     if (gained) burst(`+${gained} XP`);
   },
 
+  /* ---- customization ---- */
+  setPay(p: Partial<State['pay']>) {
+    commit(
+      (d) => {
+        Object.assign(d.pay, p);
+        d.profile.hourlyRate = Math.round(hourlyFrom(d.pay) * 100) / 100;
+      },
+      { silent: true },
+    );
+  },
+  setDock(order: AppId[], hidden: AppId[]) {
+    commit(
+      (d) => {
+        d.ui.dock = order;
+        d.ui.hidden = hidden.filter((h) => !PINNED.includes(h));
+      },
+      { silent: true },
+    );
+  },
+  toggleWidget(id: string) {
+    commit(
+      (d) => {
+        d.ui.widgets = d.ui.widgets.includes(id) ? d.ui.widgets.filter((w) => w !== id) : [...d.ui.widgets, id];
+      },
+      { silent: true },
+    );
+  },
+  saveAttr(a: Omit<AttrDef, 'id'> & { id?: string }) {
+    commit(
+      (d) => {
+        const hit = a.id && d.attributes.find((x) => x.id === a.id);
+        if (hit) Object.assign(hit, a);
+        else d.attributes.push({ ...a, id: `a-${uid()}` } as AttrDef);
+      },
+      { silent: true },
+    );
+  },
+  moveAttr(id: string, dir: -1 | 1) {
+    commit(
+      (d) => {
+        const i = d.attributes.findIndex((x) => x.id === id);
+        const j = i + dir;
+        if (i < 0 || j < 0 || j >= d.attributes.length) return;
+        [d.attributes[i], d.attributes[j]] = [d.attributes[j], d.attributes[i]];
+      },
+      { silent: true },
+    );
+  },
+  /** Removing an attribute moves everything that pointed at it — including earned XP — to `into`. */
+  removeAttr(id: string, into: string) {
+    commit(
+      (d) => {
+        if (d.attributes.length <= 3 || id === into) return;
+        d.attributes = d.attributes.filter((a) => a.id !== id);
+        const swap = <T extends { attr?: string }>(x: T) => {
+          if (x.attr === id) x.attr = into;
+        };
+        d.quests.forEach(swap);
+        d.milestones.forEach(swap);
+        d.trackers.forEach(swap);
+        d.sessions.forEach(swap);
+        d.events.forEach(swap);
+        if (d.active) swap(d.active);
+      },
+      { silent: true },
+    );
+  },
+  saveProject(p: Omit<Project, 'id'> & { id?: string }) {
+    commit(
+      (d) => {
+        const hit = p.id && d.projects.find((x) => x.id === p.id);
+        if (hit) Object.assign(hit, p);
+        else d.projects.push({ ...p, id: uid() } as Project);
+      },
+      { silent: true },
+    );
+  },
+  removeProject(id: string) {
+    commit(
+      (d) => {
+        d.projects = d.projects.filter((p) => p.id !== id);
+        for (const s of d.sessions) if (s.projectId === id) s.projectId = undefined;
+        if (d.active?.projectId === id) d.active.projectId = undefined;
+      },
+      { silent: true },
+    );
+  },
+
+  /* ---- mood & wellness ---- */
+  setMood(v: MoodEntry['v'], note?: string, day = dayKey()) {
+    commit((d) => {
+      const prev = d.moods[day];
+      d.moods[day] = { v, note: note ?? prev?.note, ts: Date.now() };
+      grant(d, `mood:${day}`, 'mood', 5, tr('心情打卡', 'Mood check-in'));
+    });
+  },
+  setMoodNote(note: string, day = dayKey()) {
+    commit(
+      (d) => {
+        if (d.moods[day]) d.moods[day].note = note;
+      },
+      { silent: true },
+    );
+  },
+  logWellness(kind: 'water' | 'breaks' | 'pomos', amount = 1, minutes = 0) {
+    let gained = 0;
+    commit((d) => {
+      const day = dayKey();
+      const w = (d.wellness[day] ??= { water: 0, breaks: 0, pomos: 0, pomoMin: 0 });
+      w[kind] = Math.max(0, w[kind] + amount);
+      if (kind === 'pomos') w.pomoMin += minutes;
+      if (amount > 0) {
+        // XP is capped per day so reminders can't be farmed.
+        const caps = { water: 8, breaks: 8, pomos: 12 };
+        const xp = { water: 2, breaks: 4, pomos: 10 }[kind];
+        if (w[kind] <= caps[kind] && grant(d, `well:${kind}:${day}:${w[kind]}`, 'wellness', xp, { water: tr('喝水', 'Water'), breaks: tr('起身活动', 'Stand-up break'), pomos: tr('番茄钟', 'Pomodoro') }[kind]))
+          gained = xp;
+      } else revoke(d, `well:${kind}:${day}:${w[kind] + 1}`);
+    });
+    if (gained) burst(`+${gained} XP`);
+  },
+  setPet(p: Partial<State['pet']>) {
+    commit((d) => Object.assign(d.pet, p), { silent: true });
+  },
+  setPomo(p: State['pomo']) {
+    commit(
+      (d) => {
+        d.pomo = p;
+      },
+      { silent: true },
+    );
+  },
+
+  /* ---- assets ---- */
+  saveAccount(a: Omit<Account, 'id'> & { id?: string }) {
+    commit(
+      (d) => {
+        const hit = a.id && d.accounts.find((x) => x.id === a.id);
+        if (hit) Object.assign(hit, a);
+        else d.accounts.push({ ...a, id: uid() } as Account);
+      },
+      { silent: true },
+    );
+  },
+  removeAccount(id: string) {
+    commit(
+      (d) => {
+        d.accounts = d.accounts.filter((a) => a.id !== id);
+        for (const s of d.snapshots) delete s.balances[id];
+      },
+      { silent: true },
+    );
+  },
+  /** Record balances "right now". One snapshot per day; a second check-in the same day updates it. */
+  checkin(balances: Record<string, number>, day = dayKey()) {
+    let gained = 0;
+    commit((d) => {
+      const hit = d.snapshots.find((s) => s.date === day);
+      if (hit) Object.assign(hit.balances, balances);
+      else {
+        d.snapshots.push({ date: day, ts: Date.now(), balances });
+        d.snapshots.sort((a, b) => a.date.localeCompare(b.date));
+      }
+      if (grant(d, `assets:${day}`, 'assets', 20, tr('资产盘点', 'Asset check-in'), d.attributes.some((a) => a.id === 'wealth') ? 'wealth' : d.attributes[0]?.id)) gained = 20;
+    });
+    if (gained) burst(`+${gained} XP`);
+  },
+  setAssets(cfg: Partial<State['assets']>) {
+    commit((d) => Object.assign(d.assets, cfg), { silent: true });
+  },
+
   /* ---- research ---- */
   savePaper(p: Omit<Paper, 'id' | 'updatedAt'> & { id?: string }) {
     commit((d) => {
@@ -347,7 +575,7 @@ export const actions = {
   },
 
   /* ---- focus & earnings ---- */
-  startFocus(rate: number, attr: Attr, note = '', link: { goalId?: string; questId?: string } = {}) {
+  startFocus(rate: number, attr: Attr, note = '', link: { goalId?: string; questId?: string; projectId?: string } = {}) {
     commit((d) => {
       d.active = { start: Date.now(), rate, attr, note, pausedMs: 0, ...link };
     });
@@ -395,6 +623,7 @@ export const actions = {
         attr: a.attr,
         goalId: a.goalId,
         questId: a.questId,
+        projectId: a.projectId,
       };
       d.sessions.push(s);
       const xp = Math.round(activeMs / 60_000); // 1 XP per focused minute

@@ -40,6 +40,9 @@ export function Spotlight({ onClose, dark }: { onClose: () => void; dark: boolea
         ? { id: 'cmd:stop', group: G.cmd, title: L('结束专注并结算', 'Stop focus & cash out'), icon: 'square', run: () => actions.stopFocus() }
         : { id: 'cmd:focus', group: G.cmd, title: L('开始专注计时', 'Start focus timer'), icon: 'play', run: () => (actions.startFocus(getState().profile.hourlyRate, 'craft'), open('earn')) },
       { id: 'cmd:theme', group: G.cmd, title: dark ? L('切换到明亮模式', 'Switch to light mode') : L('切换到暗夜模式', 'Switch to dark mode'), icon: dark ? 'sun' : 'moon', run: () => actions.profile({ theme: dark ? 'light' : 'dark' }) },
+      { id: 'cmd:pet', group: G.cmd, title: L('找到我的宠物', 'Find my pet'), icon: 'paw', run: () => window.dispatchEvent(new Event('lifeos:pet-locate')) },
+      { id: 'cmd:pomo', group: G.cmd, title: L('开始番茄钟', 'Start a pomodoro'), icon: 'timer', run: () => actions.setPomo({ phase: 'work', startedAt: Date.now(), endsAt: Date.now() + getState().pet.pomoWork * 60_000 }) },
+      { id: 'cmd:checkin', group: G.cmd, title: L('记录资产', 'Record balances'), icon: 'wallet', run: () => window.dispatchEvent(new Event('lifeos:asset-checkin')) },
       { id: 'cmd:lang', group: G.cmd, title: lang === 'zh' ? 'Switch to English' : '切换到中文', icon: 'refresh', run: () => actions.profile({ lang: lang === 'zh' ? 'en' : 'zh' }) },
       ...quests
         .filter((x) => !x.archived)

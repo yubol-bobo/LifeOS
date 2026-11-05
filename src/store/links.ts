@@ -88,7 +88,9 @@ export function krValue(s: State, m: Milestone, kr: KeyResult, mx: Metrics): KrP
                 ? mx.earned
                 : kr.metric === 'level'
                   ? mx.level.level
-                  : mx.streak.best;
+                  : kr.metric === 'netWorth'
+                    ? mx.netWorth
+                    : mx.streak.best;
       return { kr, value: v, target: kr.target, pct: clamp(v / kr.target) };
     }
     case 'manual':

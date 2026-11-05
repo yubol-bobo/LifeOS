@@ -2,7 +2,9 @@ import { addDays, dayKey, DAY } from '../lib/date';
 import { rng, uid } from '../lib/id';
 import { coinsFor, PAPER_XP, QUEST_XP, STEP_XP, MILESTONE_XP, TRACKER_XP } from './rules';
 import { defaultState } from './store';
-import type { Milestone, Paper, Quest, State, XpEvent } from './types';
+import { defaultRates } from './assets';
+import { hourlyFrom } from './defaults';
+import type { Account, Milestone, Paper, Quest, State, XpEvent } from './types';
 
 /**
  * A believable sample life for previews (e.g. the GitHub Pages demo).
@@ -185,6 +187,64 @@ export function demoState(profile: Partial<State['profile']>): State {
   for (const rw of s.rewards)
     for (let i = 0; i < rw.redeemed; i++)
       events.push({ id: uid(), ref: `reward:${rw.id}:${i}`, kind: 'reward', xp: 0, coins: -rw.cost, label: rw.title, ts: Date.now() - (10 + i * 5) * DAY });
+
+  /* ---- pay & projects ("working for") ---- */
+  s.pay = { mode: 'year', amount: 93600, hoursPerDay: 8, daysPerWeek: 5 }; // ≈ 45/h
+  s.profile.hourlyRate = Math.round(hourlyFrom(s.pay) * 100) / 100;
+  s.projects = [
+    { id: uid(), name: T('博士研究', 'PhD research'), color: 'violet' },
+    { id: uid(), name: T('助教', 'Teaching assistant'), color: 'teal', rate: 30 },
+    { id: uid(), name: T('咨询副业', 'Consulting gig'), color: 'amber', rate: 120 },
+  ];
+  for (const x of s.sessions) {
+    const pr = x.note === notes[3] ? s.projects[1] : r() < 0.14 ? s.projects[2] : s.projects[0];
+    x.projectId = pr.id;
+    x.rate = pr.rate ?? s.profile.hourlyRate;
+    x.earned = (x.activeMs / 3_600_000) * x.rate;
+  }
+
+  /* ---- wellness & mood (correlated, so the insights have something to find) ---- */
+  const runQ = dailies[2];
+  for (let i = 55; i >= 1; i--) {
+    const d = addDays(today, -i);
+    const water = Math.round(3 + r() * 6);
+    const breaks = Math.round(r() * 5);
+    const pomos = Math.round(r() * 4);
+    s.wellness[d] = { water, breaks, pomos, pomoMin: pomos * 25 };
+    if (r() < 0.12) continue; // some days unlogged
+    const focus = s.sessions.filter((x) => dayKey(x.start) === d).reduce((a, x) => a + x.activeMs, 0) / 3_600_000;
+    const ran = (s.completions[d] ?? []).includes(runQ.id);
+    const v = 2.6 + (focus >= 3 ? 0.9 : 0) + (ran ? 0.7 : 0) + (water >= 6 ? 0.4 : 0) + (breaks >= 3 ? 0.3 : 0) + (r() - 0.5) * 1.4;
+    const mv = Math.max(1, Math.min(5, Math.round(v))) as 1 | 2 | 3 | 4 | 5;
+    s.moods[d] = { v: mv, ts: at(d, 21) };
+    push(`mood:${d}`, 'mood', 5, T('心情打卡', 'Mood check-in'), at(d, 21));
+  }
+  const lastMood = Object.keys(s.moods).sort().at(-1)!;
+  s.moods[lastMood].note = T('跑完步写了两小时，状态很好。', 'Ran, then wrote for two hours. Felt great.');
+
+  /* ---- assets: weekly check-ins for half a year ---- */
+  s.assets = { base: 'USD', rates: { ...defaultRates('USD') }, cadence: 'weekly' };
+  const acct = (name: string, kind: Account['kind'], currency: string, color: Account['color']): Account => ({ id: uid(), name, kind, currency, color });
+  s.accounts = [
+    acct(T('日常支票账户', 'Everyday checking'), 'bank', 'USD', 'blue'),
+    acct(T('高息储蓄', 'High-yield savings'), 'bank', 'USD', 'teal'),
+    acct(T('券商账户', 'Brokerage'), 'invest', 'USD', 'violet'),
+    acct('Roth IRA', 'retire', 'USD', 'lime'),
+    acct(T('招行 + 余额宝', 'CNY savings'), 'bank', 'CNY', 'red'),
+    acct('ETH', 'crypto', 'ETH', 'indigo'),
+    acct(T('信用卡', 'Credit card'), 'debt', 'USD', 'slate'),
+  ];
+  let mkt = 1;
+  for (let wk = 26; wk >= 0; wk--) {
+    const d = addDays(today, -wk * 7 - 3);
+    const t = (26 - wk) / 26;
+    mkt *= 1 + (r() - 0.42) * 0.05;
+    const bal = [4200 + (r() - 0.5) * 1600, 12000 + t * 6200, 21000 * mkt + t * 3000, 6500 + t * 3300 * mkt, 30000 + t * 6000, 0.8, 900 + r() * 1300];
+    const balances: Record<string, number> = {};
+    s.accounts.forEach((a, i) => (balances[a.id] = a.kind === 'crypto' ? bal[i] : Math.round(bal[i])));
+    s.snapshots.push({ date: d, ts: at(d, 20), balances });
+    push(`assets:${d}`, 'assets', 20, T('资产盘点', 'Asset check-in'), at(d, 20), 'wealth');
+  }
 
   s.events = events.sort((a, b) => a.ts - b.ts);
   return s;

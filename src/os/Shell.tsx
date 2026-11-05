@@ -8,6 +8,10 @@ import { Trackers } from '../apps/Trackers';
 import { Shop } from '../apps/Shop';
 import { Trophies } from '../apps/Trophies';
 import { Settings } from '../apps/Settings';
+import { Mood } from '../apps/Mood';
+import { Assets, CheckinSheet } from '../apps/Assets';
+import { attrCss, DEFAULT_ATTRS } from '../store/defaults';
+import { PetLayer } from '../pet/PetLayer';
 import { useLang } from '../lib/i18n';
 import { money } from '../lib/format';
 import { useStore } from '../store/store';
@@ -30,6 +34,8 @@ const APP_VIEWS: Record<Exclude<AppId, 'home'>, () => ReactNode> = {
   research: () => <Research />,
   earn: () => <Earn />,
   trackers: () => <Trackers />,
+  mood: () => <Mood />,
+  assets: () => <Assets />,
   shop: () => <Shop />,
   trophies: () => <Trophies />,
   settings: () => <Settings />,
@@ -46,6 +52,8 @@ export function Shell() {
   const live = useLiveSession(1000);
   const currency = useStore((s) => s.profile.currency);
   const lang = useLang();
+  const attributes = useStore((s) => s.attributes);
+  const petOn = useStore((s) => s.pet.enabled);
 
   useEffect(() => {
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
@@ -83,6 +91,7 @@ export function Shell() {
 
   return (
     <div className="os">
+      <style>{attrCss(DEFAULT_ATTRS) + attrCss(attributes)}</style>
       <Wallpaper />
       <MenuBar app={app} dark={dark} onSpotlight={() => setSpot(true)} />
       <main className="desk">
@@ -112,6 +121,8 @@ export function Shell() {
         )}
       </main>
       <Dock app={app} />
+      {petOn && onboarded && <PetLayer app={app} />}
+      <CheckinSheet />
       <Notifications />
       <Bursts />
       {spot && <Spotlight dark={dark} onClose={() => setSpot(false)} />}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { dayKey, parseDay } from '../lib/date';
 import { num, smart } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
-import { ATTR_META } from '../store/hooks';
+import { useAttrs } from '../store/attrs';
 import { actions, useStore } from '../store/store';
 import type { Tracker } from '../store/types';
 import { AreaChart } from '../ui/charts';
@@ -43,6 +43,7 @@ export function Trackers() {
 }
 
 function TrackerCard({ t, onEdit }: { t: Tracker; onEdit: () => void }) {
+  const attrs = useAttrs();
   const L = useL();
   const lang = useLang();
   const [val, setVal] = useState('');
@@ -80,7 +81,7 @@ function TrackerCard({ t, onEdit }: { t: Tracker; onEdit: () => void }) {
       tone={t.attr}
       className="tracker"
       title={t.name}
-      icon={ATTR_META[t.attr].icon}
+      icon={attrs.icon(t.attr)}
       action={<Button size="sm" variant="ghost" icon="pencil" title={L('编辑', 'Edit')} onClick={onEdit} />}
     >
       <div className="tracker-top">
@@ -137,7 +138,6 @@ function TrackerCard({ t, onEdit }: { t: Tracker; onEdit: () => void }) {
 
 function TrackerEditor({ value, onClose }: { value: Partial<Tracker> | null; onClose: () => void }) {
   const L = useL();
-  const lang = useLang();
   const [d, setD] = useState<Partial<Tracker>>({});
   const [key, setKey] = useState<string | undefined>('__');
   const k = value ? (value.id ?? 'new') : undefined;
@@ -210,7 +210,7 @@ function TrackerEditor({ value, onClose }: { value: Partial<Tracker> | null; onC
           </Field>
         </div>
         <Field label={L('属性', 'Attribute')}>
-          <AttrPicker value={t.attr} onChange={(a) => setD({ ...t, attr: a })} lang={lang} />
+          <AttrPicker value={t.attr} onChange={(a) => setD({ ...t, attr: a })} />
         </Field>
       </div>
     </Modal>
