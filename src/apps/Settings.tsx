@@ -1,3 +1,4 @@
+import { AiSettings } from './AiSettings';
 import { setLayout, useLayout } from '../os/display';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { money, num } from '../lib/format';
@@ -14,7 +15,7 @@ import { Icon } from '../ui/Icon';
 import { SyncSettings } from './SyncSettings';
 import { AppGlyph, Button, Card, Field, Modal, Segmented } from '../ui/kit';
 
-type Tab = 'general' | 'sync' | 'dock' | 'attrs' | 'work' | 'pet';
+type Tab = 'general' | 'sync' | 'ai' | 'dock' | 'attrs' | 'work' | 'pet';
 
 export function Settings() {
   const L = useL();
@@ -35,6 +36,7 @@ export function Settings() {
   const tabs: { id: Tab; icon: string; zh: string; en: string }[] = [
     { id: 'general', icon: 'settings', zh: '通用', en: 'General' },
     { id: 'sync', icon: 'cloud', zh: '同步', en: 'Sync' },
+    { id: 'ai', icon: 'sparkles', zh: 'AI 宠物', en: 'AI' },
     { id: 'dock', icon: 'grid', zh: '程序坞与桌面', en: 'Dock & Desktop' },
     { id: 'attrs', icon: 'sparkles', zh: '属性', en: 'Attributes' },
     { id: 'work', icon: 'wallet', zh: '工作与收入', en: 'Work & Pay' },
@@ -58,6 +60,7 @@ export function Settings() {
       </nav>
       {tab === 'general' && <General />}
       {tab === 'sync' && <SyncSettings />}
+      {tab === 'ai' && <AiSettings />}
       {tab === 'dock' && <DockSettings />}
       {tab === 'attrs' && <AttrSettings />}
       {tab === 'work' && <WorkSettings />}
@@ -231,8 +234,9 @@ const WIDGETS: { id: string; zh: string; en: string }[] = [
   { id: 'plans', zh: '本周计划', en: 'This week' },
   { id: 'countdown', zh: '倒计时', en: 'Countdown' },
   { id: 'mood', zh: '心情打卡', en: 'Mood check-in' },
+  { id: 'journal', zh: '每日复盘', en: 'Daily review' },
   { id: 'life', zh: '人生进度', en: 'Life progress' },
-  { id: 'earn', zh: '时薪计', en: 'Wage timer' },
+  { id: 'earn', zh: '专注计时', en: 'Focus timer' },
   { id: 'attrs', zh: '属性雷达', en: 'Attribute radar' },
   { id: 'research', zh: '学术', en: 'Research' },
   { id: 'goals', zh: '目标进度', en: 'Goals' },

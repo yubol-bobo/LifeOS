@@ -9,6 +9,7 @@ import { Shop } from '../apps/Shop';
 import { Trophies } from '../apps/Trophies';
 import { Settings } from '../apps/Settings';
 import { Mood } from '../apps/Mood';
+import { Review } from '../apps/Review';
 import { Plan } from '../apps/Plan';
 import { Projects } from '../apps/Projects';
 import { Assets, CheckinSheet } from '../apps/Assets';
@@ -19,6 +20,7 @@ import { money } from '../lib/format';
 import { actions, useStore } from '../store/store';
 import { loadFeed } from '../lib/scholarFeed';
 import { initSync } from '../sync/engine';
+import { loadDictionary } from '../store/builtin';
 import { Icon } from '../ui/Icon';
 import { AppGlyph } from '../ui/kit';
 import { appById, type AppId } from './apps';
@@ -30,6 +32,9 @@ import { useFullscreen, useLayout } from './display';
 import { dismiss, useBursts, useNotices } from './notify';
 import { Onboarding } from './Onboarding';
 import { LevelUp } from './LevelUp';
+import { SummaryCard } from '../ai/SummaryCard';
+import { FocusCelebrate } from './FocusCelebrate';
+import { clock } from '../apps/Earn';
 import { open, useRoute } from './router';
 import { Spotlight } from './Spotlight';
 import { useTheme } from './theme';
@@ -41,6 +46,7 @@ const APP_VIEWS: Record<Exclude<AppId, 'home'>, () => ReactNode> = {
   earn: () => <Earn />,
   trackers: () => <Trackers />,
   mood: () => <Mood />,
+  review: () => <Review />,
   plan: () => <Plan />,
   projects: () => <Projects />,
   assets: () => <Assets />,
@@ -70,6 +76,7 @@ export function Shell() {
   }, [lang, reduce]);
 
   useEffect(() => initSync(), []);
+  useEffect(() => void loadDictionary().then(() => actions.localize()), []);
 
   // Pull the Google Scholar feed (if the deployment has one) once per page load.
   useEffect(() => {
@@ -95,8 +102,8 @@ export function Shell() {
   const def = appById(app);
   useEffect(() => {
     const name = lang === 'zh' ? def.zh : def.en;
-    document.title = live ? `${live.paused ? '⏸' : '●'} ${money(live.earned, currency)} · LifeOS` : app === 'home' ? 'LifeOS' : `${name} · LifeOS`;
-  }, [live?.earned, live?.paused, app, lang, currency]); // eslint-disable-line react-hooks/exhaustive-deps
+    document.title = live ? `${live.paused ? '⏸' : '●'} ${live.left != null ? (live.left > 0 ? clock(live.left) : '🎉') : live.paid ? money(live.earned, currency) : clock(live.ms)} · LifeOS` : app === 'home' ? 'LifeOS' : `${name} · LifeOS`;
+  }, [live ? Math.floor(live.ms / 1000) : -1, live?.paused, app, lang, currency]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const layout = useLayout();
   const fullscreen = useFullscreen();
@@ -146,6 +153,8 @@ export function Shell() {
       {petOn && onboarded && <PetLayer app={app} />}
       <CheckinSheet />
       <LevelUp />
+      <SummaryCard />
+      <FocusCelebrate />
       <Notifications />
       <Bursts />
       {spot && <Spotlight dark={dark} onClose={() => setSpot(false)} />}

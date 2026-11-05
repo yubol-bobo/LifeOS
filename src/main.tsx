@@ -11,6 +11,8 @@ import './styles/round3.css';
 import './styles/plans.css';
 import './styles/growth.css';
 import './styles/layout.css';
+import './styles/review.css';
+import './styles/focus.css';
 import { Shell } from './os/Shell';
 
 createRoot(document.getElementById('root')!).render(

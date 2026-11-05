@@ -85,9 +85,6 @@
     grid-row: span 2;
   }
 
-  .os[data-layout='landscape'] .desktop > .w-heat {
-    grid-column: span 2;
-  }
 
   /* app windows use the full width too */
   .os[data-layout='landscape'] .window {

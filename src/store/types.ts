@@ -85,6 +85,19 @@ export interface MoodEntry {
   ts: number;
 }
 
+/** One day's review. Every field is optional — a single line still counts. */
+export interface Review {
+  win?: string; // what went well / what you're proud of
+  lesson?: string; // what you learned or noticed
+  friction?: string; // what got in the way, and what to try next time
+  grateful?: string;
+  deep?: string; // answer to the day's rotating question
+  tomorrow?: string; // the one thing that matters tomorrow
+  tomorrowQuest?: string; // quest created from `tomorrow`
+  ai?: string; // the pet's summary (editable)
+  updatedAt: number;
+}
+
 export interface Wellness {
   water: number;
   breaks: number;
@@ -111,6 +124,8 @@ export interface PetConfig {
   sound: boolean;
   sysNotify: boolean;
   roam: 'calm' | 'lively';
+  reviewNudge?: boolean; // gentle evening nudge to write the day's review
+  nightSummary?: boolean; // pop the day summary at midnight
 }
 
 export type AccountKind = 'cash' | 'bank' | 'invest' | 'retire' | 'crypto' | 'property' | 'debt' | 'other';
@@ -254,7 +269,8 @@ export interface WorkSession {
   start: number;
   end: number;
   activeMs: number;
-  rate: number;
+  rate: number; // 0 = unpaid effort
+  targetMin?: number; // countdown it was started with
   earned: number;
   note?: string;
   attr: Attr;
@@ -265,7 +281,9 @@ export interface WorkSession {
 
 export interface ActiveSession {
   start: number;
-  rate: number;
+  rate: number; // 0 = unpaid effort (gym, writing, study…) — still earns XP
+  targetMin?: number; // optional countdown
+  hit?: boolean; // countdown reached (celebrated)
   note: string;
   attr: Attr;
   pausedMs: number;
@@ -294,7 +312,7 @@ export interface Reward {
   redeemed: number;
 }
 
-export type EventKind = 'quest' | 'perfect' | 'milestone' | 'step' | 'focus' | 'paper' | 'tracker' | 'reward' | 'achievement' | 'mood' | 'wellness' | 'assets' | 'plan';
+export type EventKind = 'quest' | 'perfect' | 'milestone' | 'step' | 'focus' | 'paper' | 'tracker' | 'reward' | 'achievement' | 'mood' | 'wellness' | 'assets' | 'plan' | 'review';
 
 /** Single ledger for XP & coins. Idempotent by `ref`. */
 export interface XpEvent {
@@ -330,6 +348,7 @@ export interface State {
   pay: PayConfig;
   ui: UiPrefs;
   moods: Record<string, MoodEntry>;
+  reviews: Record<string, Review>; // dayKey -> review
   wellness: Record<string, Wellness>;
   pet: PetConfig;
   pomo: PomoState | null;

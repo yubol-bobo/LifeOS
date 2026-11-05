@@ -9,10 +9,11 @@
 import { addDays, dayKey, parseDay } from '../lib/date';
 import { scheduledDailies } from './links';
 import { attrLevel, type Metrics } from './rules';
+import { bestReviewStreak, reviewFilled } from './review';
 import type { State } from './types';
 
 export type Tier = 'bronze' | 'silver' | 'gold' | 'mythic';
-export type AchCat = 'quest' | 'streak' | 'plan' | 'goal' | 'project' | 'research' | 'focus' | 'wealth' | 'health' | 'mood' | 'track' | 'level' | 'explore' | 'pet' | 'secret';
+export type AchCat = 'quest' | 'streak' | 'plan' | 'goal' | 'project' | 'research' | 'focus' | 'wealth' | 'health' | 'mood' | 'review' | 'track' | 'level' | 'explore' | 'pet' | 'secret';
 
 export const TIER_XP: Record<Tier, number> = { bronze: 50, silver: 120, gold: 300, mythic: 800 };
 export const TIER_POINTS: Record<Tier, number> = { bronze: 10, silver: 25, gold: 50, mythic: 100 };
@@ -29,6 +30,7 @@ export const CATS: { id: AchCat; zh: string; en: string; icon: string }[] = [
   { id: 'wealth', zh: '财富', en: 'Wealth', icon: 'coins' },
   { id: 'health', zh: '健康', en: 'Health', icon: 'droplets' },
   { id: 'mood', zh: '心情', en: 'Mood', icon: 'smile' },
+  { id: 'review', zh: '复盘', en: 'Reflection', icon: 'notebook' },
   { id: 'track', zh: '追踪', en: 'Tracking', icon: 'activity' },
   { id: 'level', zh: '成长', en: 'Growth', icon: 'trending-up' },
   { id: 'explore', zh: '探索', en: 'Explorer', icon: 'sparkles' },
@@ -76,8 +78,20 @@ export function achContext(s: State, m: Metrics) {
     const focus = s.sessions.filter((x) => dayKey(x.start) === d).reduce((a, x) => a + x.activeMs, 0);
     if (due.length && due.every((q) => done.has(q.id)) && s.moods?.[d] && (s.wellness?.[d]?.water ?? 0) >= goal && focus >= 3 * 3_600_000) allInDays++;
   }
+  const reviews = Object.values(s.reviews ?? {});
+  const questDone = (id?: string) => {
+    if (!id) return false;
+    const q = s.quests.find((x) => x.id === id);
+    return !!q?.doneAt;
+  };
   return {
     ...m,
+    reviews: reviews.filter((r) => reviewFilled(r) > 0).length,
+    unpaidHours: s.sessions.filter((x) => !x.rate).reduce((a, x) => a + x.activeMs, 0) / 3_600_000,
+    reviewStreak: bestReviewStreak(s),
+    deepReviews: reviews.filter((r) => reviewFilled(r) >= 3).length,
+    aiSummaries: reviews.filter((r) => (r.ai ?? '').trim()).length,
+    tomorrowDone: reviews.filter((r) => questDone(r.tomorrowQuest)).length,
     hardDone,
     maxQuestsDay: maxDay,
     weekPlans: plansDone('week'),
@@ -195,6 +209,8 @@ export const SERIES: SeriesDef[] = [
   S('i10', 'research', 'library', ['i10', 'i10-index 达到 {n}'], ['i10', 'Reach an i10-index of {n}'], (c) => c.i10, [st(5, 'silver'), st(20, 'gold')]),
 
   /* ---- focus ---- */
+  S('effort', 'focus', 'dumbbell', ['不为钱的努力', '不计薪的专注累计 {n} 小时'], ['For the Love of It', 'Log {n} hours of unpaid effort'], (c) => c.unpaidHours, [st(10, 'bronze'), st(50, 'silver'), st(200, 'gold'), st(1000, 'mythic')], { title: true }),
+  S('countdown', 'focus', 'hourglass', ['说到做到', '完成 {n} 次专注倒计时'], ['On the Clock', 'Finish {n} focus countdowns'], (c) => c.stat('focusTargets'), [st(1, 'bronze'), st(10, 'silver'), st(50, 'gold'), st(200, 'mythic')]),
   S('focus', 'focus', 'timer', ['专注', '累计专注 {n} 小时'], ['Focus', 'Focus for {n} hours'], (c) => c.focusHours, [
     st(1, 'bronze', undefined, '第一个小时', 'First Hour'),
     st(10, 'bronze', 'focus-10', '专注入门', 'Warming Up'),
@@ -221,6 +237,18 @@ export const SERIES: SeriesDef[] = [
   S('bedtime', 'health', 'moon', ['早点睡', '听宠物的话按时睡觉 {n} 次'], ['Lights Out', 'Go to bed on time {n} times'], (c) => c.stat('bedtimeOk'), [st(1, 'bronze'), st(7, 'silver'), st(30, 'gold')]),
 
   /* ---- mood ---- */
+  /* ---- reflection ---- */
+  S('reviews', 'review', 'notebook', ['复盘', '写下 {n} 天的每日复盘'], ['Reflection', 'Write {n} daily reviews'], (c) => c.reviews, [
+    st(1, 'bronze', undefined, '第一页', 'First Page'),
+    st(7, 'bronze', undefined, '一周回望', 'A Week in Words'),
+    st(30, 'silver', undefined, '月度日记', 'Monthly Diarist'),
+    st(100, 'gold', undefined, '百日自省', 'Hundred Days'),
+    st(365, 'mythic', undefined, '自省者', 'The Reflective'),
+  ], { title: true }),
+  S('reviewstreak', 'review', 'flame', ['复盘连胜', '连续 {n} 天复盘'], ['Reflection Streak', 'Review {n} days in a row'], (c) => c.reviewStreak, [st(3, 'bronze'), st(7, 'silver'), st(30, 'gold'), st(100, 'mythic')]),
+  S('deepreview', 'review', 'telescope', ['深度复盘', '{n} 次写满三个以上的问题'], ['Deep Dive', 'Answer 3+ prompts on {n} days'], (c) => c.deepReviews, [st(5, 'bronze'), st(25, 'silver'), st(100, 'gold')]),
+  S('tomorrow', 'review', 'target', ['言出必行', '{n} 次完成了复盘里定下的「明天最重要的事」'], ['Follow-Through', "Finish tomorrow's one thing {n} times"], (c) => c.tomorrowDone, [st(1, 'bronze'), st(10, 'silver'), st(50, 'gold')]),
+  S('aisummary', 'review', 'sparkles', ['宠物秘书', '保存 {n} 篇宠物写的今日总结'], ['Pet Secretary', 'Save {n} summaries from your pet'], (c) => c.aiSummaries, [st(1, 'bronze'), st(30, 'silver'), st(100, 'gold')]),
   S('mooddays', 'mood', 'smile', ['觉察', '记录 {n} 天心情'], ['Self-Aware', 'Log your mood on {n} days'], (c) => c.moodDays, [st(1, 'bronze'), st(7, 'bronze'), st(30, 'silver', 'mood-30', '情绪觉察', 'Self-Aware'), st(100, 'gold'), st(365, 'mythic')]),
   S('greatdays', 'mood', 'sun', ['好日子', '{n} 个「超棒」的日子'], ['Great Days', '{n} great days'], (c) => c.moodGreat, [st(10, 'silver'), st(50, 'gold')]),
   S('journal', 'mood', 'notebook', ['日记', '给 {n} 天心情写下一句话'], ['Journal', 'Write a line on {n} days'], (c) => c.moodNotes, [st(10, 'bronze'), st(50, 'silver')]),

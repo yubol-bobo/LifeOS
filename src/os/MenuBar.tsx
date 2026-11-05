@@ -8,6 +8,7 @@ import { appById, type AppId } from './apps';
 import { useClock, useLiveSession } from './live';
 import { syncNow, useSyncStatus } from '../sync/engine';
 import { open } from './router';
+import { clock } from '../apps/Earn';
 import { fullscreenSupported, setLayout, toggleFullscreen, toggleLayout, useFullscreen, useLayout } from './display';
 
 export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: () => void; dark: boolean }) {
@@ -89,7 +90,7 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
         {live && (
           <button className={`mb-live ${live.paused ? 'is-paused' : ''}`} onClick={() => open('earn')} title={L('正在计时', 'Focus running')}>
             <i className="pulse" />
-            <span className="num">{money(live.earned, currency)}</span>
+            <span className="num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : live.paid ? money(live.earned, currency) : `🌱 ${clock(live.ms)}`}</span>
           </button>
         )}
         <span className="mb-item" title={L('连续天数', 'Streak')}>
