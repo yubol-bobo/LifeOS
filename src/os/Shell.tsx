@@ -26,6 +26,7 @@ import { Boot } from './Boot';
 import { Dock } from './Dock';
 import { useLiveSession } from './live';
 import { MenuBar } from './MenuBar';
+import { useFullscreen, useLayout } from './display';
 import { dismiss, useBursts, useNotices } from './notify';
 import { Onboarding } from './Onboarding';
 import { LevelUp } from './LevelUp';
@@ -97,6 +98,8 @@ export function Shell() {
     document.title = live ? `${live.paused ? '⏸' : '●'} ${money(live.earned, currency)} · LifeOS` : app === 'home' ? 'LifeOS' : `${name} · LifeOS`;
   }, [live?.earned, live?.paused, app, lang, currency]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const layout = useLayout();
+  const fullscreen = useFullscreen();
   if (!booted)
     return (
       <Boot
@@ -109,7 +112,7 @@ export function Shell() {
     );
 
   return (
-    <div className="os" data-wall={equipWall || undefined}>
+    <div className="os" data-wall={equipWall || undefined} data-layout={layout} data-fullscreen={fullscreen || undefined}>
       <style>{attrCss(DEFAULT_ATTRS) + attrCss(attributes)}</style>
       <Wallpaper />
       <MenuBar app={app} dark={dark} onSpotlight={() => (actions.bump('spotlight'), setSpot(true))} />

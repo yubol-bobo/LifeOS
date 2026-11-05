@@ -8,6 +8,7 @@ import { appById, type AppId } from './apps';
 import { useClock, useLiveSession } from './live';
 import { syncNow, useSyncStatus } from '../sync/engine';
 import { open } from './router';
+import { fullscreenSupported, setLayout, toggleFullscreen, toggleLayout, useFullscreen, useLayout } from './display';
 
 export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: () => void; dark: boolean }) {
   const L = useL();
@@ -20,6 +21,10 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
   const petOn = useStore((s) => s.pet.enabled);
   const pomo = useStore((s) => s.pomo);
   const [menu, setMenu] = useState(false);
+  const [view, setView] = useState(false);
+  const layout = useLayout();
+  const fs = useFullscreen();
+  const canFs = fullscreenSupported();
 
   const time = now.toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' });
   const date = now.toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -33,9 +38,30 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
         <strong className="mb-app">{lang === 'zh' ? def.zh : def.en}</strong>
         <nav className="mb-menus">
           <button onClick={onSpotlight}>{L('前往', 'Go')}</button>
-          <button onClick={() => actions.profile({ theme: dark ? 'light' : 'dark' })}>{L('外观', 'View')}</button>
+          <button onClick={() => setView((v) => !v)} aria-expanded={view} className={view ? 'is-on' : ''}>
+            {L('外观', 'View')}
+          </button>
           <button onClick={() => open('settings')}>{L('系统', 'System')}</button>
         </nav>
+        {view && (
+          <div className="mb-dropdown mb-dropdown-view" onMouseLeave={() => setView(false)}>
+            <button className={layout === 'portrait' ? 'is-check' : ''} onClick={() => (setView(false), setLayout('portrait'))}>
+              <Icon name="layout-tall" size={15} /> {L('竖版 · 滚动浏览', 'Portrait · scrolling')}
+            </button>
+            <button className={layout === 'landscape' ? 'is-check' : ''} onClick={() => (setView(false), setLayout('landscape'))}>
+              <Icon name="layout-wide" size={15} /> {L('横版 · 铺满屏幕的仪表盘', 'Landscape · full-screen dashboard')}
+            </button>
+            <hr />
+            {canFs && (
+              <button onClick={() => (setView(false), void toggleFullscreen())}>
+                <Icon name={fs ? 'fullscreen-exit' : 'fullscreen'} size={15} /> {fs ? L('退出全屏', 'Exit full screen') : L('进入全屏', 'Enter full screen')}
+              </button>
+            )}
+            <button onClick={() => (setView(false), actions.profile({ theme: dark ? 'light' : 'dark' }))}>
+              <Icon name={dark ? 'sun' : 'moon'} size={15} /> {dark ? L('切换到明亮', 'Light mode') : L('切换到暗夜', 'Dark mode')}
+            </button>
+          </div>
+        )}
         {menu && (
           <div className="mb-dropdown" onMouseLeave={() => setMenu(false)}>
             <button onClick={() => (setMenu(false), open('settings'))}>
@@ -98,10 +124,28 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
         <button className="mb-icon" onClick={onSpotlight} aria-label={L('搜索', 'Search')}>
           <Icon name="search" size={15} />
         </button>
+        <button
+          className={`mb-icon mb-layout ${layout === 'landscape' ? 'is-on' : ''}`}
+          onClick={toggleLayout}
+          aria-label={layout === 'landscape' ? L('切换到竖版', 'Switch to portrait') : L('切换到横版仪表盘', 'Switch to landscape dashboard')}
+          title={layout === 'landscape' ? L('切换到竖版', 'Switch to portrait') : L('切换到横版仪表盘', 'Switch to landscape dashboard')}
+        >
+          <Icon name={layout === 'landscape' ? 'layout-tall' : 'layout-wide'} size={15} />
+        </button>
         <span className="mb-clock">
           <span className="mb-date">{date}</span>
           <span className="num">{time}</span>
         </span>
+        {canFs && (
+          <button
+            className={`mb-icon mb-fs ${fs ? 'is-on' : ''}`}
+            onClick={() => void toggleFullscreen()}
+            aria-label={fs ? L('退出全屏', 'Exit full screen') : L('全屏', 'Full screen')}
+            title={fs ? L('退出全屏 (Esc)', 'Exit full screen (Esc)') : L('全屏', 'Full screen')}
+          >
+            <Icon name={fs ? 'fullscreen-exit' : 'fullscreen'} size={15} />
+          </button>
+        )}
       </div>
     </header>
   );
