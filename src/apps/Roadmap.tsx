@@ -1,3 +1,4 @@
+import { LifeSettingsModal } from './LifeSettings';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { dayKey, daysBetween, lifeProgress, parseDay } from '../lib/date';
 import { uid } from '../lib/id';
@@ -16,6 +17,7 @@ import { useMetrics } from '../store/hooks';
 import type { KeyResult, KrKind, KrMetric } from '../store/types';
 
 export function Roadmap() {
+  const [lifeOpen, setLifeOpen] = useState(false);
   const L = useL();
   const lang = useLang();
   const s = useStore((x) => x);
@@ -71,9 +73,18 @@ export function Roadmap() {
         </Card>
 
         <div className="stack">
-          <Card title={L('人生周格', 'Life in weeks')} icon="grid">
+          <Card
+            title={L('人生周格', 'Life in weeks')}
+            icon="grid"
+            action={
+              <Button size="sm" variant="ghost" icon="pencil" onClick={() => setLifeOpen(true)}>
+                {L('出生与寿命', 'Birth & lifespan')}
+              </Button>
+            }
+          >
             <p className="muted small">{L(`每一格是一周，每一行是一年。共 ${s.profile.lifeExpectancy} 行。彩色圆点是里程碑。`, `Each cell is a week, each row a year — ${s.profile.lifeExpectancy} rows. Colored dots are milestones.`)}</p>
             <LifeWeeks />
+            <LifeSettingsModal open={lifeOpen} onClose={() => setLifeOpen(false)} />
           </Card>
           <Card title={L('已抵达', 'Reached')} icon="mountain">
             {past.length === 0 ? (

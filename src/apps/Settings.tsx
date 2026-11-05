@@ -1,3 +1,4 @@
+import { ExpectancyInput } from './LifeSettings';
 import { AiSettings } from './AiSettings';
 import { setLayout, setWindowPrefs, useLayout, useWindowPrefs } from '../os/display';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
@@ -120,7 +121,7 @@ function General() {
                 <input className="input" type="date" value={p.birthDate} onChange={(e) => e.target.value && actions.profile({ birthDate: e.target.value })} />
               </Field>
               <Field label={L('预期寿命（年）', 'Life expectancy (years)')}>
-                <input className="input" type="number" min={30} max={120} value={p.lifeExpectancy} onChange={(e) => actions.profile({ lifeExpectancy: Math.max(30, Math.min(120, +e.target.value || 85)) })} />
+                <ExpectancyInput />
               </Field>
             </div>
           </div>
