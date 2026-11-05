@@ -11,6 +11,7 @@ import type { MoodEntry, PetKind } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { MoodFace } from '../ui/MoodFace';
 import { chime, sysNotify } from './sound';
+import { BREAK_IDLE_MIN, MIN_SIT_STRETCH_FOR_AUTO_BREAK, nightKey, pastBedtime, waterPlan } from './health';
 import { PetAvatar, type PetMood } from './sprites';
 
 /* =====================================================================
@@ -701,16 +702,36 @@ export function PetLayer({ app }: { app: AppId }) {
 
   /* ---------------- reminders, pomodoro, check-ins ---------------- */
   useEffect(() => {
+    // "Sitting" = you're at the computer (input in the last 5 min) or a focus timer is running.
     let sitStart = Date.now();
     let lastActive = Date.now();
+    let eyeAt = Date.now();
+    let lastDrank = -1;
     let chatterAt = Date.now() + 90_000;
+    if (!ls.get('waterAt')) ls.set('waterAt', Date.now() - (cfg.current.waterMin - 2) * 60_000); // first check ~2 min after opening
     const tick = () => {
       const now = Date.now();
       const s = getState();
       const c = cfg.current;
-      const active = now - pointer.current.t < 5 * 60_000 || (!!s.active && !s.active.pausedAt);
-      if (!active && now - lastActive > 5 * 60_000) sitStart = now; // a real break happened
+      const L = Lr.current;
+      const timerOn = !!s.active && !s.active.pausedAt;
+      const inputRecent = now - pointer.current.t < BREAK_IDLE_MIN * 60_000;
+      const active = inputRecent || timerOn;
+      // Back after stepping away ≥ 5 min? That was a real break — log it automatically.
+      if (active && now - lastActive > BREAK_IDLE_MIN * 60_000) {
+        const sat = (lastActive - sitStart) / 60_000;
+        sitStart = now;
+        eyeAt = now;
+        if (sat >= MIN_SIT_STRETCH_FOR_AUTO_BREAK) {
+          actions.logWellness('breaks');
+          if (!bubbleRef.current) say({ id: `back-${now}`, text: L('欢迎回来～刚才的离开已经自动记作一次起身活动', 'Welcome back — that time away counted as a stand-up break') }, 5000);
+        }
+      }
       if (active) lastActive = now;
+      // Any drink logged anywhere (pet, Mood app, reminder) resets the water clock.
+      const drank = s.wellness[dayKey()]?.water ?? 0;
+      if (lastDrank >= 0 && drank > lastDrank) ls.set('waterAt', now);
+      lastDrank = drank;
 
       // Pomodoro phase changes
       const p = s.pomo;
@@ -750,36 +771,79 @@ export function PetLayer({ app }: { app: AppId }) {
       if (bubbleRef.current?.sticky || e.current.mode === 'drag') return;
       const inBreak = s.pomo?.phase === 'break';
 
-      // Water
-      if (c.waterMin && active && now - ls.get('water', now - 1) >= c.waterMin * 60_000) {
-        ls.set('water', now);
+      // Water — keep pace with the daily goal across waking hours
+      const plan = waterPlan(new Date(now), drank, c.waterGoal, c.cupMl, c.wakeHour, c.sleepHour);
+      if (c.waterMin && active && plan.inWindow && plan.behind > 0 && now - ls.get('waterAt') >= c.waterMin * 60_000) {
+        ls.set('waterAt', now);
         remind(
           {
             id: 'water',
-            text: Lr.current('喝口水吧～今天已经喝了 ' + (s.wellness[dayKey()]?.water ?? 0) + ' 杯', `Time for some water! ${s.wellness[dayKey()]?.water ?? 0} cups so far today`),
+            text: L(
+              `该喝水啦！今天 ${plan.drank}/${plan.goal} 杯（${plan.ml.drank}/${plan.ml.goal} ml），按节奏现在应该到 ${plan.expected} 杯了。`,
+              `Water time! ${plan.drank}/${plan.goal} cups today (${plan.ml.drank}/${plan.ml.goal} ml) — by now you'd be at ${plan.expected}.`,
+            ),
             actions: [
-              { label: Lr.current('喝了 +1', 'Done +1'), primary: true, icon: 'droplets', run: () => (actions.logWellness('water'), spawn('drop', e.current.x, e.current.y - S, 5, 40), release()) },
-              { label: Lr.current('等会儿', 'Later'), run: () => (ls.set('water', now - (c.waterMin - 10) * 60_000), setBubble(null), setMood('idle'), next()) },
+              { label: L('喝了一杯', 'Had a cup'), primary: true, icon: 'droplets', run: () => (actions.logWellness('water'), spawn('drop', e.current.x, e.current.y - S, 6, 40), release()) },
+              { label: L('15 分钟后', 'In 15 min'), run: () => (ls.set('waterAt', now - (c.waterMin - 15) * 60_000), setBubble(null), setMood('idle'), next()) },
             ],
           },
-          Lr.current('该喝水了', 'Time to drink water'),
+          L(`该喝水了 · ${plan.drank}/${plan.goal} 杯`, `Time to drink water · ${plan.drank}/${plan.goal} cups`),
         );
         return;
       }
       // Sitting too long
       if (c.sitMin && active && !inBreak && now - sitStart >= c.sitMin * 60_000 && now > ls.get('sitSnooze')) {
+        const sat = Math.round((now - sitStart) / 60_000);
         remind(
           {
             id: 'sit',
-            text: Lr.current(`已经连续坐了 ${Math.round((now - sitStart) / 60_000)} 分钟，起来活动一下！`, `You’ve been sitting ${Math.round((now - sitStart) / 60_000)} min — stand up and stretch!`),
+            text: L(`已经连续坐了 ${sat} 分钟。起来走动 2–3 分钟吧：伸展、倒杯水、看看窗外。`, `You've been sitting for ${sat} minutes. Get up and move for 2–3 minutes — stretch, refill water, look outside.`),
             actions: [
-              { label: Lr.current('我起来了', 'I’m up'), primary: true, icon: 'footprints', run: () => ((sitStart = Date.now()), actions.logWellness('breaks'), release()) },
-              { label: Lr.current('10 分钟后', 'In 10 min'), run: () => (ls.set('sitSnooze', Date.now() + 10 * 60_000), setBubble(null), setMood('idle'), next()) },
+              { label: L('我起来了', "I'm up"), primary: true, icon: 'footprints', run: () => ((sitStart = Date.now()), (eyeAt = Date.now()), actions.logWellness('breaks'), release()) },
+              { label: L('10 分钟后', 'In 10 min'), run: () => (ls.set('sitSnooze', Date.now() + 10 * 60_000), setBubble(null), setMood('idle'), next()) },
             ],
           },
-          Lr.current('久坐提醒', 'Time to stand up'),
+          L(`久坐 ${sat} 分钟了，起来活动一下`, `Sitting for ${sat} min — time to move`),
         );
         return;
+      }
+      // Bedtime
+      const night = nightKey(new Date(now));
+      if (c.bedtime && inputRecent && pastBedtime(new Date(now), c.bedtime) && localStorage.getItem('lifeos:pet:bedNight') !== night && now > ls.get('bedSnooze')) {
+        remind(
+          {
+            id: 'bed',
+            text: L('到睡觉时间啦。成年人每晚需要 7–9 小时睡眠，明天的你会感谢现在的你。', "It's bedtime. Adults need 7–9 hours of sleep — tomorrow-you will be grateful."),
+            actions: [
+              {
+                label: L('好，晚安', 'Okay, good night'),
+                primary: true,
+                icon: 'moon',
+                run: () => {
+                  try {
+                    localStorage.setItem('lifeos:pet:bedNight', night);
+                  } catch {
+                    /* ignore */
+                  }
+                  setBubble(null);
+                  setMood('sleep');
+                  e.current.mode = 'sleep';
+                  e.current.until = performance.now() + 60_000;
+                },
+              },
+              { label: L('再 15 分钟', '15 more min'), run: () => (ls.set('bedSnooze', Date.now() + 15 * 60_000), setBubble(null), setMood('idle'), next()) },
+            ],
+          },
+          L('该睡觉了', 'Time for bed'),
+          'sleep',
+        );
+        return;
+      }
+      // Eyes: 20-20-20 (gentle, no buttons)
+      if (c.eye20 && inputRecent && now - eyeAt >= 20 * 60_000 && !bubbleRef.current) {
+        eyeAt = now;
+        say({ id: `eye-${now}`, text: L('护眼时间：看向 6 米外的地方 20 秒～', 'Eye break: look at something ~6 m away for 20 seconds') }, 20_000);
+        if (c.sysNotify) sysNotify(`${c.name} · LifeOS`, L('护眼时间：看向远处 20 秒', 'Eye break: look far away for 20 s'));
       }
       // Asset check-in due (at most once per day)
       if (active && checkinDue(s) && ls.get('assetsAsked') < new Date().setHours(0, 0, 0, 0)) {

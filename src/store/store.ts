@@ -74,7 +74,7 @@ export function defaultState(): State {
     ui: { dock: [...DEFAULT_DOCK], hidden: [], widgets: [] },
     moods: {},
     wellness: {},
-    pet: { enabled: true, kind: 'mochi', name: zh ? '团子' : 'Mochi', waterMin: 60, sitMin: 50, pomoWork: 25, pomoBreak: 5, sound: true, sysNotify: false, roam: 'lively' },
+    pet: { enabled: true, kind: 'mochi', name: zh ? '团子' : 'Mochi', waterMin: 45, waterGoal: 8, cupMl: 250, wakeHour: 8, sleepHour: 23, sitMin: 45, eye20: false, bedtime: 23 * 60 + 30, pomoWork: 25, pomoBreak: 5, sound: true, sysNotify: false, roam: 'lively' },
     pomo: null,
     accounts: [],
     snapshots: [],

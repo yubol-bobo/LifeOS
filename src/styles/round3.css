@@ -1082,3 +1082,35 @@
     transform: rotate(360deg);
   }
 }
+
+.health-note {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  background: color-mix(in oklab, var(--p-teal) 10%, var(--surface-2));
+}
+
+.health-note svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--p-teal);
+}
+
+.goal-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.goal-edit .num {
+  margin-right: 6px;
+}
+
+.goal-edit .btn-sm.btn-icon {
+  width: 26px;
+  height: 26px;
+}

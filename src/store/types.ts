@@ -53,8 +53,14 @@ export interface PetConfig {
   enabled: boolean;
   kind: PetKind;
   name: string;
-  waterMin: number; // 0 = off
+  waterMin: number; // minimum minutes between water reminders; 0 = water reminders off
+  waterGoal: number; // cups per day
+  cupMl: number;
+  wakeHour: number;
+  sleepHour: number;
   sitMin: number; // 0 = off
+  eye20: boolean; // 20-20-20 eye breaks
+  bedtime: number; // minutes after midnight; 0 = off
   pomoWork: number;
   pomoBreak: number;
   sound: boolean;

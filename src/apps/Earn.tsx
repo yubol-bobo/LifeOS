@@ -229,8 +229,12 @@ export function Earn() {
           <div className="goal">
             <div className="goal-top">
               <span>{L('今日专注目标', "Today's focus goal")}</span>
-              <span className="num">
-                {(todayMs / 3_600_000).toFixed(1)} / {(goalMs / 3_600_000).toFixed(1)} h
+              <span className="goal-edit">
+                <span className="num">
+                  {(todayMs / 3_600_000).toFixed(1)} / {(goalMs / 3_600_000).toFixed(1)} h
+                </span>
+                <Button size="sm" variant="ghost" icon="minus" title={L('目标减少 30 分钟', 'Goal −30 min')} disabled={profile.focusGoalMin <= 30} onClick={() => actions.profile({ focusGoalMin: Math.max(30, profile.focusGoalMin - 30) })} />
+                <Button size="sm" variant="ghost" icon="plus" title={L('目标增加 30 分钟', 'Goal +30 min')} disabled={profile.focusGoalMin >= 16 * 60} onClick={() => actions.profile({ focusGoalMin: Math.min(16 * 60, profile.focusGoalMin + 30) })} />
               </span>
             </div>
             <Bar value={todayMs / goalMs} tone="wealth" height={12} />
