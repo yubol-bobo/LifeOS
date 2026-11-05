@@ -1,0 +1,316 @@
+import { useMemo, type ReactNode } from 'react';
+import { addDays, dayKey, daysBetween, lastNDays, lifeProgress } from '../lib/date';
+import { money, num } from '../lib/format';
+import { useL, useLang } from '../lib/i18n';
+import { open } from '../os/router';
+import { useLiveSession } from '../os/live';
+import Planet from '../scene/Planet';
+import { ATTR_META, useMetrics } from '../store/hooks';
+import { attrLevel, levelTitle, QUEST_XP } from '../store/rules';
+import { actions, useStore } from '../store/store';
+import { ATTRS } from '../store/types';
+import { Heatmap, Radar, Sparkline } from '../ui/charts';
+import { Icon } from '../ui/Icon';
+import { Bar, Button, CheckBubble, Chip, Ring } from '../ui/kit';
+import { Odometer } from '../ui/Odometer';
+
+export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
+  const L = useL();
+  const lang = useLang();
+  const s = useStore((x) => x);
+  const m = useMetrics();
+  const live = useLiveSession(200);
+  const today = dayKey();
+  const lp = lifeProgress(s.profile.birthDate, s.profile.lifeExpectancy);
+  const hour = new Date().getHours();
+  const hello =
+    hour < 5 ? L('夜深了', 'Burning the midnight oil') : hour < 12 ? L('早上好', 'Good morning') : hour < 18 ? L('下午好', 'Good afternoon') : L('晚上好', 'Good evening');
+
+  const doneToday = new Set(s.completions[today] ?? []);
+  const quests = s.quests.filter((q) => !q.archived && (q.kind === 'daily' || !q.doneAt || q.doneAt > Date.now() - 86_400_000));
+  const dailies = s.quests.filter((q) => q.kind === 'daily' && !q.archived);
+  const dailyDone = dailies.filter((q) => doneToday.has(q.id)).length;
+
+  const todaysFocus = s.sessions.filter((x) => dayKey(x.start) === today);
+  const todayMs = todaysFocus.reduce((a, x) => a + x.activeMs, 0) + (live?.ms ?? 0);
+  const todayEarned = todaysFocus.reduce((a, x) => a + x.earned, 0) + (live?.earned ?? 0);
+  const weekDays = lastNDays(7);
+  const weekEarn = weekDays.map((d) => s.sessions.filter((x) => dayKey(x.start) === d).reduce((a, x) => a + x.earned, 0) + (d === today ? (live?.earned ?? 0) : 0));
+
+  const next = s.milestones
+    .filter((x) => x.status !== 'done' && x.targetDate)
+    .sort((a, b) => a.targetDate!.localeCompare(b.targetDate!))[0];
+
+  const days = useMemo(() => lastNDays(140), [today]); // eslint-disable-line react-hooks/exhaustive-deps
+  const xpByDay = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const e of s.events) if (e.xp > 0) map[dayKey(e.ts)] = (map[dayKey(e.ts)] ?? 0) + e.xp;
+    return map;
+  }, [s.events]);
+  const maxDay = Math.max(60, ...Object.values(xpByDay));
+  const citeSpark = s.citationLog.slice(-12).map((x) => x.total);
+  const lastWeekCites = (() => {
+    const cut = addDays(today, -30);
+    const before = [...s.citationLog].reverse().find((x) => x.date <= cut);
+    return before ? m.totalCitations - before.total : 0;
+  })();
+
+  return (
+    <div className={`desktop ${hidden ? 'is-hidden' : ''}`} aria-hidden={hidden}>
+      {/* ---------- hero / planet ---------- */}
+      <section className="widget w-hero">
+        <div className="hero-text">
+          <p className="eyebrow">{new Date().toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+          <h1>
+            {hello}
+            {s.profile.name ? (lang === 'zh' ? `，${s.profile.name}` : `, ${s.profile.name}`) : ''}
+          </h1>
+          <p className="hero-sub">
+            {dailies.length === 0
+              ? L('添加几个每日任务，开始养成你的星球。', 'Add a few daily quests to start growing your planet.')
+              : dailyDone === dailies.length
+                ? L('今日任务全部完成，星球在发光。', 'Every daily quest done — your planet is glowing.')
+                : L(`今天还有 ${dailies.length - dailyDone} 个每日任务等你。`, `${dailies.length - dailyDone} daily quests left today.`)}
+          </p>
+        </div>
+        <div className="hero-planet">
+          <Planet
+            trees={Math.min(90, 4 + m.level.level * 2 + Math.floor(m.questsDone / 15))}
+            flags={m.milestonesDone}
+            streak={m.streak.current}
+            dark={dark}
+            still={s.profile.reduceMotion || hidden}
+          />
+          <span className="planet-hint">{L('拖动旋转 · 树木随等级生长，旗帜是你的里程碑', 'Drag to spin · trees grow with level, flags are milestones')}</span>
+        </div>
+        <div className="hero-level">
+          <Ring value={m.level.progress} size={78} stroke={8}>
+            <span className="ring-num num">{m.level.level}</span>
+            <span className="ring-cap">LV</span>
+          </Ring>
+          <div className="hero-level-text">
+            <strong>{levelTitle(m.level.level, lang)}</strong>
+            <span className="num">
+              {num(m.level.into)} / {num(m.level.span)} XP
+            </span>
+            <div className="hero-pills">
+              <Chip icon="flame" tone="accent">
+                {L(`${m.streak.current} 天连胜`, `${m.streak.current}-day streak`)}
+              </Chip>
+              <Chip tone="gold">
+                <span className="coin coin-sm" /> {m.coins.toLocaleString()}
+              </Chip>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------- today's quests ---------- */}
+      <section className="widget w-quests">
+        <WidgetHead icon="list-checks" title={L('今日任务', "Today's quests")} onOpen={() => open('quests')}>
+          <span className="num muted">
+            {dailyDone}/{dailies.length}
+          </span>
+        </WidgetHead>
+        <Bar value={dailies.length ? dailyDone / dailies.length : 0} height={8} label="daily progress" />
+        <ul className="mini-quests">
+          {quests.slice(0, 7).map((q) => {
+            const done = q.kind === 'daily' ? doneToday.has(q.id) : !!q.doneAt;
+            return (
+              <li key={q.id} className={done ? 'is-done' : ''}>
+                <CheckBubble checked={done} onChange={() => actions.toggleQuest(q.id)} tone={q.attr} label={q.title} />
+                <span className="mq-title">{q.title}</span>
+                <span className="mq-xp num">+{QUEST_XP[q.difficulty]}</span>
+              </li>
+            );
+          })}
+          {quests.length === 0 && <li className="muted">{L('还没有任务', 'No quests yet')}</li>}
+        </ul>
+      </section>
+
+      {/* ---------- life progress ---------- */}
+      <section className="widget w-life">
+        <WidgetHead icon="hourglass" title={L('人生进度', 'Life progress')} onOpen={() => open('roadmap')} />
+        <div className="life-rows">
+          {[
+            [L('今天', 'Today'), lp.day, 'accent'],
+            [L('本周', 'This week'), lp.week, 'mind'],
+            [L('本月', 'This month'), lp.month, 'wealth'],
+            [new Date().getFullYear().toString(), lp.year, 'craft'],
+            [L('人生', 'Life'), lp.life, 'spirit'],
+          ].map(([label, v, tone]) => (
+            <div className="life-row" key={label as string}>
+              <span className="life-label">{label as string}</span>
+              <Bar value={v as number} tone={tone as 'accent'} height={10} label={label as string} />
+              <span className="life-pct num">{((v as number) * 100).toFixed(label === L('人生', 'Life') ? 1 : 0)}%</span>
+            </div>
+          ))}
+        </div>
+        <p className="life-foot">
+          {L(`${lp.age.toFixed(1)} 岁 · 已度过 ${num(lp.weeksLived)} 周 · 今年还剩 ${lp.daysLeftYear} 天`, `Age ${lp.age.toFixed(1)} · ${num(lp.weeksLived)} weeks lived · ${lp.daysLeftYear} days left this year`)}
+        </p>
+      </section>
+
+      {/* ---------- earn ---------- */}
+      <section className={`widget w-earn ${live ? 'is-live' : ''}`}>
+        <WidgetHead icon="timer" title={L('时薪计', 'Wage timer')} onOpen={() => open('earn')} />
+        <div className="earn-mini">
+          <Odometer value={money(todayEarned, s.profile.currency)} className="odo-lg" />
+          <span className="muted">
+            {L('今日收入', 'earned today')} · {(todayMs / 3_600_000).toFixed(1)}h / {(s.profile.focusGoalMin / 60).toFixed(1)}h
+          </span>
+          <Bar value={todayMs / (s.profile.focusGoalMin * 60_000)} tone="wealth" height={8} label="focus goal" />
+        </div>
+        <div className="earn-week">
+          <div>
+            <span className="muted small">{L('近 7 天', 'Last 7 days')}</span>
+            <strong className="num">{money(weekEarn.reduce((a, b) => a + b, 0), s.profile.currency, 0)}</strong>
+          </div>
+          <Sparkline values={weekEarn} tone="wealth" width={110} height={36} />
+        </div>
+        {live ? (
+          <div className="row-gap">
+            <Button variant="soft" icon={live.paused ? 'play' : 'pause'} onClick={actions.pauseFocus}>
+              {live.paused ? L('继续', 'Resume') : L('暂停', 'Pause')}
+            </Button>
+            <Button variant="primary" icon="square" onClick={() => actions.stopFocus()}>
+              {L('结算', 'Cash out')}
+            </Button>
+          </div>
+        ) : (
+          <Button variant="primary" icon="play" onClick={() => actions.startFocus(s.profile.hourlyRate, 'craft')}>
+            {L(`开始专注 · ${money(s.profile.hourlyRate, s.profile.currency, 0)}/h`, `Start focus · ${money(s.profile.hourlyRate, s.profile.currency, 0)}/h`)}
+          </Button>
+        )}
+      </section>
+
+      {/* ---------- attributes ---------- */}
+      <section className="widget w-attrs">
+        <WidgetHead icon="sparkles" title={L('属性', 'Attributes')} onOpen={() => open('trophies')} />
+        <Radar
+          size={250}
+          axes={ATTRS.map((a) => ({
+            key: a,
+            label: lang === 'zh' ? ATTR_META[a].zh : ATTR_META[a].en,
+            value: m.attrXp[a],
+            display: `Lv.${attrLevel(m.attrXp[a])}`,
+          }))}
+        />
+      </section>
+
+      {/* ---------- research ---------- */}
+      <section className="widget w-research">
+        <WidgetHead icon="graduation" title={L('学术', 'Research')} onOpen={() => open('research')} />
+        <div className="research-mini">
+          <div>
+            <div className="big-num num">{num(m.totalCitations)}</div>
+            <div className="muted">{L('总引用', 'citations')}</div>
+          </div>
+          <Sparkline values={citeSpark} tone="spirit" width={120} height={44} />
+        </div>
+        <div className="kv-row">
+          <span>
+            h-index <b className="num">{m.hIndex}</b>
+          </span>
+          <span>
+            i10 <b className="num">{m.i10}</b>
+          </span>
+          <span>
+            {L('近30天', '30d')} <b className="num">+{lastWeekCites}</b>
+          </span>
+        </div>
+      </section>
+
+      {/* ---------- next milestone ---------- */}
+      <section className="widget w-next">
+        <WidgetHead icon="flag" title={L('下一个里程碑', 'Next milestone')} onOpen={() => open('roadmap')} />
+        {next ? (
+          <div className="next-ms">
+            <div className="countdown">
+              <span className="big-num num">{Math.max(0, daysBetween(today, next.targetDate!))}</span>
+              <span className="muted">{L('天', 'days')}</span>
+            </div>
+            <div className="next-body">
+              <strong>{next.title}</strong>
+              {next.steps.length > 0 && (
+                <>
+                  <Bar value={next.steps.filter((x) => x.done).length / next.steps.length} tone={next.attr} height={8} label="steps" />
+                  <span className="muted num">
+                    {next.steps.filter((x) => x.done).length}/{next.steps.length} {L('步', 'steps')}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <p className="muted">{L('设定一个带日期的里程碑，这里会开始倒计时。', 'Give a milestone a target date to start a countdown.')}</p>
+        )}
+      </section>
+
+      {/* ---------- activity ---------- */}
+      <section className="widget w-heat">
+        <WidgetHead icon="calendar" title={L('经验热力图', 'XP activity')}>
+          <span className="muted num">
+            {L('最佳连胜', 'Best streak')} {m.streak.best}
+          </span>
+        </WidgetHead>
+        <Heatmap
+          days={days}
+          weeks={20}
+          max={maxDay}
+          value={(d) => xpByDay[d] ?? 0}
+          label={(d, v) => (
+            <>
+              <span className="tip-k">{d}</span>
+              <span className="tip-v num">{v} XP</span>
+            </>
+          )}
+        />
+        <div className="heat-legend">
+          <span>{L('少', 'Less')}</span>
+          {[0, 1, 2, 3, 4].map((l) => (
+            <i key={l} className={`heat-cell l${l}`} />
+          ))}
+          <span>{L('多', 'More')}</span>
+        </div>
+      </section>
+
+      {/* ---------- recent log ---------- */}
+      <section className="widget w-log">
+        <WidgetHead icon="zap" title={L('最近获得', 'Recent gains')} />
+        <ul className="xp-log">
+          {[...s.events]
+            .sort((a, b) => b.ts - a.ts)
+            .slice(0, 6)
+            .map((e) => (
+              <li key={e.id}>
+                <span className="xp-dot" style={{ background: e.attr ? `var(--c-${e.attr})` : e.coins < 0 ? 'var(--gold)' : 'var(--accent)' }} />
+                <span className="xp-label">{e.label}</span>
+                <span className="xp-amt num">{e.xp > 0 ? `+${e.xp}` : `${e.coins}`}</span>
+              </li>
+            ))}
+          {s.events.length === 0 && <li className="muted">{L('完成任务后会出现在这里', 'Your gains will show up here')}</li>}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+function WidgetHead({ icon, title, onOpen, children }: { icon: string; title: string; onOpen?: () => void; children?: ReactNode }) {
+  return (
+    <header className="w-head">
+      <span className="w-ic">
+        <Icon name={icon} size={14} stroke={2.4} />
+      </span>
+      <h3>{title}</h3>
+      <div className="w-head-end">
+        {children}
+        {onOpen && (
+          <button className="w-open" onClick={onOpen} aria-label={`Open ${title}`}>
+            <Icon name="chevron-right" size={16} />
+          </button>
+        )}
+      </div>
+    </header>
+  );
+}

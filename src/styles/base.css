@@ -1,0 +1,1190 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.15;
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.num {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.muted {
+  color: var(--ink-3);
+}
+
+.small {
+  font-size: 12px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.row-gap {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.row-gap.wrap {
+  flex-wrap: wrap;
+}
+
+.error {
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+kbd {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line-2);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+
+/* ---------------------------------------------------------------------
+   Buttons — glossy keycaps with a physical bottom edge
+   --------------------------------------------------------------------- */
+
+.btn {
+  --edge: var(--key-edge);
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 13px;
+  font-weight: 700;
+  font-size: 13.5px;
+  white-space: nowrap;
+  background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+  color: var(--ink);
+  box-shadow:
+    0 1px 0 var(--hi) inset,
+    0 3px 0 var(--edge),
+    0 5px 12px -4px rgba(60, 40, 15, 0.22);
+  transition:
+    transform 0.12s var(--ease-out),
+    box-shadow 0.12s var(--ease-out),
+    filter 0.2s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:hover:not(:disabled) {
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+  box-shadow:
+    0 1px 0 var(--hi) inset,
+    0 4px 0 var(--edge),
+    0 8px 16px -6px rgba(60, 40, 15, 0.28);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 var(--hi) inset,
+    0 0 0 var(--edge),
+    0 2px 4px -2px rgba(60, 40, 15, 0.2);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+}
+
+.btn-sm {
+  height: 30px;
+  padding: 0 11px;
+  font-size: 12.5px;
+  border-radius: 10px;
+}
+
+.btn-lg {
+  height: 48px;
+  padding: 0 22px;
+  font-size: 15px;
+  border-radius: 16px;
+}
+
+.btn-icon {
+  padding: 0;
+  width: 38px;
+}
+
+.btn-icon.btn-sm {
+  width: 30px;
+}
+
+.btn-icon.btn-lg {
+  width: 48px;
+}
+
+.btn-primary {
+  --edge: var(--accent-deep);
+  color: #fff;
+  background: linear-gradient(180deg, var(--accent-2) 0%, var(--accent) 60%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.45) inset,
+    0 3px 0 var(--edge),
+    0 8px 18px -6px color-mix(in oklab, var(--accent) 70%, transparent);
+  text-shadow: 0 1px 0 rgba(150, 40, 0, 0.25);
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.45) inset,
+    0 4px 0 var(--edge),
+    0 12px 22px -8px color-mix(in oklab, var(--accent) 75%, transparent);
+}
+
+.btn-primary:active:not(:disabled) {
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.45) inset,
+    0 0 0 var(--edge),
+    0 2px 6px -2px color-mix(in oklab, var(--accent) 70%, transparent);
+}
+
+.btn-gold {
+  --edge: var(--gold-deep);
+  color: #3d2800;
+  background: linear-gradient(180deg, #ffd77a 0%, var(--gold) 70%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 3px 0 var(--edge),
+    0 8px 18px -6px color-mix(in oklab, var(--gold) 70%, transparent);
+}
+
+.btn-ghost {
+  background: transparent;
+  box-shadow: none;
+  color: var(--ink-2);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--ink) 6%, transparent);
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-ghost:active:not(:disabled) {
+  transform: scale(0.96);
+  box-shadow: none;
+}
+
+.btn-danger {
+  --edge: #a92b22;
+  color: #fff;
+  background: linear-gradient(180deg, #f2675c, var(--danger));
+}
+
+/* ---------------------------------------------------------------------
+   Cards
+   --------------------------------------------------------------------- */
+
+.card {
+  position: relative;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  padding: 18px;
+  box-shadow: var(--shadow-md);
+  min-width: 0;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  min-height: 30px;
+}
+
+.card-head h3 {
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.card-glyph {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  color: var(--tone, var(--accent));
+  background: color-mix(in oklab, var(--tone, var(--accent)) 14%, var(--surface));
+  box-shadow: inset 0 -2px 0 color-mix(in oklab, var(--tone, var(--accent)) 18%, transparent);
+}
+
+.card-action {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* stat tiles */
+.stat {
+  background: var(--surface);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  min-width: 0;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--ink-3);
+  text-transform: none;
+}
+
+.stat-value {
+  font-size: 26px;
+  font-weight: 700;
+  margin-top: 2px;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--ink);
+}
+
+.stat[style*='--tone'] .stat-value {
+  background: linear-gradient(180deg, var(--ink), color-mix(in oklab, var(--tone) 70%, var(--ink)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.stat-value small {
+  font-size: 13px;
+  color: var(--ink-3);
+  -webkit-text-fill-color: var(--ink-3);
+}
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 6px;
+}
+
+/* ---------------------------------------------------------------------
+   Chips
+   --------------------------------------------------------------------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  white-space: nowrap;
+}
+
+.chip svg {
+  color: var(--tone, var(--ink-3));
+}
+
+.chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--tone) 22%, transparent);
+}
+
+.chip-btn:hover {
+  background: var(--surface-3);
+}
+
+/* ---------------------------------------------------------------------
+   Progress bar — inset track with a glossy, rounded tube
+   --------------------------------------------------------------------- */
+
+.bar {
+  position: relative;
+  width: 100%;
+  border-radius: 999px;
+  background: var(--surface-3);
+  box-shadow: var(--shadow-inset);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--tone) 70%, white) 0%, var(--tone) 55%, color-mix(in oklab, var(--tone) 85%, black) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transition: width 0.6s var(--ease-out);
+  min-width: 0;
+}
+
+/* ring */
+.ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.ring svg {
+  position: absolute;
+  inset: 0;
+}
+
+.ring-track {
+  stroke: var(--surface-3);
+}
+
+.ring-fill {
+  stroke: var(--tone);
+  transition: stroke-dasharray 0.6s var(--ease-out);
+  filter: drop-shadow(0 2px 4px color-mix(in oklab, var(--tone) 45%, transparent));
+}
+
+.ring-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  gap: 3px;
+}
+
+.ring-num {
+  font-size: 26px;
+  font-weight: 750;
+}
+
+.ring-num.xl {
+  font-size: 52px;
+}
+
+.ring-cap {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--ink-3);
+}
+
+/* ---------------------------------------------------------------------
+   Check bubble — a squishy 3D button that pops
+   --------------------------------------------------------------------- */
+
+.check {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  color: transparent;
+  background: var(--surface-2);
+  box-shadow:
+    inset 0 0 0 1.5px var(--line-2),
+    inset 0 2px 3px rgba(60, 40, 15, 0.08);
+  transition:
+    transform 0.25s var(--ease-spring),
+    background 0.2s,
+    box-shadow 0.2s,
+    color 0.2s;
+}
+
+.check:hover {
+  box-shadow:
+    inset 0 0 0 2px color-mix(in oklab, var(--tone) 60%, transparent),
+    inset 0 2px 3px rgba(60, 40, 15, 0.08);
+}
+
+.check:active {
+  transform: scale(0.88);
+}
+
+.check.is-on {
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--tone) 72%, white), var(--tone));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 2px 0 color-mix(in oklab, var(--tone) 70%, black),
+    0 6px 12px -4px color-mix(in oklab, var(--tone) 60%, transparent);
+  animation: pop 0.38s var(--ease-spring);
+}
+
+.check svg {
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.18));
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.8);
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Segmented control
+   --------------------------------------------------------------------- */
+
+.seg {
+  display: inline-flex;
+  padding: 4px;
+  gap: 3px;
+  border-radius: 13px;
+  background: var(--surface-3);
+  box-shadow: var(--shadow-inset);
+  flex-wrap: wrap;
+}
+
+.seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    color 0.2s;
+}
+
+.seg-sm button {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.seg button:hover {
+  color: var(--ink);
+}
+
+.seg button.is-on {
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow:
+    0 1px 0 var(--hi) inset,
+    0 2px 6px -1px rgba(40, 25, 10, 0.18);
+}
+
+/* ---------------------------------------------------------------------
+   Inputs
+   --------------------------------------------------------------------- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.field-hint {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-inset), inset 0 0 0 1px var(--line);
+  transition: box-shadow 0.2s;
+}
+
+textarea.input {
+  height: auto;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+select.input {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-3) 50%), linear-gradient(135deg, var(--ink-3) 50%, transparent 50%);
+  background-position:
+    calc(100% - 17px) 17px,
+    calc(100% - 12px) 17px;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 30px;
+}
+
+.input:focus {
+  outline: none;
+  box-shadow: var(--shadow-inset), inset 0 0 0 2px var(--accent);
+}
+
+.input::placeholder {
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.input-group .input:last-child:is(select) {
+  width: 96px;
+  flex: none;
+}
+
+.input-addon {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.input-num {
+  width: 84px;
+  height: 32px;
+  text-align: right;
+}
+
+.attr-pick {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.attr-opt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  transition: all 0.2s var(--ease-out);
+}
+
+.attr-opt svg {
+  color: var(--tone);
+}
+
+.attr-opt.is-on {
+  color: var(--ink);
+  background: color-mix(in oklab, var(--tone) 14%, var(--surface));
+  box-shadow:
+    inset 0 0 0 2px var(--tone),
+    0 4px 10px -4px color-mix(in oklab, var(--tone) 60%, transparent);
+}
+
+.icon-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.icon-pick button {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink-2);
+}
+
+.icon-pick button.is-on {
+  color: var(--gold-deep);
+  box-shadow: inset 0 0 0 2px var(--gold);
+  background: color-mix(in oklab, var(--gold) 14%, var(--surface));
+}
+
+/* ---------------------------------------------------------------------
+   Modal
+   --------------------------------------------------------------------- */
+
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in oklab, var(--bg) 40%, rgba(20, 12, 4, 0.35));
+  backdrop-filter: blur(6px) saturate(1.1);
+  animation: fade 0.18s ease-out;
+}
+
+.modal {
+  width: 100%;
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  animation: rise 0.32s var(--ease-spring);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 18px 6px 22px;
+}
+
+.modal-head h2 {
+  font-size: 19px;
+}
+
+.modal-body {
+  padding: 10px 22px 18px;
+  overflow: auto;
+}
+
+.modal-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 18px 18px;
+  border-top: 1px solid var(--line);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Empty state
+   --------------------------------------------------------------------- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 26px 12px;
+  color: var(--ink-2);
+}
+
+.empty h4 {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.empty p {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.empty-art {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 6px;
+  border-radius: 18px;
+  color: var(--ink-3);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-inset);
+}
+
+/* ---------------------------------------------------------------------
+   App glyph — the 3D clay icon
+   --------------------------------------------------------------------- */
+
+.glyph {
+  position: relative;
+  display: inline-block;
+  flex: none;
+}
+
+.glyph-body {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 30%;
+  color: #fff;
+  background:
+    radial-gradient(120% 90% at 30% 0%, color-mix(in oklab, var(--hue) 45%, white) 0%, transparent 55%),
+    linear-gradient(170deg, color-mix(in oklab, var(--hue) 82%, white) 0%, var(--hue) 50%, color-mix(in oklab, var(--hue) 78%, black) 100%);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -3px 6px color-mix(in oklab, var(--hue) 60%, black),
+    0 2px 0 color-mix(in oklab, var(--hue) 55%, black),
+    0 8px 16px -6px color-mix(in oklab, var(--hue) 70%, transparent);
+  overflow: hidden;
+}
+
+.glyph-body::before {
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 5%;
+  height: 40%;
+  border-radius: 50% 50% 40% 40% / 70% 70% 30% 30%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+  pointer-events: none;
+}
+
+.glyph-body svg {
+  position: relative;
+  filter: drop-shadow(0 1.5px 0 color-mix(in oklab, var(--hue) 50%, black)) drop-shadow(0 3px 4px rgba(0, 0, 0, 0.18));
+}
+
+.glyph-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(180deg, #ff6d62, #e3392e);
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 3px 6px -2px rgba(200, 30, 20, 0.5);
+}
+
+/* ---------------------------------------------------------------------
+   Logo mark & coin
+   --------------------------------------------------------------------- */
+
+.logo-mark {
+  --s: 18px;
+  position: relative;
+  display: inline-block;
+  width: var(--s);
+  height: var(--s);
+  border-radius: 32%;
+  background:
+    radial-gradient(90% 70% at 30% 10%, rgba(255, 255, 255, 0.55), transparent 60%),
+    linear-gradient(170deg, #ff9466, #f0521f);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 2px 5px -1px rgba(220, 70, 20, 0.5);
+  flex: none;
+}
+
+.logo-mark::after {
+  content: '';
+  position: absolute;
+  inset: 26%;
+  border-radius: 50%;
+  border: calc(var(--s) * 0.09) solid #fff;
+  background: radial-gradient(circle, #fff 0 22%, transparent 24%);
+}
+
+.logo-lg {
+  --s: 56px;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.5),
+    0 4px 0 #c8441a,
+    0 18px 30px -10px rgba(220, 70, 20, 0.55);
+}
+
+.logo-xl {
+  --s: 92px;
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.5),
+    0 6px 0 #c8441a,
+    0 30px 50px -14px rgba(220, 70, 20, 0.6);
+}
+
+.coin {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, #fff3c4 0 18%, transparent 20%),
+    radial-gradient(circle, #ffd76a 0 52%, #e9a521 54% 70%, #ffcf5a 72%);
+  box-shadow:
+    0 1px 0 #b57a0c,
+    0 2px 4px -1px rgba(180, 120, 10, 0.5);
+  vertical-align: -2px;
+  flex: none;
+}
+
+.coin-sm {
+  width: 12px;
+  height: 12px;
+}
+
+/* ---------------------------------------------------------------------
+   Charts
+   --------------------------------------------------------------------- */
+
+.chart {
+  position: relative;
+  width: 100%;
+}
+
+.chart svg {
+  display: block;
+  overflow: visible;
+}
+
+.chart .grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.chart .tick {
+  fill: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: 600;
+  font-family: var(--font-body);
+}
+
+.chart .line,
+.spark .line {
+  fill: none;
+  stroke: var(--tone);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart .area,
+.spark .area {
+  fill: var(--tone);
+  opacity: 0.12;
+}
+
+.chart .dot,
+.spark .dot {
+  fill: var(--tone);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.chart .cross {
+  stroke: var(--line-2);
+  stroke-width: 1;
+}
+
+.chart .col {
+  fill: color-mix(in oklab, var(--tone) 55%, var(--surface));
+  transition: fill 0.15s;
+}
+
+.chart .col.is-last,
+.chart .col.is-hover {
+  fill: var(--tone);
+}
+
+.tip {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 120px;
+  padding: 7px 10px;
+  border-radius: 11px;
+  background: var(--ink);
+  color: var(--ink-inv);
+  font-size: 12px;
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+.tip-center {
+  transform: translate(-50%, -100%);
+  min-width: 0;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.tip-k {
+  opacity: 0.7;
+  font-weight: 600;
+}
+
+.tip-v {
+  font-weight: 750;
+  font-size: 14px;
+}
+
+.tip-center .tip-v {
+  font-size: 12px;
+}
+
+/* heatmap */
+.heat {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.heat-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.heat-cell {
+  display: block;
+  aspect-ratio: 1;
+  max-width: 18px;
+  width: 100%;
+  border-radius: 4px;
+  background: var(--surface-3);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+}
+
+.heat-cell.is-void {
+  background: transparent;
+  box-shadow: none;
+}
+
+.heat-cell.l1 {
+  background: color-mix(in oklab, var(--accent) 30%, var(--surface-3));
+}
+
+.heat-cell.l2 {
+  background: color-mix(in oklab, var(--accent) 55%, var(--surface-3));
+}
+
+.heat-cell.l3 {
+  background: color-mix(in oklab, var(--accent) 78%, var(--surface-3));
+}
+
+.heat-cell.l4 {
+  background: var(--accent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 2px 4px -1px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
+.heat-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.heat-legend .heat-cell {
+  width: 11px;
+  height: 11px;
+}
+
+/* radar */
+.radar {
+  display: block;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.radar-web {
+  fill: none;
+  stroke: var(--line-2);
+  stroke-width: 1;
+}
+
+.radar-shape {
+  fill: color-mix(in oklab, var(--accent) 16%, transparent);
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.radar-dot {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.radar-label {
+  font-size: 11.5px;
+  font-weight: 750;
+  fill: var(--ink);
+  font-family: var(--font-body);
+}
+
+.radar-val {
+  font-size: 10.5px;
+  font-weight: 650;
+  fill: var(--ink-3);
+  font-family: var(--font-display);
+}
+
+/* odometer */
+.odo {
+  display: inline-flex;
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.odo-digit {
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+  width: 0.62em;
+}
+
+.odo-strip {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.45s var(--ease-out);
+}
+
+.odo-strip span {
+  height: 1em;
+  text-align: center;
+}
+
+.odo-sym {
+  display: inline-block;
+  height: 1em;
+}
+
+.odo-lg {
+  font-size: 30px;
+}
+
+.odo-xl {
+  font-size: 40px;
+}
+
+/* reduced motion */
+:root[data-motion='reduce'] *,
+:root[data-motion='reduce'] *::before,
+:root[data-motion='reduce'] *::after {
+  animation-duration: 0.001ms !important;
+  transition-duration: 0.001ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -1,0 +1,131 @@
+/* =====================================================================
+   LifeOS design tokens
+   Clay-3D language: warm paper surfaces, soft dual shadows, glossy keys.
+   Light & dark are each tuned by hand — dark is not an inversion.
+   ===================================================================== */
+
+:root {
+  color-scheme: light;
+
+  --font-display: 'Bricolage Grotesque Variable', 'PingFang SC', 'HarmonyOS Sans SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-body: 'Manrope Variable', 'PingFang SC', 'HarmonyOS Sans SC', 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+
+  /* surfaces */
+  --bg: #eee8de;
+  --surface: #fbf8f3;
+  --surface-2: #f4efe7;
+  --surface-3: #e7dfd2;
+  --glass: rgba(251, 248, 243, 0.72);
+  --glass-strong: rgba(251, 248, 243, 0.86);
+  --line: rgba(64, 46, 22, 0.09);
+  --line-2: rgba(64, 46, 22, 0.16);
+
+  /* ink */
+  --ink: #221d17;
+  --ink-2: #5f564b;
+  --ink-3: #93897d;
+  --ink-inv: #fffaf3;
+
+  /* brand */
+  --accent: #ff6a3d;
+  --accent-2: #ff8f63;
+  --accent-deep: #d94c20;
+  --accent-soft: #ffe2d6;
+  --gold: #f2b33d;
+  --gold-deep: #c98a12;
+  --good: #1ba677;
+  --warn: #e09b12;
+  --danger: #e0473c;
+
+  /* attributes — validated categorical palette (fixed order) */
+  --c-mind: #3f7be0;
+  --c-body: #eb6834;
+  --c-wealth: #1ba677;
+  --c-craft: #e09b12;
+  --c-bond: #e2689a;
+  --c-spirit: #7a5ae6;
+
+  /* wallpaper */
+  --wall-a: #ffd6c2;
+  --wall-b: #cfe0ff;
+  --wall-c: #ffe9b5;
+  --wall-base: #efe7dc;
+
+  /* depth */
+  --hi: rgba(255, 255, 255, 0.95);
+  --shadow-sm: 0 1px 0 var(--hi) inset, 0 1px 2px rgba(84, 56, 22, 0.08), 0 2px 6px -2px rgba(84, 56, 22, 0.1);
+  --shadow-md: 0 1px 0 var(--hi) inset, 0 -1px 0 rgba(84, 56, 22, 0.05) inset, 0 2px 4px rgba(84, 56, 22, 0.05), 0 12px 28px -12px rgba(84, 56, 22, 0.24);
+  --shadow-lg: 0 1px 0 var(--hi) inset, 0 4px 10px rgba(84, 56, 22, 0.06), 0 30px 60px -24px rgba(84, 56, 22, 0.35);
+  --shadow-inset: inset 0 2px 4px rgba(84, 56, 22, 0.09), inset 0 -1px 0 var(--hi);
+  --key-edge: #e2d8c9;
+
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --menubar-h: 34px;
+  --dock-h: 86px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0f0e15;
+  --surface: #1d1c27;
+  --surface-2: #181721;
+  --surface-3: #2b2938;
+  --glass: rgba(29, 28, 39, 0.7);
+  --glass-strong: rgba(29, 28, 39, 0.88);
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.13);
+
+  --ink: #f4efe8;
+  --ink-2: #b9b1a6;
+  --ink-3: #807a88;
+  --ink-inv: #15141c;
+
+  --accent: #ff7a4d;
+  --accent-2: #ff9b73;
+  --accent-deep: #d9532a;
+  --accent-soft: #3b2420;
+  --gold: #f5bd4f;
+  --gold-deep: #b9800c;
+
+  --c-mind: #4a8df0;
+  --c-body: #e0612e;
+  --c-wealth: #1e9e72;
+  --c-craft: #b87c08;
+  --c-bond: #d9578a;
+  --c-spirit: #8c6cf2;
+
+  --wall-a: #3a1f3f;
+  --wall-b: #15265a;
+  --wall-c: #46241a;
+  --wall-base: #0e0d16;
+
+  --hi: rgba(255, 255, 255, 0.07);
+  --shadow-sm: 0 1px 0 var(--hi) inset, 0 2px 6px -2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 1px 0 var(--hi) inset, 0 2px 4px rgba(0, 0, 0, 0.25), 0 16px 34px -16px rgba(0, 0, 0, 0.75);
+  --shadow-lg: 0 1px 0 var(--hi) inset, 0 6px 14px rgba(0, 0, 0, 0.3), 0 36px 70px -24px rgba(0, 0, 0, 0.85);
+  --shadow-inset: inset 0 2px 5px rgba(0, 0, 0, 0.45), inset 0 -1px 0 var(--hi);
+  --key-edge: #0c0b12;
+}
+
+/* System dark when no explicit choice (before JS runs) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: #0f0e15;
+    --surface: #1d1c27;
+    --ink: #f4efe8;
+  }
+}
