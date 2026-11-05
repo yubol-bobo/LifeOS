@@ -11,6 +11,8 @@
 
 </div>
 
+> 🚀 **第一次使用？** 看 [**SETUP.md 上手指南**](SETUP.md)：开启 Pages、Google Scholar ID、SerpAPI Key 等所有需要配置的东西，一步一步写清楚了。
+
 ![LifeOS desktop — light](docs/desktop-light.jpg)
 
 | 暗夜模式 Dark | 时薪计 Earn |
