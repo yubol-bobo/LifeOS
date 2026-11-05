@@ -237,12 +237,18 @@ export function Heatmap({
   max,
   label,
   weeks = 20,
+  onPick,
+  selected,
+  className = '',
 }: {
   days: string[]; // chronological day keys, ending today
   value: (day: string) => number;
   max: number;
   label: (day: string, v: number) => ReactNode;
   weeks?: number;
+  onPick?: (day: string) => void;
+  selected?: string;
+  className?: string;
 }) {
   const [tip, setTip] = useState<{ x: number; y: number; body: ReactNode } | null>(null);
   const cols = useMemo(() => {
@@ -266,7 +272,7 @@ export function Heatmap({
     return out;
   }, [days, weeks]);
   return (
-    <div className="heat" onPointerLeave={() => setTip(null)}>
+    <div className={`heat ${onPick ? 'is-pickable' : ''} ${className}`} onPointerLeave={() => setTip(null)}>
       {cols.map((c, i) => (
         <div className="heat-col" key={i}>
           {c.map((d, j) => {
@@ -276,7 +282,8 @@ export function Heatmap({
             return (
               <span
                 key={j}
-                className={`heat-cell l${lvl}`}
+                className={`heat-cell l${lvl} ${selected === d ? 'is-sel' : ''}`}
+                onClick={onPick ? () => onPick(d) : undefined}
                 onPointerEnter={(e) => {
                   const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
                   const p = (e.currentTarget.parentElement!.parentElement as HTMLElement).getBoundingClientRect();

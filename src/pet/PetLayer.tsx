@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { dayKey } from '../lib/date';
+import { addDays, dayKey } from '../lib/date';
+import { openSummary } from '../ai/summary';
+import { hasReview } from '../store/review';
 import { useL } from '../lib/i18n';
 import type { AppId } from '../os/apps';
 import { onAppEvent } from '../os/notify';
@@ -99,6 +101,7 @@ export function PetLayer({ app }: { app: AppId }) {
   const [menu, setMenu] = useState(false);
   const [tag, setTag] = useState(false);
   const [spot, setSpot] = useState<{ x: number; y: number } | null>(null);
+  const [thinking, setThinking] = useState(false);
   const [, force] = useState(0);
 
   const layer = useRef<HTMLDivElement>(null);
@@ -682,6 +685,29 @@ export function PetLayer({ app }: { app: AppId }) {
     [], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  /* ---------------- thinking (writing the day summary) ---------------- */
+  useEffect(() => {
+    let iv = 0;
+    const f = (ev: Event) => {
+      const on = (ev as CustomEvent<{ on: boolean }>).detail.on;
+      setThinking(on);
+      window.clearInterval(iv);
+      if (on) {
+        const g = e.current;
+        g.mode = 'idle';
+        g.until = performance.now() + 60_000; // stay put while thinking
+        setMood('happy');
+        spawn('spark', g.x, g.y - S, 10, 60);
+        iv = window.setInterval(() => spawn('star', e.current.x, e.current.y - S, 2, 40), 700);
+      } else {
+        e.current.until = 0;
+        setMood('idle');
+      }
+    };
+    window.addEventListener('lifeos:pet-think', f);
+    return () => (window.removeEventListener('lifeos:pet-think', f), window.clearInterval(iv));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   /* ---------------- locate ---------------- */
   useEffect(() => {
     const locate = () => {
@@ -724,6 +750,12 @@ export function PetLayer({ app }: { app: AppId }) {
       const s = getState();
       const c = cfg.current;
       const L = Lr.current;
+      // Midnight: the pet writes up the day that just ended (works without AI too).
+      const midnight = new Date(now).setHours(0, 0, 0, 0);
+      if (c.nightSummary !== false && now - midnight < 15 * 60_000 && ls.get('nightSum') < midnight) {
+        ls.set('nightSum', now);
+        void openSummary(addDays(dayKey(now), -1), { auto: true });
+      }
       const timerOn = !!s.active && !s.active.pausedAt;
       const inputRecent = now - pointer.current.t < BREAK_IDLE_MIN * 60_000;
       const active = inputRecent || timerOn;
@@ -939,6 +971,42 @@ export function PetLayer({ app }: { app: AppId }) {
         remind({ id: 'mood', text: Lr.current('今天过得怎么样？点一下就好', 'How was today? Just tap one'), moods: true }, Lr.current('心情打卡', 'Mood check-in'), 'happy');
         return;
       }
+      // Missed midnight (app was closed)? Offer yesterday's summary once, in the morning.
+      const yday = addDays(dayKey(now), -1);
+      if (active && c.nightSummary !== false && hour >= 6 && hour < 13 && ls.get('nightSum') < midnight && !s.reviews?.[yday]?.ai && s.events.some((x) => dayKey(x.ts) === yday)) {
+        ls.set('nightSum', now);
+        remind(
+          {
+            id: 'yday-summary',
+            text: L(`早呀！昨天还没总结，要我帮你写一份吗？`, `Morning! Want me to write up yesterday for you?`),
+            actions: [
+              { label: L('好呀', 'Yes please'), primary: true, icon: 'sparkles', run: () => (void openSummary(yday, { auto: true }), release()) },
+              { label: L('不用了', 'No thanks'), run: () => (setBubble(null), setMood('idle'), next()) },
+            ],
+          },
+          L('昨天的总结', "Yesterday's summary"),
+          'happy',
+        );
+        return;
+      }
+      // Evening: a gentle, skippable nudge to review the day
+      if (active && c.reviewNudge !== false && (hour > 21 || (hour === 21 && new Date(now).getMinutes() >= 30)) && !hasReview(s, dayKey(now)) && ls.get('reviewAsked') < midnight) {
+        ls.set('reviewAsked', now);
+        remind(
+          {
+            id: 'review',
+            text: L('今天要不要花两分钟复盘一下？一句话也算～', 'Two minutes to look back on today? Even one line counts.'),
+            actions: [
+              { label: L('写两句', 'Write a line'), primary: true, icon: 'notebook', run: () => (open('review'), release()) },
+              { label: L('你帮我总结', 'You summarize'), icon: 'sparkles', run: () => (void openSummary(dayKey()), release()) },
+              { label: L('今天不了', 'Not today'), run: () => (setBubble(null), setMood('idle'), next()) },
+            ],
+          },
+          L('每日复盘', 'Daily review'),
+          'happy',
+        );
+        return;
+      }
       // Light chatter
       if (active && now > chatterAt && !bubbleRef.current && e.current.mode !== 'sleep') {
         chatterAt = now + rand(4, 8) * 60_000;
@@ -981,6 +1049,7 @@ export function PetLayer({ app }: { app: AppId }) {
       on: !!pomo,
       run: () => actions.setPomo(pomo ? null : { phase: 'work', startedAt: Date.now(), endsAt: Date.now() + pet.pomoWork * 60_000 }),
     },
+    { icon: 'sparkles', label: L('今日总结', 'Day summary'), run: () => void openSummary(dayKey()) },
     { icon: 'gamepad', label: L('一起玩', 'Play'), run: () => (actions.bump('petPlay'), (g.mode = 'idle'), (g.until = 0), setMood('happy'), (g.ball = null), window.setTimeout(() => ((g.mode = 'play'), (g.until = performance.now() + 8000), (g.ball = { x: g.x + 120, y: g.y - 120, vx: 200, vy: -150 }), force((n) => n + 1)), 50)) },
     { icon: 'moon', label: L('去睡觉', 'Nap'), run: () => ((g.mode = 'sleep'), (g.until = performance.now() + 30000), setMood('sleep')) },
     { icon: 'settings', label: L('设置', 'Settings'), run: () => (sessionStorage.setItem('lifeos:settings-tab', 'pet'), open('settings'), window.dispatchEvent(new Event('lifeos:settings-tab'))) },
@@ -990,7 +1059,7 @@ export function PetLayer({ app }: { app: AppId }) {
     <div className="pet-layer" ref={layer} aria-hidden={false}>
       {spot && <div className="pet-spotlight" style={{ '--sx': `${spot.x}px`, '--sy': `${spot.y}px` } as CSSProperties} />}
       {g.mode === 'play' && g.ball && <div className="pet-ball" ref={ballEl} />}
-      <div className={`pet pet-k-${kind} ${tag ? 'is-located' : ''}`} ref={root}>
+      <div className={`pet pet-k-${kind} ${tag ? 'is-located' : ''} ${thinking ? 'is-thinking' : ''}`} ref={root}>
         <div className="pet-shadow" ref={shadow} />
         {spot && <div className="pet-ripple" />}
         <div className="pet-wrap" ref={wrap}>

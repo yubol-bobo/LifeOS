@@ -26,6 +26,10 @@ import { titleName, unlockedAt } from '../store/progression';
 import { periodOf } from '../lib/period';
 import { planProgress } from '../store/plans';
 import { upcoming } from '../store/countdowns';
+import { ReviewHeatmap } from './Review';
+import { clock } from './Earn';
+import { hasReview, reviewStreak } from '../store/review';
+import { openSummary } from '../ai/summary';
 
 export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const L = useL();
@@ -55,6 +59,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const todaysFocus = s.sessions.filter((x) => dayKey(x.start) === today);
   const todayMs = todaysFocus.reduce((a, x) => a + x.activeMs, 0) + (live?.ms ?? 0);
   const todayEarned = todaysFocus.reduce((a, x) => a + x.earned, 0) + (live?.earned ?? 0);
+  const todayFreeMs = todaysFocus.filter((x) => !x.rate).reduce((a, x) => a + x.activeMs, 0) + (live && !live.paid ? live.ms : 0);
   const weekDays = lastNDays(7);
   const weekEarn = weekDays.map((d) => s.sessions.filter((x) => dayKey(x.start) === d).reduce((a, x) => a + x.earned, 0) + (d === today ? (live?.earned ?? 0) : 0));
 
@@ -192,11 +197,14 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       {/* ---------- earn ---------- */}
       {!hide.has('earn') && (
       <section className={`widget w-earn ${live ? 'is-live' : ''}`}>
-        <WidgetHead icon="timer" title={L('时薪计', 'Wage timer')} onOpen={() => open('earn')} />
+        <WidgetHead icon="timer" title={L('专注计时', 'Focus')} onOpen={() => open('earn')}>
+          {live && <span className="muted num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : clock(live.ms)}</span>}
+        </WidgetHead>
         <div className="earn-mini">
           <Odometer value={money(todayEarned, s.profile.currency)} className="odo-lg" />
           <span className="muted">
-            {L('今日收入', 'earned today')} · {(todayMs / 3_600_000).toFixed(1)}h / {(s.profile.focusGoalMin / 60).toFixed(1)}h
+            {L('今日收入', 'earned today')} · {L('专注', 'focus')} {(todayMs / 3_600_000).toFixed(1)}h / {(s.profile.focusGoalMin / 60).toFixed(1)}h
+            {todayFreeMs > 0 && ` · 🌱 ${(todayFreeMs / 3_600_000).toFixed(1)}h`}
           </span>
           <Bar value={todayMs / (s.profile.focusGoalMin * 60_000)} tone="wealth" height={8} label="focus goal" />
         </div>
@@ -213,13 +221,18 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
               {live.paused ? L('继续', 'Resume') : L('暂停', 'Pause')}
             </Button>
             <Button variant="primary" icon="square" onClick={() => actions.stopFocus()}>
-              {L('结算', 'Cash out')}
+              {live.paid ? L('结算', 'Cash out') : L('结束', 'Stop')}
             </Button>
           </div>
         ) : (
-          <Button variant="primary" icon="play" onClick={() => actions.startFocus(s.profile.hourlyRate, 'craft')}>
-            {L(`开始专注 · ${money(s.profile.hourlyRate, s.profile.currency, 0)}/h`, `Start focus · ${money(s.profile.hourlyRate, s.profile.currency, 0)}/h`)}
-          </Button>
+          <div className="row-gap">
+            <Button variant="primary" icon="play" onClick={() => actions.startFocus(s.profile.hourlyRate, 'craft')}>
+              {L(`开始工作 · ${money(s.profile.hourlyRate, s.profile.currency, 0)}/h`, `Start work · ${money(s.profile.hourlyRate, s.profile.currency, 0)}/h`)}
+            </Button>
+            <Button variant="soft" icon="sprout" onClick={() => (localStorage.setItem('lifeos:focus-mode', 'free'), open('earn'))}>
+              {L('不计薪', 'Unpaid')}
+            </Button>
+          </div>
         )}
       </section>
       )}
@@ -373,6 +386,29 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
               <small>{L('一二三四五六日'[(parseDay(d).getDay() + 6) % 7], 'MTWTFSS'[(parseDay(d).getDay() + 6) % 7])}</small>
             </span>
           ))}
+        </div>
+      </section>
+      )}
+
+      {!hide.has('journal') && (
+      <section className="widget w-journal">
+        <WidgetHead icon="notebook" title={L('每日复盘', 'Daily review')} onOpen={() => open('review')}>
+          <span className="muted num">{L(`连续 ${reviewStreak(s)} 天`, `${reviewStreak(s)}-day streak`)}</span>
+        </WidgetHead>
+        <ReviewHeatmap
+          weeks={12}
+          onPick={(d) => {
+            sessionStorage.setItem('lifeos:review-day', d);
+            open('review');
+          }}
+        />
+        <div className="journal-actions">
+          <Button size="sm" variant={hasReview(s, today) ? 'soft' : 'primary'} icon={hasReview(s, today) ? 'check' : 'notebook'} onClick={() => open('review')}>
+            {hasReview(s, today) ? L('已复盘 · 再看看', 'Reviewed · open') : L('写今天的复盘', 'Review today')}
+          </Button>
+          <Button size="sm" variant="soft" icon="sparkles" onClick={() => void openSummary(today)}>
+            {L('宠物总结', 'Pet summary')}
+          </Button>
         </div>
       </section>
       )}

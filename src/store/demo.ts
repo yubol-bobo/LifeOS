@@ -5,6 +5,9 @@ import { defaultState } from './store';
 import { defaultRates } from './assets';
 import { hourlyFrom } from './defaults';
 import { periodOf } from '../lib/period';
+import { bi, localizeState } from './builtin';
+import { ACHIEVEMENTS, achContext } from './achievements';
+import { metrics } from './rules';
 import type { Account, Milestone, Paper, Quest, State, XpEvent } from './types';
 
 /**
@@ -18,7 +21,7 @@ export function demoState(profile: Partial<State['profile']>): State {
   s.onboarded = true;
   s.demo = true;
   const zh = s.profile.lang === 'zh';
-  const T = (a: string, b: string) => (zh ? a : b);
+  const T = (a: string, b: string) => (bi(a, b), zh ? a : b);
   const today = dayKey();
   const events: XpEvent[] = [];
   const at = (day: string, h = 12) => new Date(day + 'T00:00:00').getTime() + h * 3_600_000;
@@ -131,7 +134,7 @@ export function demoState(profile: Partial<State['profile']>): State {
 
   /* ---- focus sessions ---- */
   const attrs: XpEvent['attr'][] = ['craft', 'mind', 'craft', 'wealth'];
-  const notes = [T('论文写作', 'Paper writing'), T('跑实验', 'Experiments'), T('读文献', 'Reading'), T('助教', 'TA hours')];
+  const notes = [T('论文写作', 'Paper writing'), T('跑实验', 'Experiments'), T('读文献', 'Literature'), T('助教工时', 'TA hours')];
   for (let i = 27; i >= 1; i--) {
     const d = addDays(today, -i);
     const n = 1 + Math.floor(r() * 3);
@@ -270,6 +273,41 @@ export function demoState(profile: Partial<State['profile']>): State {
   const lastMood = Object.keys(s.moods).sort().at(-1)!;
   s.moods[lastMood].note = T('跑完步写了两小时，状态很好。', 'Ran, then wrote for two hours. Felt great.');
 
+  /* ---- daily reviews: a habit that grew over the last six weeks ---- */
+  const wins = [
+    T('终于把实验跑通了', 'Finally got the experiment working'),
+    T('读完了那篇拖了一周的论文', 'Finished the paper I’d put off for a week'),
+    T('跑了 8 公里，配速比上周快', 'Ran 8 km, faster than last week'),
+    T('和导师聊得很顺', 'Great chat with my advisor'),
+    T('把邮箱清零了', 'Inbox zero'),
+    T('写完了引言的初稿', 'Drafted the introduction'),
+  ];
+  const lessons = [
+    T('早上先做最难的事，效率高很多', 'Hardest thing first works'),
+    T('下午三点后不要喝咖啡', 'No coffee after 3 pm'),
+    T('写不下去时换个地方就好', 'Stuck? Change rooms'),
+    T('番茄钟比硬撑有用', 'Pomodoros beat willpower'),
+  ];
+  const grates = [T('室友做的晚饭', 'Dinner my roommate made'), T('下午的阳光', 'Afternoon sun'), T('朋友的一条消息', 'A text from a friend'), T('图书馆的安静角落', 'A quiet library corner')];
+  for (let i = 42; i >= 1; i--) {
+    const d = addDays(today, -i);
+    if (r() > (i < 14 ? 0.82 : 0.5)) continue;
+    const rv: State['reviews'][string] = { updatedAt: at(d, 22), win: wins[Math.floor(r() * wins.length)] };
+    if (r() < 0.6) rv.lesson = lessons[Math.floor(r() * lessons.length)];
+    if (r() < 0.5) rv.grateful = grates[Math.floor(r() * grates.length)];
+    if (r() < 0.25) rv.tomorrow = T('先写 30 分钟再看手机', 'Write 30 min before checking the phone');
+    s.reviews[d] = rv;
+    push(`review:${d}`, 'review', 15, T(`每日复盘 · ${d}`, `Daily review · ${d}`), at(d, 22), 'spirit');
+    const filled = [rv.win, rv.lesson, rv.grateful, rv.tomorrow].filter(Boolean).length;
+    if (filled >= 3) push(`review+:${d}`, 'review', 10, T('深度复盘', 'Deep review'), at(d, 22), 'spirit');
+  }
+  const yd = addDays(today, -1);
+  if (s.reviews[yd])
+    s.reviews[yd].ai = T(
+      '🌱 稳稳推进的一天\n• 完成 5 个任务，专注 4.2 小时，入账 $189。\n• 心情不错，喝水 7/8 杯，起身 4 次。\n• 「博士资格答辩」推进到 70%，ICLR rebuttal 还有 6 天。\n• 冷知识：章鱼有三颗心脏——今天的你也像同时开了三个引擎。\n明天先把引言改完，再奖励自己一杯手冲。',
+      '🌱 A steady step forward\n• 5 quests done, 4.2 h of focus, $189 earned.\n• Good mood, water 7/8, 4 stand-up breaks.\n• “PhD proposal defense” is at 70%; ICLR rebuttal in 6 days.\n• Fun fact: an octopus has three hearts — today you ran on about as many engines.\nTomorrow: finish the intro first, then treat yourself to a pour-over.',
+    );
+
   /* ---- assets: weekly check-ins for half a year ---- */
   s.assets = { base: 'USD', rates: { ...defaultRates('USD') }, cadence: 'weekly' };
   const acct = (name: string, kind: Account['kind'], currency: string, color: Account['color']): Account => ({ id: uid(), name, kind, currency, color });
@@ -295,5 +333,20 @@ export function demoState(profile: Partial<State['profile']>): State {
   }
 
   s.events = events.sort((a, b) => a.ts - b.ts);
+  // Achievements a life like this would have earned along the way — dated in the past, not "today".
+  for (let pass = 0, i = 0; pass < 4; pass++) {
+    const ctx = achContext(s, metrics(s));
+    let added = 0;
+    for (const a of ACHIEVEMENTS) {
+      if (s.achievements[a.id] || a.value(ctx) < a.target) continue;
+      const ts = at(addDays(today, -2 - ((i++ * 7) % 70)), 21);
+      s.achievements[a.id] = ts;
+      s.events.push({ id: uid(), ref: `ach:${a.id}`, ts, kind: 'achievement', xp: a.xp, coins: coinsFor(a.xp), label: T(`🏆 ${a.zh[0]}`, `🏆 ${a.en[0]}`) });
+      added++;
+    }
+    if (!added) break;
+  }
+  s.events.sort((a, b) => a.ts - b.ts);
+  localizeState(s as unknown as Record<string, unknown>, s.profile.lang); // tag built-in text so it follows the language switch
   return s;
 }

@@ -37,9 +37,13 @@ import type {
   Quest,
   Reward,
   State,
+  FocusPreset,
+  Review,
   Tracker,
   WorkSession,
 } from './types';
+import { REVIEW_FIELDS, reviewFilled } from './review';
+import { bi, FOCUS_PRESETS, localizeState, pairOf } from './builtin';
 
 const KEY = 'lifeos:v1';
 
@@ -77,8 +81,10 @@ export function defaultState(): State {
     pay: { mode: 'hour', amount: 40, hoursPerDay: 8, daysPerWeek: 5 },
     ui: { dock: [...DEFAULT_DOCK], hidden: [], widgets: [] },
     moods: {},
+    reviews: {},
+    focusPresets: FOCUS_PRESETS.map(([p, icon, attr], i) => ({ id: `fp-${i + 1}`, name: zh ? p[0] : p[1], icon, attr, i18n: { name: p } })),
     wellness: {},
-    pet: { enabled: true, kind: 'mochi', name: zh ? '团子' : 'Mochi', waterMin: 45, waterGoal: 8, cupMl: 250, wakeHour: 8, sleepHour: 23, sitMin: 45, eye20: false, bedtime: 23 * 60 + 30, pomoWork: 25, pomoBreak: 5, sound: true, sysNotify: false, roam: 'lively' },
+    pet: { enabled: true, kind: 'mochi', name: zh ? '团子' : 'Mochi', waterMin: 45, waterGoal: 8, cupMl: 250, wakeHour: 8, sleepHour: 23, sitMin: 45, eye20: false, bedtime: 23 * 60 + 30, pomoWork: 25, pomoBreak: 5, sound: true, sysNotify: false, roam: 'lively', reviewNudge: true, nightSummary: true },
     pomo: null,
     accounts: [],
     snapshots: [],
@@ -104,6 +110,8 @@ export function migrate(parsed: Partial<State>): State {
     pet: { ...d.pet, ...parsed.pet },
     assets: { ...d.assets, ...parsed.assets },
     stats: { ...parsed.stats },
+    reviews: { ...parsed.reviews },
+    focusPresets: parsed.focusPresets ?? d.focusPresets,
     equip: { ...parsed.equip },
     attributes: parsed.attributes?.length ? parsed.attributes : d.attributes,
     categories: parsed.categories?.length ? parsed.categories : d.categories,
@@ -189,7 +197,7 @@ export function useStore<T>(sel: (s: State) => T): T {
   });
 }
 
-const tr = (zh: string, en: string) => (state.profile.lang === 'zh' ? zh : en);
+const tr = (zh: string, en: string) => (bi(zh, en), state.profile.lang === 'zh' ? zh : en);
 
 /* ------------------------------------------------------------------ */
 /* Commit pipeline: mutate a draft → award achievements → detect level */
@@ -236,7 +244,7 @@ export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
     for (const a of ACHIEVEMENTS) {
       if (draft.achievements[a.id] || a.value(ctx) < a.target) continue;
       draft.achievements[a.id] = Date.now();
-      draft.events.push(ev(`ach:${a.id}`, 'achievement', a.xp, `🏆 ${a.zh[0]} / ${a.en[0]}`));
+      draft.events.push(ev(`ach:${a.id}`, 'achievement', a.xp, tr(`🏆 ${a.zh[0]}`, `🏆 ${a.en[0]}`)));
       unlocked.push(a.id);
       added++;
     }
@@ -283,7 +291,12 @@ export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
 }
 
 function ev(ref: string, kind: EventKind, xp: number, label: string, attr?: Attr, coins = coinsFor(xp)) {
-  return { id: uid(), ref, ts: Date.now(), kind, xp, coins, attr, label };
+  const pair = pairOf(label); // built-in labels remember both languages
+  return { id: uid(), ref, ts: Date.now(), kind, xp, coins, attr, label, ...(pair ? { i18n: { label: pair } } : {}) };
+}
+
+function activeMsOf(a: NonNullable<State['active']>, now = Date.now()) {
+  return Math.max(0, now - a.start - a.pausedMs - (a.pausedAt ? now - a.pausedAt : 0));
 }
 
 function grant(d: State, ref: string, kind: EventKind, xp: number, label: string, attr?: Attr) {
@@ -304,6 +317,12 @@ export const actions = {
   replace(next: State) {
     commit((d) => Object.assign(d, next), { silent: true });
   },
+  /** Bring built-in text in line with the current language (runs once the dictionary is loaded). */
+  localize() {
+    const probe = structuredClone(state) as unknown as Record<string, unknown>;
+    if (!localizeState(probe, state.profile.lang) && JSON.stringify(probe) === JSON.stringify(state)) return;
+    commit((d) => void localizeState(d as unknown as Record<string, unknown>, d.profile.lang), { silent: true });
+  },
   reset() {
     const keep = state.profile;
     commit((d) => Object.assign(d, defaultState(), { profile: keep, onboarded: true }), { silent: true });
@@ -313,7 +332,9 @@ export const actions = {
     commit(
       (d) => {
         if (themeChange) d.stats.themeSwitch = (d.stats.themeSwitch ?? 0) + 1;
+        const langChange = p.lang && p.lang !== d.profile.lang;
         Object.assign(d.profile, p);
+        if (langChange) localizeState(d as unknown as Record<string, unknown>, d.profile.lang);
       },
       { silent: !themeChange },
     );
@@ -330,7 +351,9 @@ export const actions = {
 
   /* ---- quests ---- */
   addQuest(q: Omit<Quest, 'id' | 'createdAt'>) {
-    commit((d) => void d.quests.push({ ...q, id: uid(), createdAt: Date.now() }));
+    const id = uid();
+    commit((d) => void d.quests.push({ ...q, id, createdAt: Date.now() }));
+    return id;
   },
   updateQuest(id: string, patch: Partial<Quest>) {
     commit((d) => {
@@ -504,6 +527,25 @@ export const actions = {
       const prev = d.moods[day];
       d.moods[day] = { v, note: note ?? prev?.note, ts: Date.now() };
       grant(d, `mood:${day}`, 'mood', 5, tr('心情打卡', 'Mood check-in'));
+    });
+  },
+  /** Save (part of) a day's review. The first words of the day earn XP; a deep review (3+ prompts) a bonus. */
+  saveReview(day: string, patch: Partial<Review>) {
+    commit((d) => {
+      const cur = (d.reviews[day] ??= { updatedAt: Date.now() });
+      Object.assign(cur, patch, { updatedAt: Date.now() });
+      for (const k of REVIEW_FIELDS) if (typeof cur[k] === 'string' && !cur[k]!.trim()) delete cur[k];
+      const n = reviewFilled(cur);
+      if (!n) {
+        revoke(d, `review:${day}`);
+        revoke(d, `review+:${day}`);
+        if (!cur.tomorrowQuest) delete d.reviews[day];
+        return;
+      }
+      const spirit = d.attributes.find((a) => a.id === 'spirit')?.id;
+      grant(d, `review:${day}`, 'review', 15, tr(`每日复盘 · ${day}`, `Daily review · ${day}`), spirit);
+      if (n >= 3) grant(d, `review+:${day}`, 'review', 10, tr('深度复盘', 'Deep review'), spirit);
+      else revoke(d, `review+:${day}`);
     });
   },
   setMoodNote(note: string, day = dayKey()) {
@@ -824,7 +866,7 @@ export const actions = {
   },
 
   /* ---- focus & earnings ---- */
-  startFocus(rate: number, attr: Attr, note = '', link: { goalId?: string; questId?: string; projectId?: string } = {}) {
+  startFocus(rate: number, attr: Attr, note = '', link: { goalId?: string; questId?: string; projectId?: string; targetMin?: number } = {}) {
     commit((d) => {
       d.active = { start: Date.now(), rate, attr, note, pausedMs: 0, ...link };
     });
@@ -834,6 +876,37 @@ export const actions = {
     const q = state.quests.find((x) => x.id === questId);
     if (!q) return;
     actions.startFocus(state.profile.hourlyRate, q.attr, q.title, { questId, goalId: q.goalId });
+  },
+  /* ---- unpaid-focus quick picks ---- */
+  saveFocusPreset(p: Omit<FocusPreset, 'id'> & { id?: string }) {
+    commit((d) => {
+      const hit = p.id && d.focusPresets.find((x) => x.id === p.id);
+      if (hit) Object.assign(hit, p);
+      else d.focusPresets.push({ ...p, id: uid() });
+    }, { silent: true });
+  },
+  removeFocusPreset(id: string) {
+    commit((d) => void (d.focusPresets = d.focusPresets.filter((x) => x.id !== id)), { silent: true });
+  },
+  moveFocusPreset(id: string, dir: -1 | 1) {
+    commit((d) => {
+      const i = d.focusPresets.findIndex((x) => x.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= d.focusPresets.length) return;
+      [d.focusPresets[i], d.focusPresets[j]] = [d.focusPresets[j], d.focusPresets[i]];
+    }, { silent: true });
+  },
+  resetFocusPresets() {
+    commit((d) => void (d.focusPresets = defaultState().focusPresets), { silent: true });
+  },
+  /** Add minutes to (or set) the running session's countdown. */
+  extendFocus(min: number) {
+    commit((d) => {
+      if (!d.active) return;
+      const elapsed = Math.ceil(activeMsOf(d.active) / 60_000);
+      d.active.targetMin = Math.max(d.active.targetMin ?? 0, elapsed) + min;
+      d.active.hit = false;
+    });
   },
   pauseFocus() {
     commit((d) => {
@@ -873,10 +946,16 @@ export const actions = {
         goalId: a.goalId,
         questId: a.questId,
         projectId: a.projectId,
+        ...(a.targetMin ? { targetMin: a.targetMin } : {}),
       };
       d.sessions.push(s);
-      const xp = Math.round(activeMs / 60_000); // 1 XP per focused minute
+      const xp = Math.round(activeMs / 60_000); // 1 XP per focused minute — paid or not
       grant(d, `focus:${s.id}`, 'focus', xp, a.note || tr('专注时段', 'Focus session'), a.attr);
+      // Finished the countdown you set yourself: a small bonus.
+      if (a.targetMin && activeMs >= a.targetMin * 60_000 - 5_000) {
+        grant(d, `focusgoal:${s.id}`, 'focus', Math.max(5, Math.round(a.targetMin / 5)), tr(`完成 ${a.targetMin} 分钟专注倒计时`, `${a.targetMin}-min countdown complete`), a.attr);
+        d.stats.focusTargets = (d.stats.focusTargets ?? 0) + 1;
+      }
       summary = s;
       // Linkage: enough focus on a quest today completes it.
       const q = a.questId ? d.quests.find((x) => x.id === a.questId) : undefined;

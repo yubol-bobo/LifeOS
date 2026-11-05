@@ -3,6 +3,7 @@ import { useL, useLang } from '../lib/i18n';
 import { demoState } from '../store/demo';
 import { actions, getState } from '../store/store';
 import { defaultRates } from '../store/assets';
+import { STARTER } from '../store/builtin';
 import type { PayConfig } from '../store/types';
 import { Button, Field, Modal, Segmented } from '../ui/kit';
 import { SyncConnect } from '../apps/SyncSettings';
@@ -23,17 +24,12 @@ export function Onboarding() {
     actions.setPay({ mode, amount: rate });
     actions.setAssets({ base: currency, rates: defaultRates(currency) });
     const zh = lang === 'zh';
-    // A gentle starter kit so the desktop isn't empty.
-    const starter: [string, string, 'mind' | 'body' | 'spirit' | 'craft'][] = [
-      ['专注工作 2 小时', 'Two hours of deep work', 'craft'],
-      ['阅读 30 分钟', 'Read for 30 minutes', 'mind'],
-      ['运动一下', 'Move your body', 'body'],
-      ['写三行日记', 'Write three lines of journal', 'spirit'],
-    ];
+    const T = ([a, b]: [string, string]) => (zh ? a : b);
+    // A gentle starter kit so the desktop isn't empty (built-in text follows the language switch).
     // A first goal, wired to the starter habits, so the daily → goal chain is visible from day one.
     actions.saveMilestone({
-      title: zh ? '坚持 30 天' : 'My first 30 days',
-      note: zh ? '每完成一个下面的习惯，这个目标都会自动前进。' : 'Every habit below moves this goal forward automatically.',
+      title: T(STARTER.goal),
+      note: T(STARTER.goalNote),
       attr: 'spirit',
       size: 'big',
       status: 'active',
@@ -44,9 +40,9 @@ export function Onboarding() {
       ],
     });
     const goalId = getState().milestones[getState().milestones.length - 1]?.id;
-    for (const [a, b, attr] of starter) actions.addQuest({ title: zh ? a : b, attr, difficulty: 'normal', kind: 'daily', goalId });
-    actions.saveReward({ title: zh ? '一杯好咖啡' : 'A really good coffee', cost: 60, icon: 'coffee' });
-    actions.saveReward({ title: zh ? '看一部电影' : 'Movie night', cost: 250, icon: 'film' });
+    for (const [p, attr] of STARTER.quests) actions.addQuest({ title: T(p), attr, difficulty: 'normal', kind: 'daily', goalId });
+    for (const [p, cost, icon] of STARTER.rewards) actions.saveReward({ title: T(p), cost, icon });
+    actions.localize();
   };
 
   const loadDemo = () => actions.replace(demoState({ ...getState().profile, lang }));

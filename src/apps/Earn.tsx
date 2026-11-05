@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useAttrs } from '../store/attrs';
+import { Pie3D } from '../scene/Pie3D';
+import { useTheme } from '../os/theme';
 import { dayKey, lastNDays, parseDay, startOfWeek } from '../lib/date';
 import { duration, money } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -7,7 +10,7 @@ import { burst, notify } from '../os/notify';
 import { actions, useStore } from '../store/store';
 import type { Attr } from '../store/types';
 import { Columns } from '../ui/charts';
-import { Bar, Button, Card, Empty, Field, Modal, Ring, Stat } from '../ui/kit';
+import { Bar, Button, Card, Empty, Field, Modal, Ring, Segmented, Stat } from '../ui/kit';
 import { Odometer } from '../ui/Odometer';
 import { AttrPicker } from './Quests';
 import { PayCard, ProjectsEditor } from './Settings';
@@ -36,6 +39,27 @@ export function Earn() {
   const rate = project?.rate ?? profile.hourlyRate;
   const [note, setNote] = useState('');
   const [attr, setAttr] = useState<Attr>('craft');
+  // Paid work or unpaid effort (gym, paper writing, study…) — both are timed and earn XP.
+  const [mode, setModeRaw] = useState<'paid' | 'free'>(() => {
+    try {
+      return (localStorage.getItem('lifeos:focus-mode') as 'paid' | 'free') || 'paid';
+    } catch {
+      return 'paid';
+    }
+  });
+  const setMode = (m: 'paid' | 'free') => {
+    setModeRaw(m);
+    try {
+      localStorage.setItem('lifeos:focus-mode', m);
+    } catch {
+      /* ignore */
+    }
+  };
+  const [target, setTarget] = useState(0); // countdown minutes, 0 = none
+  const [customOpen, setCustomOpen] = useState(false);
+  const presets = useStore((s) => s.focusPresets);
+  const attrIds = useStore((s) => s.attributes).map((a) => a.id);
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const [link, setLink] = useState('');
   const goals = useStore((s) => s.milestones).filter((g) => g.status !== 'done');
   const quests = useStore((s) => s.quests);
@@ -44,7 +68,7 @@ export function Earn() {
   const start = () => {
     const q = link.startsWith('q:') ? quests.find((x) => x.id === link.slice(2)) : undefined;
     const goalId = q ? q.goalId : link.startsWith('g:') ? link.slice(2) : undefined;
-    actions.startFocus(rate, q ? q.attr : attr, note || q?.title || '', { goalId, questId: q?.id, projectId: project?.id });
+    actions.startFocus(mode === 'free' ? 0 : rate, q ? q.attr : attr, note || q?.title || '', { goalId, questId: q?.id, projectId: project?.id, ...(target ? { targetMin: target } : {}) });
     try {
       localStorage.setItem('lifeos:last-project', projectId);
     } catch {
@@ -58,7 +82,7 @@ export function Earn() {
   const quarter = live ? Math.floor(live.ms / 900_000) : 0;
   const lastQ = useRef(quarter);
   useEffect(() => {
-    if (live && quarter > lastQ.current) {
+    if (live?.paid && quarter > lastQ.current) {
       burst(`+${money(live.active.rate / 4, cur)}`, 'gold');
       if (quarter % 4 === 0) notify({ title: L(`专注满 ${quarter / 4} 小时`, `${quarter / 4} hour${quarter > 4 ? 's' : ''} of focus`), body: L(`本次已赚 ${money(live.earned, cur)}，保持节奏。`, `${money(live.earned, cur)} earned this session. Keep going.`), icon: 'coins', tone: 'gold' });
     }
@@ -92,8 +116,8 @@ export function Earn() {
     <div className="app">
       <div className="app-head">
         <div>
-          <h1>{L('时薪计', 'Earn')}</h1>
-          <p className="muted">{L('开始工作，看着每一秒变成真实的价值。每专注 1 分钟 +1 XP。', 'Start working and watch every second turn into real value. +1 XP per focused minute.')}</p>
+          <h1>{L('专注计时', 'Focus')}</h1>
+          <p className="muted">{L('赚钱的工作、健身、写论文、学习……每一段专注都会被记下来：时长、经验和贡献。每专注 1 分钟 +1 XP；可以设个倒计时，时间一到就庆祝。', 'Paid work, the gym, paper writing, study — every stretch of focus is logged: time, XP and what it went to. +1 XP per minute; set a countdown and celebrate when it’s done.')}</p>
         </div>
         <Button icon="plus" onClick={() => setManual(true)}>
           {L('补录时段', 'Log past session')}
@@ -102,19 +126,51 @@ export function Earn() {
 
       <section className={`earn-hero ${live ? (live.paused ? 'is-paused' : 'is-live') : ''}`}>
         <div className="earn-ring">
-          <Ring value={live ? (live.ms % 900_000) / 900_000 : 0} size={232} stroke={12} tone="wealth">
-            <span className="earn-label">{live ? (live.paused ? L('已暂停', 'Paused') : L('本次收入', 'This session')) : L('准备就绪', 'Ready')}</span>
-            <Odometer value={money(liveEarned, cur)} className="odo-xl" />
-            <span className="earn-time num">{duration(liveMs)}</span>
+          <Ring
+            value={live ? (live.target ? Math.min(1, live.ms / live.target) : (live.ms % 900_000) / 900_000) : 0}
+            size={232}
+            stroke={12}
+            tone={(live ? live.paid : mode === 'paid') ? 'wealth' : 'violet'}
+          >
+            <span className="earn-label">
+              {live
+                ? live.paused
+                  ? L('已暂停', 'Paused')
+                  : live.left != null
+                    ? live.left > 0
+                      ? L('倒计时', 'Remaining')
+                      : L('已完成 🎉', 'Done 🎉')
+                    : live.paid
+                      ? L('本次收入', 'This session')
+                      : L('本次专注', 'This session')
+                : L('准备就绪', 'Ready')}
+            </span>
+            {live && live.left != null ? (
+              <span className="odo-xl num earn-count">{clock(live.left > 0 ? live.left : live.ms)}</span>
+            ) : (live ? live.paid : mode === 'paid') ? (
+              <Odometer value={money(liveEarned, cur)} className="odo-xl" />
+            ) : (
+              <span className="odo-xl num earn-count">{clock(liveMs)}</span>
+            )}
+            <span className="earn-time num">
+              {live && live.left != null ? `${duration(liveMs)} / ${live.active.targetMin}′` : live?.paid || (!live && mode === 'paid') ? duration(liveMs) : `+${Math.floor(liveMs / 60_000)} XP`}
+            </span>
           </Ring>
-          <span className="earn-rate num">
-            {money(perSec, cur, 4)} / {L('秒', 'sec')}
-          </span>
+          <span className="earn-rate num">{(live ? live.paid : mode === 'paid') ? `${money(perSec, cur, 4)} / ${L('秒', 'sec')}` : L('🌱 不计薪 · 每分钟 +1 XP', '🌱 Unpaid · +1 XP a minute')}</span>
         </div>
 
         <div className="earn-controls">
           {!live ? (
             <>
+              <Segmented
+                value={mode}
+                onChange={setMode}
+                options={[
+                  { value: 'paid', label: L('赚钱的工作', 'Paid work'), icon: 'coins' },
+                  { value: 'free', label: L('不计薪的努力', 'Unpaid effort'), icon: 'sprout' },
+                ]}
+              />
+              {mode === 'paid' && (
               <button className="pay-chip" onClick={() => setPayOpen(true)}>
                 <Icon name="wallet" size={15} />
                 <span>
@@ -125,8 +181,26 @@ export function Earn() {
                 {project?.rate != null && <span className="muted small">({project.name})</span>}
                 <Icon name="pencil" size={13} />
               </button>
+              )}
+              {mode === 'free' && (
+                <div className="free-presets" role="group" aria-label={L('常做的事', 'Common activities')}>
+                  {presets.map((p) => (
+                    <button key={p.id} className={`chip ${note === p.name ? 'is-active' : ''}`} onClick={() => (setNote(p.name), setAttr(attrIds.includes(p.attr) ? p.attr : attrIds[0]))}>
+                      <Icon name={p.icon} size={13} /> {p.name}
+                    </button>
+                  ))}
+                  {note.trim() && !presets.some((p) => p.name === note.trim()) && (
+                    <button className="chip chip-add" onClick={() => actions.saveFocusPreset({ name: note.trim(), icon: 'star', attr })} title={L('把现在填的内容存为常用', 'Save what you typed as a quick pick')}>
+                      <Icon name="plus" size={13} /> {L(`存为常用「${note.trim()}」`, `Save “${note.trim()}”`)}
+                    </button>
+                  )}
+                  <button className="chip chip-edit" onClick={() => setPresetsOpen(true)}>
+                    <Icon name="pencil" size={13} /> {L('编辑', 'Edit')}
+                  </button>
+                </div>
+              )}
               <div className="row2">
-                <Field label={L('为谁工作', 'Working for')}>
+                <Field label={mode === 'paid' ? L('为谁工作', 'Working for') : L('属于哪个项目（可选）', 'Project (optional)')}>
                   <div className="input-group">
                     <select className="input" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
                       <option value="">{L('— 默认 —', '— Default —')}</option>
@@ -141,7 +215,7 @@ export function Earn() {
                   </div>
                 </Field>
                 <Field label={L('在做什么', 'Working on')}>
-                  <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={L('例如：写论文', 'e.g. Paper draft')} />
+                  <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={mode === 'paid' ? L('例如：客户需求文档', 'e.g. Client spec') : L('例如：健身、写论文', 'e.g. Gym, paper writing')} />
                 </Field>
               </div>
               <Field label={L('推进哪个任务 / 目标', 'Moves which quest / goal')} hint={L('关联后，专注时长会自动计入目标的「专注小时」，或让任务在达标后自动完成。', 'Linked time counts toward a goal’s focus hours, or auto-completes a quest once its target is reached.')}>
@@ -173,8 +247,26 @@ export function Earn() {
                   <AttrPicker value={attr} onChange={setAttr} />
                 </Field>
               )}
+              <Field label={L('倒计时（可选）', 'Countdown (optional)')} hint={L('时间一到会放烟花庆祝，并额外奖励 XP；不设就一直正计时。', 'When it runs out you get fireworks and bonus XP; leave it off to count up.')}>
+                <div className="countdown-pick">
+                  {[0, 25, 45, 60, 90, 120].map((m) => (
+                    <button key={m} className={`chip ${target === m && !customOpen ? 'is-active' : ''}`} onClick={() => (setTarget(m), setCustomOpen(false))}>
+                      {m ? (m >= 60 && m % 60 === 0 ? L(`${m / 60} 小时`, `${m / 60} h`) : L(`${m} 分钟`, `${m} min`)) : L('不设', 'None')}
+                    </button>
+                  ))}
+                  <button className={`chip ${customOpen ? 'is-active' : ''}`} onClick={() => setCustomOpen(true)}>
+                    {L('自定义', 'Custom')}
+                  </button>
+                  {customOpen && (
+                    <span className="countdown-custom">
+                      <input className="input" type="number" min={1} max={720} value={target || ''} placeholder="50" onChange={(e) => setTarget(Math.max(0, Math.min(720, Math.round(+e.target.value || 0))))} aria-label={L('分钟', 'Minutes')} />
+                      {L('分钟', 'min')}
+                    </span>
+                  )}
+                </div>
+              </Field>
               <Button variant="primary" size="lg" icon="play" onClick={start}>
-                {L('开始计时', 'Start the clock')}
+                {target ? L(`开始 ${target} 分钟倒计时`, `Start a ${target}-minute countdown`) : L('开始计时', 'Start the clock')}
               </Button>
             </>
           ) : (
@@ -185,7 +277,7 @@ export function Earn() {
                 <GoalTag goalId={live.active.goalId} />
                 {live.active.projectId && <ProjectTag id={live.active.projectId} />}
                 <span className="muted num">
-                  {money(live.active.rate, cur, 0)}/h · {L('开始于', 'since')} {new Date(live.active.start).toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                  {live.paid ? `${money(live.active.rate, cur, 0)}/h` : L('🌱 不计薪', '🌱 Unpaid')} · {L('开始于', 'since')} {new Date(live.active.start).toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
               <div className="row-gap">
@@ -198,13 +290,22 @@ export function Earn() {
                   icon="square"
                   onClick={() => {
                     const s = actions.stopFocus();
-                    if (s) notify({ title: L('已结算', 'Cashed out'), body: L(`${duration(s.activeMs)} · ${money(s.earned, cur)} · +${Math.round(s.activeMs / 60000)} XP`, `${duration(s.activeMs)} · ${money(s.earned, cur)} · +${Math.round(s.activeMs / 60000)} XP`), icon: 'coins', tone: 'gold' });
+                    if (s && s.rate > 0) notify({ title: L('已结算', 'Cashed out'), body: `${duration(s.activeMs)} · ${money(s.earned, cur)} · +${Math.round(s.activeMs / 60000)} XP`, icon: 'coins', tone: 'gold' });
+                    else if (s) notify({ title: L('已记录这段努力', 'Effort logged'), body: `${s.note || L('专注', 'Focus')} · ${duration(s.activeMs)} · +${Math.round(s.activeMs / 60000)} XP`, icon: 'sprout', tone: 'good' });
                     else notify({ title: L('不足 1 分钟，未记录', 'Under a minute — not logged'), icon: 'info' });
                   }}
                 >
-                  {L('结束并结算', 'Stop & cash out')}
+                  {live.paid ? L('结束并结算', 'Stop & cash out') : L('结束并记录', 'Stop & log it')}
                 </Button>
                 <Button size="lg" variant="ghost" icon="trash" title={L('丢弃本次', 'Discard')} onClick={() => actions.stopFocus(false)} />
+              </div>
+              <div className="row-gap wrap">
+                <span className="muted small">{live.target ? L('倒计时', 'Countdown') : L('加个倒计时', 'Add a countdown')}</span>
+                {[15, 25, 45].map((m) => (
+                  <Button key={m} size="sm" variant="soft" icon="plus" onClick={() => actions.extendFocus(m)}>
+                    {L(`${m} 分钟`, `${m} min`)}
+                  </Button>
+                ))}
               </div>
               {(() => {
                 const q = quests.find((x) => x.id === live.active.questId);
@@ -247,6 +348,8 @@ export function Earn() {
         <Stat label={L('本月', 'This month')} value={money(tMonth.earned + liveEarned, cur, 0)} sub={`${((tMonth.ms + liveMs) / 3_600_000).toFixed(1)} h`} />
         <Stat label={L('累计', 'All time')} value={money(tAll.earned, cur, 0)} sub={`${(tAll.ms / 3_600_000).toFixed(0)} h`} />
       </div>
+
+      <EffortCard live={live} />
 
       {projects.length > 0 && (
         <Card title={L('本月按「为谁工作」', 'This month by client / project')} icon="briefcase">
@@ -293,7 +396,7 @@ export function Earn() {
                       {new Date(x.start).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })} · {duration(x.activeMs)}
                     </span>
                   </div>
-                  <span className="num sess-amt">{money(x.earned, cur)}</span>
+                  <span className={`num sess-amt ${x.rate ? '' : 'is-free'}`}>{x.rate ? money(x.earned, cur) : `🌱 +${Math.round(x.activeMs / 60_000)} XP`}</span>
                   <Button size="sm" variant="ghost" icon="trash" title={L('删除', 'Delete')} onClick={() => actions.removeSession(x.id)} />
                 </li>
               ))}
@@ -303,6 +406,7 @@ export function Earn() {
       </div>
 
       <ManualSession open={manual} onClose={() => setManual(false)} />
+      <PresetEditor open={presetsOpen} onClose={() => setPresetsOpen(false)} />
       <Modal open={payOpen} onClose={() => setPayOpen(false)} title={L('收入方式', 'How you’re paid')}>
         <PayCard pay={pay} currency={cur} compact />
       </Modal>
@@ -373,3 +477,250 @@ function ManualSession({ open, onClose }: { open: boolean; onClose: () => void }
   );
 }
 
+
+/** h:mm:ss or m:ss */
+export function clock(ms: number) {
+  const t = Math.round(ms / 1000);
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const sec = t % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+}
+
+/** Today (and this week): where the focused time went — paid work and unpaid effort, as an interactive 3D donut. */
+const SLICE_COLORS = ['orange', 'blue', 'jade', 'violet', 'amber', 'pink', 'teal', 'indigo', 'red', 'lime', 'brown', 'slate'];
+const cssVar = (name: string, fallback: string) => {
+  try {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+function EffortCard({ live }: { live: ReturnType<typeof useLiveSession> }) {
+  const L = useL();
+  const dark = useTheme();
+  const sessions = useStore((s) => s.sessions);
+  const projects = useStore((s) => s.projects);
+  const cur = useStore((s) => s.profile.currency);
+  const reduce = useStore((s) => s.profile.reduceMotion);
+  const [range, setRange] = useState<'today' | 'week'>('today');
+  const [show, setShow] = useState<'all' | 'paid' | 'free'>('all');
+  const [sel, setSel] = useState<string | null>(null);
+  const [hov, setHov] = useState<string | null>(null);
+  const from = range === 'today' ? new Date(new Date().setHours(0, 0, 0, 0)).getTime() : startOfWeek().getTime();
+  const rows = new Map<string, { id: string; label: string; ms: number; paid: boolean; earned: number; n: number }>();
+  const add = (label: string, ms: number, paid: boolean, earned: number) => {
+    const id = `${paid ? 'p' : 'f'}:${label}`;
+    const r = rows.get(id) ?? { id, label, ms: 0, paid, earned: 0, n: 0 };
+    r.ms += ms;
+    r.earned += earned;
+    r.n += 1;
+    rows.set(id, r);
+  };
+  const nameOf = (x: { note?: string; projectId?: string }) => x.note || projects.find((p) => p.id === x.projectId)?.name || L('专注', 'Focus');
+  for (const x of sessions) if (x.start >= from) add(nameOf(x), x.activeMs, x.rate > 0, x.earned);
+  if (live) add(nameOf(live.active), live.ms, live.paid, live.earned);
+  const all = [...rows.values()].sort((a, b) => b.ms - a.ms);
+  const total = all.reduce((a, r) => a + r.ms, 0);
+  const paidMs = all.filter((r) => r.paid).reduce((a, r) => a + r.ms, 0);
+  const list = all.filter((r) => show === 'all' || (show === 'paid') === r.paid);
+  const shown = list.reduce((a, r) => a + r.ms, 0);
+  // stable colour per activity (by first appearance in the full list)
+  const colorOf = (id: string) => {
+    const i = all.findIndex((r) => r.id === id);
+    const k = SLICE_COLORS[i % SLICE_COLORS.length];
+    return cssVar(`--p-${k}`, '#888');
+  };
+  const paidRim = cssVar('--c-wealth', '#1ba677');
+  const freeRim = cssVar('--p-violet', '#7a5ae6');
+  const slices = list.map((r) => ({ id: r.id, value: Math.max(1, Math.round(r.ms / 60_000)), color: colorOf(r.id), rim: r.paid ? paidRim : freeRim }));
+  const byId = new Map(all.map((r) => [r.id, r]));
+  const h = (ms: number) => (ms / 3_600_000).toFixed(1);
+  const focusId = sel ?? hov;
+  const focusRow = focusId ? byId.get(focusId) : undefined;
+
+  return (
+    <Card
+      title={L('努力都去哪了', 'Where the effort went')}
+      icon="activity"
+      action={
+        <div className="row-gap wrap">
+          <Segmented
+            size="sm"
+            value={show}
+            onChange={(v) => (setShow(v), setSel(null))}
+            options={[
+              { value: 'all', label: L('全部', 'All') },
+              { value: 'paid', label: L('赚钱', 'Paid'), icon: 'coins' },
+              { value: 'free', label: L('不计薪', 'Unpaid'), icon: 'sprout' },
+            ]}
+          />
+          <Segmented
+            size="sm"
+            value={range}
+            onChange={(v) => (setRange(v), setSel(null))}
+            options={[
+              { value: 'today', label: L('今天', 'Today') },
+              { value: 'week', label: L('本周', 'This week') },
+            ]}
+          />
+        </div>
+      }
+    >
+      {total === 0 ? (
+        <p className="muted small">{L('还没有记录。工作、健身、写论文……开始一段专注就会出现在这里。', 'Nothing yet. Work, gym, writing — start a session and it shows up here.')}</p>
+      ) : (
+        <>
+          <div className="effort-split">
+            <span className="es-paid" style={{ flex: paidMs || 0.0001, opacity: show === 'free' ? 0.25 : 1 }} />
+            <span className="es-free" style={{ flex: total - paidMs || 0.0001, opacity: show === 'paid' ? 0.25 : 1 }} />
+          </div>
+          <div className="effort-legend muted small">
+            <span>
+              <i className="es-paid" /> {L('赚钱的工作', 'Paid')} <b className="num">{h(paidMs)}h</b>
+            </span>
+            <span>
+              <i className="es-free" /> {L('不计薪的努力', 'Unpaid')} <b className="num">{h(total - paidMs)}h</b>
+            </span>
+            <span>
+              {L('合计', 'Total')} <b className="num">{h(total)}h</b> · <b className="num">+{Math.round(total / 60_000)}</b> XP
+            </span>
+          </div>
+          {list.length === 0 ? (
+            <p className="muted small">{show === 'paid' ? L('这段时间还没有赚钱的专注。', 'No paid focus in this range yet.') : L('这段时间还没有不计薪的专注。', 'No unpaid focus in this range yet.')}</p>
+          ) : (
+            <div className="effort-viz">
+              <Pie3D
+                slices={slices}
+                dark={dark}
+                height={360}
+                still={reduce}
+                selected={sel}
+                onSelect={setSel}
+                onHover={setHov}
+                center={
+                  <>
+                    <b className="num">{focusRow ? h(focusRow.ms) : h(shown)}h</b>
+                    <span>{focusRow ? `${Math.round((focusRow.ms / shown) * 100)}%` : show === 'all' ? L('全部专注', 'all focus') : show === 'paid' ? L('赚钱的', 'paid') : L('不计薪', 'unpaid')}</span>
+                  </>
+                }
+                tooltip={(id) => {
+                  const r = byId.get(id);
+                  if (!r) return null;
+                  return (
+                    <>
+                      <span className="tip-k">
+                        {r.label} {r.paid ? '' : '🌱'}
+                      </span>
+                      <span className="tip-v num">
+                        {h(r.ms)}h · {Math.round((r.ms / shown) * 100)}% · {r.paid ? money(r.earned, cur, 0) : `+${Math.round(r.ms / 60_000)} XP`}
+                      </span>
+                    </>
+                  );
+                }}
+              />
+              <ul className="proj-break effort-list">
+                {list.map((r) => (
+                  <li
+                    key={r.id}
+                    className={`${focusId === r.id ? 'is-focus' : ''} ${focusId && focusId !== r.id ? 'is-dim' : ''}`}
+                    onMouseEnter={() => setHov(r.id)}
+                    onMouseLeave={() => setHov(null)}
+                    onClick={() => setSel((v) => (v === r.id ? null : r.id))}
+                  >
+                    <i style={{ background: colorOf(r.id) }} />
+                    <span className="pb-name">
+                      {r.label} {!r.paid && <small className="muted">🌱</small>}
+                    </span>
+                    <span className="num muted small">
+                      {h(r.ms)}h · {Math.round((r.ms / shown) * 100)}%
+                    </span>
+                    <strong className="num">{r.paid ? money(r.earned, cur, 0) : `+${Math.round(r.ms / 60_000)} XP`}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
+      )}
+    </Card>
+  );
+}
+
+const PRESET_ICONS = ['dumbbell', 'footprints', 'bike', 'pencil', 'book-open', 'graduation', 'brain', 'code', 'palette', 'music', 'camera', 'languages', 'leaf', 'heart', 'users', 'utensils', 'house', 'sprout', 'mountain', 'star', 'rocket', 'coffee', 'gamepad', 'notebook'];
+
+/** Add, rename, re-icon, re-attribute, reorder and delete the unpaid-focus quick picks. */
+function PresetEditor({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const L = useL();
+  const presets = useStore((s) => s.focusPresets);
+  const attrs = useAttrs();
+  const [iconFor, setIconFor] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const add = () => {
+    const n = name.trim();
+    if (!n) return;
+    actions.saveFocusPreset({ name: n, icon: 'star', attr: attrs.list[0]?.id ?? 'craft' });
+    setName('');
+  };
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={L('常做的事（不计薪）', 'Quick picks (unpaid)')}
+      width={620}
+      footer={
+        <>
+          <Button variant="ghost" icon="refresh" onClick={actions.resetFocusPresets}>
+            {L('恢复默认', 'Reset to defaults')}
+          </Button>
+          <span className="spacer" />
+          <Button variant="primary" onClick={onClose}>
+            {L('完成', 'Done')}
+          </Button>
+        </>
+      }
+    >
+      <p className="muted small">{L('点图标换图标；经验会计入右边选的属性。', 'Click an icon to change it; XP goes to the attribute on the right.')}</p>
+      <ul className="preset-list">
+        {presets.map((p, i) => (
+          <li key={p.id}>
+            <div className="preset-row">
+              <button className="preset-ic" onClick={() => setIconFor(iconFor === p.id ? null : p.id)} aria-label={L('换图标', 'Change icon')} style={{ '--tone': `var(--c-${p.attr})` } as CSSProperties}>
+                <Icon name={p.icon} size={18} />
+              </button>
+              <input className="input" value={p.name} onChange={(e) => actions.saveFocusPreset({ ...p, name: e.target.value })} aria-label={L('名称', 'Name')} />
+              <select className="input preset-attr" value={p.attr} onChange={(e) => actions.saveFocusPreset({ ...p, attr: e.target.value })} aria-label={L('经验计入', 'XP goes to')}>
+                {attrs.list.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {attrs.label(a.id)}
+                  </option>
+                ))}
+              </select>
+              <Button size="sm" variant="ghost" icon="arrow-up" disabled={i === 0} onClick={() => actions.moveFocusPreset(p.id, -1)} aria-label={L('上移', 'Move up')} />
+              <Button size="sm" variant="ghost" icon="arrow-down" disabled={i === presets.length - 1} onClick={() => actions.moveFocusPreset(p.id, 1)} aria-label={L('下移', 'Move down')} />
+              <Button size="sm" variant="ghost" icon="trash" onClick={() => actions.removeFocusPreset(p.id)} aria-label={L('删除', 'Delete')} />
+            </div>
+            {iconFor === p.id && (
+              <div className="icon-pick">
+                {PRESET_ICONS.map((ic) => (
+                  <button key={ic} type="button" className={p.icon === ic ? 'is-on' : ''} onClick={() => (actions.saveFocusPreset({ ...p, icon: ic }), setIconFor(null))} aria-label={ic}>
+                    <Icon name={ic} size={18} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </li>
+        ))}
+        {presets.length === 0 && <li className="muted small">{L('还没有，加一个吧。', 'Nothing yet — add one.')}</li>}
+      </ul>
+      <div className="row-gap">
+        <input className="input" value={name} placeholder={L('例如：练琴、游泳、写小说', 'e.g. Piano, swimming, novel')} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+        <Button icon="plus" onClick={add} disabled={!name.trim()}>
+          {L('添加', 'Add')}
+        </Button>
+      </div>
+    </Modal>
+  );
+}

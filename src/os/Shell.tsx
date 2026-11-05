@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Desktop } from '../apps/Desktop';
 import { Quests } from '../apps/Quests';
 import { Roadmap } from '../apps/Roadmap';
@@ -9,6 +9,7 @@ import { Shop } from '../apps/Shop';
 import { Trophies } from '../apps/Trophies';
 import { Settings } from '../apps/Settings';
 import { Mood } from '../apps/Mood';
+import { Review } from '../apps/Review';
 import { Plan } from '../apps/Plan';
 import { Projects } from '../apps/Projects';
 import { Assets, CheckinSheet } from '../apps/Assets';
@@ -19,6 +20,7 @@ import { money } from '../lib/format';
 import { actions, useStore } from '../store/store';
 import { loadFeed } from '../lib/scholarFeed';
 import { initSync } from '../sync/engine';
+import { loadDictionary } from '../store/builtin';
 import { Icon } from '../ui/Icon';
 import { AppGlyph } from '../ui/kit';
 import { appById, type AppId } from './apps';
@@ -26,10 +28,13 @@ import { Boot } from './Boot';
 import { Dock } from './Dock';
 import { useLiveSession } from './live';
 import { MenuBar } from './MenuBar';
-import { useFullscreen, useLayout } from './display';
+import { useFullscreen, useLayout, useWindowPrefs } from './display';
 import { dismiss, useBursts, useNotices } from './notify';
 import { Onboarding } from './Onboarding';
 import { LevelUp } from './LevelUp';
+import { SummaryCard } from '../ai/SummaryCard';
+import { FocusCelebrate } from './FocusCelebrate';
+import { clock } from '../apps/Earn';
 import { open, useRoute } from './router';
 import { Spotlight } from './Spotlight';
 import { useTheme } from './theme';
@@ -41,6 +46,7 @@ const APP_VIEWS: Record<Exclude<AppId, 'home'>, () => ReactNode> = {
   earn: () => <Earn />,
   trackers: () => <Trackers />,
   mood: () => <Mood />,
+  review: () => <Review />,
   plan: () => <Plan />,
   projects: () => <Projects />,
   assets: () => <Assets />,
@@ -70,6 +76,7 @@ export function Shell() {
   }, [lang, reduce]);
 
   useEffect(() => initSync(), []);
+  useEffect(() => void loadDictionary().then(() => actions.localize()), []);
 
   // Pull the Google Scholar feed (if the deployment has one) once per page load.
   useEffect(() => {
@@ -79,6 +86,10 @@ export function Shell() {
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
+      // Esc closes the app window (unless a dialog, menu or input has focus)
+      if (e.key === 'Escape' && !document.querySelector('.modal, .spotlight, .fc-card, .sumcard') && !(e.target as HTMLElement)?.closest?.('input, textarea, select')) {
+        if (location.hash.replace(/^#\/?/, '')) open('home');
+      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setSpot((v) => {
@@ -95,10 +106,11 @@ export function Shell() {
   const def = appById(app);
   useEffect(() => {
     const name = lang === 'zh' ? def.zh : def.en;
-    document.title = live ? `${live.paused ? '⏸' : '●'} ${money(live.earned, currency)} · LifeOS` : app === 'home' ? 'LifeOS' : `${name} · LifeOS`;
-  }, [live?.earned, live?.paused, app, lang, currency]); // eslint-disable-line react-hooks/exhaustive-deps
+    document.title = live ? `${live.paused ? '⏸' : '●'} ${live.left != null ? (live.left > 0 ? clock(live.left) : '🎉') : live.paid ? money(live.earned, currency) : clock(live.ms)} · LifeOS` : app === 'home' ? 'LifeOS' : `${name} · LifeOS`;
+  }, [live ? Math.floor(live.ms / 1000) : -1, live?.paused, app, lang, currency]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const layout = useLayout();
+  const winPrefs = useWindowPrefs();
   const fullscreen = useFullscreen();
   if (!booted)
     return (
@@ -118,8 +130,17 @@ export function Shell() {
       <MenuBar app={app} dark={dark} onSpotlight={() => (actions.bump('spotlight'), setSpot(true))} />
       <main className="desk">
         <Desktop dark={dark} hidden={app !== 'home'} />
+        {app !== 'home' && winPrefs.clickOut && !zoom && (
+          <div className="win-scrim" onClick={() => open('home')} title={lang === 'zh' ? '点击空白处返回桌面' : 'Click outside to go back to the desktop'} aria-hidden />
+        )}
         {app !== 'home' && (
-          <div className={`window ${zoom ? 'is-zoom' : ''}`} key={app} role="region" aria-label={lang === 'zh' ? def.zh : def.en}>
+          <div
+            className={`window ${zoom ? 'is-zoom' : ''} ${winPrefs.size === 'fit' ? 'is-fit' : ''}`}
+            key={app}
+            role="region"
+            aria-label={lang === 'zh' ? def.zh : def.en}
+            style={{ '--win-w': `${def.width ?? 1280}px` } as CSSProperties}
+          >
             <div className="win-bar" onDoubleClick={() => setZoom((z) => !z)}>
               <div className="lights">
                 <button className="light l-close" aria-label="Close" onClick={() => open('home')}>
@@ -146,6 +167,8 @@ export function Shell() {
       {petOn && onboarded && <PetLayer app={app} />}
       <CheckinSheet />
       <LevelUp />
+      <SummaryCard />
+      <FocusCelebrate />
       <Notifications />
       <Bursts />
       {spot && <Spotlight dark={dark} onClose={() => setSpot(false)} />}

@@ -1,4 +1,5 @@
-import { setLayout, useLayout } from '../os/display';
+import { AiSettings } from './AiSettings';
+import { setLayout, setWindowPrefs, useLayout, useWindowPrefs } from '../os/display';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -14,7 +15,7 @@ import { Icon } from '../ui/Icon';
 import { SyncSettings } from './SyncSettings';
 import { AppGlyph, Button, Card, Field, Modal, Segmented } from '../ui/kit';
 
-type Tab = 'general' | 'sync' | 'dock' | 'attrs' | 'work' | 'pet';
+type Tab = 'general' | 'sync' | 'ai' | 'dock' | 'attrs' | 'work' | 'pet';
 
 export function Settings() {
   const L = useL();
@@ -35,6 +36,7 @@ export function Settings() {
   const tabs: { id: Tab; icon: string; zh: string; en: string }[] = [
     { id: 'general', icon: 'settings', zh: '通用', en: 'General' },
     { id: 'sync', icon: 'cloud', zh: '同步', en: 'Sync' },
+    { id: 'ai', icon: 'sparkles', zh: 'AI 宠物', en: 'AI' },
     { id: 'dock', icon: 'grid', zh: '程序坞与桌面', en: 'Dock & Desktop' },
     { id: 'attrs', icon: 'sparkles', zh: '属性', en: 'Attributes' },
     { id: 'work', icon: 'wallet', zh: '工作与收入', en: 'Work & Pay' },
@@ -58,6 +60,7 @@ export function Settings() {
       </nav>
       {tab === 'general' && <General />}
       {tab === 'sync' && <SyncSettings />}
+      {tab === 'ai' && <AiSettings />}
       {tab === 'dock' && <DockSettings />}
       {tab === 'attrs' && <AttrSettings />}
       {tab === 'work' && <WorkSettings />}
@@ -72,6 +75,7 @@ function General() {
   const L = useL();
   const p = useStore((s) => s.profile);
   const layout = useLayout();
+  const win = useWindowPrefs();
   const demo = useStore((s) => s.demo);
   const file = useRef<HTMLInputElement>(null);
   const [confirm, setConfirm] = useState<null | 'reset' | 'demo'>(null);
@@ -141,6 +145,26 @@ function General() {
                 options={[
                   { value: 'portrait', label: L('竖版', 'Portrait'), icon: 'layout-tall' },
                   { value: 'landscape', label: L('横版仪表盘', 'Landscape'), icon: 'layout-wide' },
+                ]}
+              />
+            </Field>
+            <Field label={L('应用窗口（仅本设备）', 'App windows (this device)')} hint={L('贴合内容：窗口只占内容需要的宽度，两边露出桌面；绿色按钮仍可放大。', 'Fit: windows take only the width their content needs, with the desktop showing at the sides; the green button still maximizes.')}>
+              <Segmented
+                value={win.size}
+                onChange={(v) => setWindowPrefs({ size: v })}
+                options={[
+                  { value: 'fit', label: L('贴合内容', 'Fit content') },
+                  { value: 'wide', label: L('宽屏', 'Wide') },
+                ]}
+              />
+            </Field>
+            <Field label={L('点窗口外面', 'Clicking outside a window')}>
+              <Segmented
+                value={win.clickOut ? 'close' : 'stay'}
+                onChange={(v) => setWindowPrefs({ clickOut: v === 'close' })}
+                options={[
+                  { value: 'close', label: L('返回桌面', 'Back to desktop') },
+                  { value: 'stay', label: L('不做任何事', 'Do nothing') },
                 ]}
               />
             </Field>
@@ -231,8 +255,9 @@ const WIDGETS: { id: string; zh: string; en: string }[] = [
   { id: 'plans', zh: '本周计划', en: 'This week' },
   { id: 'countdown', zh: '倒计时', en: 'Countdown' },
   { id: 'mood', zh: '心情打卡', en: 'Mood check-in' },
+  { id: 'journal', zh: '每日复盘', en: 'Daily review' },
   { id: 'life', zh: '人生进度', en: 'Life progress' },
-  { id: 'earn', zh: '时薪计', en: 'Wage timer' },
+  { id: 'earn', zh: '专注计时', en: 'Focus timer' },
   { id: 'attrs', zh: '属性雷达', en: 'Attribute radar' },
   { id: 'research', zh: '学术', en: 'Research' },
   { id: 'goals', zh: '目标进度', en: 'Goals' },

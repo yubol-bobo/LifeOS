@@ -17,7 +17,8 @@ export function useLiveSession(interval = 100) {
   }, [active, interval]);
   if (!active) return null;
   const ms = activeMs(active);
-  return { active, ms, earned: (ms / 3_600_000) * active.rate, paused: !!active.pausedAt };
+  const target = active.targetMin ? active.targetMin * 60_000 : null;
+  return { active, ms, earned: (ms / 3_600_000) * active.rate, paused: !!active.pausedAt, paid: active.rate > 0, target, left: target != null ? Math.max(0, target - ms) : null };
 }
 
 export function useClock(interval = 1000) {

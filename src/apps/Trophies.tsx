@@ -91,7 +91,7 @@ function Road() {
         <Card className="level-card">
           <Ring value={m.level.progress} size={150} stroke={14}>
             <span className="ring-num num xl">{lvl}</span>
-            <span className="ring-cap">LEVEL</span>
+            <span className="ring-cap">{L('等级', 'LEVEL')}</span>
           </Ring>
           <div className="level-text">
             <h2>

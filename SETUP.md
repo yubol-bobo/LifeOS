@@ -18,8 +18,9 @@
 | 6 | 汇率 | 不需要 Key | 自动内置，可一键在线更新 | LifeOS 网页里 |
 | 7 | 浏览器通知 | 可选 | — | LifeOS 网页里点一下授权 |
 | 8 | **多设备同步**：GitHub token（只勾 gist）+ 同步密码 | 多设备使用时要 | github.com/settings/tokens | **只填在 LifeOS 网页里**（每台设备各填一次） |
+| 9 | **AI 宠物**：OpenAI / Claude / DeepSeek / Kimi / GLM 任选一个的 API Key | 可选 | 各服务商后台 | **只填在 LifeOS 网页里**（系统设置 → AI 宠物） |
 
-> 🔒 **原则：Key 永远只放在 GitHub Secrets 里。** 不要写进代码、不要填进网页、不要发到聊天里。网站是公开的，任何放进网页的东西访客都能看到。
+> 🔒 **原则：Key 永远不写进代码、不提交到仓库、不发到聊天里。** 部署要用的 Key（SerpAPI）只放 GitHub Secrets；你个人用的 Key（同步 token、AI Key）只在你自己浏览器打开的 LifeOS 里填——它们只保存在那台设备的浏览器中，不会出现在公开网站里，别的访客看不到。
 
 ---
 
@@ -156,6 +157,31 @@ Google Scholar 没有官方 API，LifeOS 通过 [SerpAPI](https://serpapi.com) �
 - 🔑 **token 和同步密码只填在 LifeOS 网页里**，不要放进代码或仓库 Secrets（同步是浏览器直接和 GitHub 通信的，跟 Actions 无关）。它们只保存在每台设备本地，不会被同步或导出。
 - 🔒 **同步密码忘了就无法解密云端数据**（这是加密的代价）。这时可以在一台有完整数据的设备上「断开」，删掉 Gist（[gist.github.com](https://gist.github.com) 里名为 `LifeOS sync` 的那个），再用新密码重新连接。
 - token 泄露或过期：去 GitHub 删掉旧 token、生成新的，在各设备的「同步」里断开后重新连接。
+
+---
+
+## 9. AI 宠物（今日总结）
+
+让宠物读取你一天的数据，写一份简短有趣的「今日总结」，可以编辑并存进当天的每日复盘。**不接也能用**：没有 Key 时宠物会写一份离线版。
+
+1. 任选一个服务商，创建 API Key：
+
+   | 服务商 | 获取 Key | 默认模型（可改） | 备注 |
+   |---|---|---|---|
+   | Claude（Anthropic） | console.anthropic.com → API Keys | `claude-opus-5-5` | 可选开启「联网找新闻」（会多一点费用）；想更省可以改成 `claude-sonnet-5-5` 或 `claude-haiku-5-5` |
+   | OpenAI | platform.openai.com/api-keys | `gpt-5-mini` | |
+   | DeepSeek | platform.deepseek.com/api_keys | `deepseek-chat` | |
+   | Kimi（月之暗面） | platform.moonshot.cn → API Key | `moonshot-v1-8k` | 海外账号把接口地址改成 `https://api.moonshot.ai/v1` |
+   | GLM（智谱） | open.bigmodel.cn → API Keys | `glm-4-flash` | |
+
+2. 打开你的 LifeOS → **系统设置 → AI 宠物**，选服务商，粘贴 Key，点 **测试连接**。
+3. 建议在服务商后台给这个 Key **设置额度上限**。一份总结大约几百到一千多个 token，一天一次花费很低。
+
+**会发送什么？** 只有在生成总结时，浏览器把当天的数据摘要（完成的任务名、专注时长和项目、入账、XP、心情和备注、喝水起身、本周计划和目标进度、即将到来的倒计时、你当天写的复盘）直接发给你选的服务商。Key 和数据都不经过任何中间服务器。
+
+**测试连接失败？**
+- 「Key 无效」→ 重新复制 Key，注意没有多余空格。
+- 「连接失败」→ 网络问题，或者该服务不允许浏览器直接调用（CORS）。可以在「接口地址」里填你自己的代理（例如一个 Cloudflare Worker 转发）。
 
 ---
 
