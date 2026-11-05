@@ -23,7 +23,9 @@ export function Button({
   title,
   className = '',
   style,
+  'aria-label': ariaLabel,
 }: {
+  'aria-label'?: string;
   children?: ReactNode;
   variant?: 'soft' | 'primary' | 'ghost' | 'danger' | 'gold';
   size?: 'sm' | 'md' | 'lg';
@@ -39,7 +41,7 @@ export function Button({
     <button
       type={type}
       title={title}
-      aria-label={title}
+      aria-label={ariaLabel ?? title}
       disabled={disabled}
       onClick={onClick}
       style={style}

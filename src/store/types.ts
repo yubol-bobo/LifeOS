@@ -66,6 +66,14 @@ export interface Countdown {
   createdAt: string;
 }
 
+/** A quick-pick activity for unpaid focus (gym, paper writing…). Fully editable. */
+export interface FocusPreset {
+  id: string;
+  name: string;
+  icon: string;
+  attr: Attr;
+}
+
 export interface PayConfig {
   mode: 'hour' | 'day' | 'month' | 'year';
   amount: number;
@@ -349,6 +357,7 @@ export interface State {
   ui: UiPrefs;
   moods: Record<string, MoodEntry>;
   reviews: Record<string, Review>; // dayKey -> review
+  focusPresets: FocusPreset[]; // unpaid-focus quick picks
   wellness: Record<string, Wellness>;
   pet: PetConfig;
   pomo: PomoState | null;

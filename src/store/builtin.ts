@@ -56,7 +56,7 @@ function localizeObj(o: Obj, lang: Lang, fields = FIELDS): boolean {
   return changed;
 }
 
-const COLLECTIONS = ['quests', 'milestones', 'papers', 'trackers', 'rewards', 'projects', 'plans', 'countdowns', 'accounts', 'sessions', 'events'];
+const COLLECTIONS = ['focusPresets', 'quests', 'milestones', 'papers', 'trackers', 'rewards', 'projects', 'plans', 'countdowns', 'accounts', 'sessions', 'events'];
 
 /** Rewrite built-in text in `s` to `lang`. Returns whether anything changed. */
 export function localizeState(s: Record<string, unknown>, lang: Lang) {
@@ -97,6 +97,17 @@ export const STARTER = {
     [bi('看一部电影', 'Movie night'), 250, 'film'],
   ] as [Pair, number, string][],
 };
+
+/** Default unpaid-focus activities (editable in the Focus app). */
+export const FOCUS_PRESETS: [Pair, string, string][] = [
+  [bi('健身', 'Gym'), 'dumbbell', 'body'],
+  [bi('写论文', 'Paper writing'), 'pencil', 'craft'],
+  [bi('阅读', 'Reading'), 'book-open', 'mind'],
+  [bi('学习', 'Study'), 'graduation', 'mind'],
+  [bi('跑步', 'Running'), 'footprints', 'body'],
+  [bi('冥想', 'Meditation'), 'leaf', 'spirit'],
+  [bi('副项目', 'Side project'), 'code', 'craft'],
+];
 
 let dictionary: Promise<void> | null = null;
 /** Build the full dictionary once: generating the demo registers every demo pair as a side effect. */

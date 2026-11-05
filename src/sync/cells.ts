@@ -28,6 +28,7 @@ const ARRAYS: { name: keyof State; key: (x: Keyed) => string; ordered: boolean; 
   { name: 'categories', key: (x) => String(x.id), ordered: true },
   { name: 'plans', key: (x) => String(x.id), ordered: true },
   { name: 'countdowns', key: (x) => String(x.id), ordered: true },
+  { name: 'focusPresets', key: (x) => String(x.id), ordered: true },
   // The XP ledger is keyed by `ref`, which is what makes it idempotent across devices.
   { name: 'events', key: (x) => String(x.ref), ordered: false, sort: (a, b) => Number(a.ts) - Number(b.ts) },
   { name: 'sessions', key: (x) => String(x.id), ordered: false, sort: (a, b) => Number(a.start) - Number(b.start) },

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useAttrs } from '../store/attrs';
 import { dayKey, lastNDays, parseDay, startOfWeek } from '../lib/date';
 import { duration, money } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -8,7 +9,6 @@ import { actions, useStore } from '../store/store';
 import type { Attr } from '../store/types';
 import { Columns } from '../ui/charts';
 import { Bar, Button, Card, Empty, Field, Modal, Ring, Segmented, Stat } from '../ui/kit';
-import type { WorkSession } from '../store/types';
 import { Odometer } from '../ui/Odometer';
 import { AttrPicker } from './Quests';
 import { PayCard, ProjectsEditor } from './Settings';
@@ -55,8 +55,9 @@ export function Earn() {
   };
   const [target, setTarget] = useState(0); // countdown minutes, 0 = none
   const [customOpen, setCustomOpen] = useState(false);
-  const sessionsAll = useStore((s) => s.sessions);
-  const presets = freePresets(sessionsAll, L);
+  const presets = useStore((s) => s.focusPresets);
+  const attrIds = useStore((s) => s.attributes).map((a) => a.id);
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const [link, setLink] = useState('');
   const goals = useStore((s) => s.milestones).filter((g) => g.status !== 'done');
   const quests = useStore((s) => s.quests);
@@ -182,10 +183,18 @@ export function Earn() {
               {mode === 'free' && (
                 <div className="free-presets" role="group" aria-label={L('常做的事', 'Common activities')}>
                   {presets.map((p) => (
-                    <button key={p.note} className={`chip ${note === p.note ? 'is-active' : ''}`} onClick={() => (setNote(p.note), setAttr(p.attr))}>
-                      <Icon name={p.icon} size={13} /> {p.note}
+                    <button key={p.id} className={`chip ${note === p.name ? 'is-active' : ''}`} onClick={() => (setNote(p.name), setAttr(attrIds.includes(p.attr) ? p.attr : attrIds[0]))}>
+                      <Icon name={p.icon} size={13} /> {p.name}
                     </button>
                   ))}
+                  {note.trim() && !presets.some((p) => p.name === note.trim()) && (
+                    <button className="chip chip-add" onClick={() => actions.saveFocusPreset({ name: note.trim(), icon: 'star', attr })} title={L('把现在填的内容存为常用', 'Save what you typed as a quick pick')}>
+                      <Icon name="plus" size={13} /> {L(`存为常用「${note.trim()}」`, `Save “${note.trim()}”`)}
+                    </button>
+                  )}
+                  <button className="chip chip-edit" onClick={() => setPresetsOpen(true)}>
+                    <Icon name="pencil" size={13} /> {L('编辑', 'Edit')}
+                  </button>
                 </div>
               )}
               <div className="row2">
@@ -395,6 +404,7 @@ export function Earn() {
       </div>
 
       <ManualSession open={manual} onClose={() => setManual(false)} />
+      <PresetEditor open={presetsOpen} onClose={() => setPresetsOpen(false)} />
       <Modal open={payOpen} onClose={() => setPayOpen(false)} title={L('收入方式', 'How you’re paid')}>
         <PayCard pay={pay} currency={cur} compact />
       </Modal>
@@ -476,26 +486,6 @@ export function clock(ms: number) {
   return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
 }
 
-/** Quick picks for unpaid effort: what you did recently first, then sensible defaults. */
-function freePresets(sessions: WorkSession[], L: (zh: string, en: string) => string) {
-  const defaults: { note: string; attr: Attr; icon: string }[] = [
-    { note: L('健身', 'Gym'), attr: 'body', icon: 'dumbbell' },
-    { note: L('写论文', 'Paper writing'), attr: 'craft', icon: 'pencil' },
-    { note: L('阅读', 'Reading'), attr: 'mind', icon: 'book-open' },
-    { note: L('学习', 'Study'), attr: 'mind', icon: 'graduation' },
-    { note: L('跑步', 'Running'), attr: 'body', icon: 'footprints' },
-    { note: L('冥想', 'Meditation'), attr: 'spirit', icon: 'leaf' },
-    { note: L('副项目', 'Side project'), attr: 'craft', icon: 'code' },
-  ];
-  const recent: { note: string; attr: Attr; icon: string }[] = [];
-  for (const x of [...sessions].reverse()) {
-    if (x.rate || !x.note || recent.some((r) => r.note === x.note) || defaults.some((d) => d.note === x.note)) continue;
-    recent.push({ note: x.note, attr: x.attr, icon: 'clock' });
-    if (recent.length >= 3) break;
-  }
-  return [...recent, ...defaults].slice(0, 9);
-}
-
 /** Today (and this week): where the focused time went — paid work and unpaid effort side by side. */
 function EffortCard({ live }: { live: ReturnType<typeof useLiveSession> }) {
   const L = useL();
@@ -571,5 +561,81 @@ function EffortCard({ live }: { live: ReturnType<typeof useLiveSession> }) {
         </>
       )}
     </Card>
+  );
+}
+
+const PRESET_ICONS = ['dumbbell', 'footprints', 'bike', 'pencil', 'book-open', 'graduation', 'brain', 'code', 'palette', 'music', 'camera', 'languages', 'leaf', 'heart', 'users', 'utensils', 'house', 'sprout', 'mountain', 'star', 'rocket', 'coffee', 'gamepad', 'notebook'];
+
+/** Add, rename, re-icon, re-attribute, reorder and delete the unpaid-focus quick picks. */
+function PresetEditor({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const L = useL();
+  const presets = useStore((s) => s.focusPresets);
+  const attrs = useAttrs();
+  const [iconFor, setIconFor] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const add = () => {
+    const n = name.trim();
+    if (!n) return;
+    actions.saveFocusPreset({ name: n, icon: 'star', attr: attrs.list[0]?.id ?? 'craft' });
+    setName('');
+  };
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={L('常做的事（不计薪）', 'Quick picks (unpaid)')}
+      width={620}
+      footer={
+        <>
+          <Button variant="ghost" icon="refresh" onClick={actions.resetFocusPresets}>
+            {L('恢复默认', 'Reset to defaults')}
+          </Button>
+          <span className="spacer" />
+          <Button variant="primary" onClick={onClose}>
+            {L('完成', 'Done')}
+          </Button>
+        </>
+      }
+    >
+      <p className="muted small">{L('点图标换图标；经验会计入右边选的属性。', 'Click an icon to change it; XP goes to the attribute on the right.')}</p>
+      <ul className="preset-list">
+        {presets.map((p, i) => (
+          <li key={p.id}>
+            <div className="preset-row">
+              <button className="preset-ic" onClick={() => setIconFor(iconFor === p.id ? null : p.id)} aria-label={L('换图标', 'Change icon')} style={{ '--tone': `var(--c-${p.attr})` } as CSSProperties}>
+                <Icon name={p.icon} size={18} />
+              </button>
+              <input className="input" value={p.name} onChange={(e) => actions.saveFocusPreset({ ...p, name: e.target.value })} aria-label={L('名称', 'Name')} />
+              <select className="input preset-attr" value={p.attr} onChange={(e) => actions.saveFocusPreset({ ...p, attr: e.target.value })} aria-label={L('经验计入', 'XP goes to')}>
+                {attrs.list.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {attrs.label(a.id)}
+                  </option>
+                ))}
+              </select>
+              <Button size="sm" variant="ghost" icon="arrow-up" disabled={i === 0} onClick={() => actions.moveFocusPreset(p.id, -1)} aria-label={L('上移', 'Move up')} />
+              <Button size="sm" variant="ghost" icon="arrow-down" disabled={i === presets.length - 1} onClick={() => actions.moveFocusPreset(p.id, 1)} aria-label={L('下移', 'Move down')} />
+              <Button size="sm" variant="ghost" icon="trash" onClick={() => actions.removeFocusPreset(p.id)} aria-label={L('删除', 'Delete')} />
+            </div>
+            {iconFor === p.id && (
+              <div className="icon-pick">
+                {PRESET_ICONS.map((ic) => (
+                  <button key={ic} type="button" className={p.icon === ic ? 'is-on' : ''} onClick={() => (actions.saveFocusPreset({ ...p, icon: ic }), setIconFor(null))} aria-label={ic}>
+                    <Icon name={ic} size={18} />
+                  </button>
+                ))}
+              </div>
+            )}
+          </li>
+        ))}
+        {presets.length === 0 && <li className="muted small">{L('还没有，加一个吧。', 'Nothing yet — add one.')}</li>}
+      </ul>
+      <div className="row-gap">
+        <input className="input" value={name} placeholder={L('例如：练琴、游泳、写小说', 'e.g. Piano, swimming, novel')} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+        <Button icon="plus" onClick={add} disabled={!name.trim()}>
+          {L('添加', 'Add')}
+        </Button>
+      </div>
+    </Modal>
   );
 }

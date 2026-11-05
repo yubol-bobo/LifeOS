@@ -37,12 +37,13 @@ import type {
   Quest,
   Reward,
   State,
+  FocusPreset,
   Review,
   Tracker,
   WorkSession,
 } from './types';
 import { REVIEW_FIELDS, reviewFilled } from './review';
-import { bi, localizeState, pairOf } from './builtin';
+import { bi, FOCUS_PRESETS, localizeState, pairOf } from './builtin';
 
 const KEY = 'lifeos:v1';
 
@@ -81,6 +82,7 @@ export function defaultState(): State {
     ui: { dock: [...DEFAULT_DOCK], hidden: [], widgets: [] },
     moods: {},
     reviews: {},
+    focusPresets: FOCUS_PRESETS.map(([p, icon, attr], i) => ({ id: `fp-${i + 1}`, name: zh ? p[0] : p[1], icon, attr, i18n: { name: p } })),
     wellness: {},
     pet: { enabled: true, kind: 'mochi', name: zh ? '团子' : 'Mochi', waterMin: 45, waterGoal: 8, cupMl: 250, wakeHour: 8, sleepHour: 23, sitMin: 45, eye20: false, bedtime: 23 * 60 + 30, pomoWork: 25, pomoBreak: 5, sound: true, sysNotify: false, roam: 'lively', reviewNudge: true, nightSummary: true },
     pomo: null,
@@ -109,6 +111,7 @@ export function migrate(parsed: Partial<State>): State {
     assets: { ...d.assets, ...parsed.assets },
     stats: { ...parsed.stats },
     reviews: { ...parsed.reviews },
+    focusPresets: parsed.focusPresets ?? d.focusPresets,
     equip: { ...parsed.equip },
     attributes: parsed.attributes?.length ? parsed.attributes : d.attributes,
     categories: parsed.categories?.length ? parsed.categories : d.categories,
@@ -873,6 +876,28 @@ export const actions = {
     const q = state.quests.find((x) => x.id === questId);
     if (!q) return;
     actions.startFocus(state.profile.hourlyRate, q.attr, q.title, { questId, goalId: q.goalId });
+  },
+  /* ---- unpaid-focus quick picks ---- */
+  saveFocusPreset(p: Omit<FocusPreset, 'id'> & { id?: string }) {
+    commit((d) => {
+      const hit = p.id && d.focusPresets.find((x) => x.id === p.id);
+      if (hit) Object.assign(hit, p);
+      else d.focusPresets.push({ ...p, id: uid() });
+    }, { silent: true });
+  },
+  removeFocusPreset(id: string) {
+    commit((d) => void (d.focusPresets = d.focusPresets.filter((x) => x.id !== id)), { silent: true });
+  },
+  moveFocusPreset(id: string, dir: -1 | 1) {
+    commit((d) => {
+      const i = d.focusPresets.findIndex((x) => x.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= d.focusPresets.length) return;
+      [d.focusPresets[i], d.focusPresets[j]] = [d.focusPresets[j], d.focusPresets[i]];
+    }, { silent: true });
+  },
+  resetFocusPresets() {
+    commit((d) => void (d.focusPresets = defaultState().focusPresets), { silent: true });
   },
   /** Add minutes to (or set) the running session's countdown. */
   extendFocus(min: number) {

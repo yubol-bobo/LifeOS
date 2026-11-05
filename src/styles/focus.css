@@ -205,3 +205,58 @@
   flex-direction: column;
   gap: 8px;
 }
+
+.free-presets .chip-edit,
+.free-presets .chip-add {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  border-style: dashed;
+  color: var(--ink-3);
+}
+.free-presets .chip-add {
+  color: var(--accent);
+}
+.preset-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 14px;
+}
+.preset-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.preset-row .input {
+  flex: 1;
+  min-width: 0;
+}
+.preset-row .preset-attr {
+  flex: 0 0 120px;
+}
+.preset-ic {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--tone, var(--ink-2));
+  background: color-mix(in oklab, var(--tone, var(--ink)) 12%, var(--surface));
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+@media (max-width: 560px) {
+  .preset-row {
+    flex-wrap: wrap;
+  }
+  .preset-row .preset-attr {
+    flex-basis: 100%;
+  }
+}
