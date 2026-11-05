@@ -14,7 +14,8 @@ import { attrCss, DEFAULT_ATTRS } from '../store/defaults';
 import { PetLayer } from '../pet/PetLayer';
 import { useLang } from '../lib/i18n';
 import { money } from '../lib/format';
-import { useStore } from '../store/store';
+import { actions, useStore } from '../store/store';
+import { loadFeed } from '../lib/scholarFeed';
 import { Icon } from '../ui/Icon';
 import { AppGlyph } from '../ui/kit';
 import { appById, type AppId } from './apps';
@@ -59,6 +60,12 @@ export function Shell() {
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
     document.documentElement.dataset.motion = reduce ? 'reduce' : 'full';
   }, [lang, reduce]);
+
+  // Pull the Google Scholar feed (if the deployment has one) once per page load.
+  useEffect(() => {
+    if (!onboarded) return;
+    loadFeed().then((f) => f && actions.applyScholarFeed(f));
+  }, [onboarded]);
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {

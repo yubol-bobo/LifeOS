@@ -102,7 +102,7 @@ export function metrics(s: State) {
   }
   const questsDone =
     Object.values(s.completions).reduce((n, ids) => n + ids.length, 0) + s.quests.filter((q) => q.doneAt).length;
-  const cites = s.papers.map((p) => p.citations || 0);
+  const cites = s.papers.filter((p) => !p.removed).map((p) => p.citations || 0);
   const totalCitations = cites.reduce((a, b) => a + b, 0);
   const focusMs = s.sessions.reduce((a, x) => a + x.activeMs, 0);
   const earned = s.sessions.reduce((a, x) => a + x.earned, 0);

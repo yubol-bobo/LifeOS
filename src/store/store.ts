@@ -16,6 +16,7 @@ import {
   metrics,
 } from './rules';
 import { DEFAULT_DOCK, PINNED, type AppId } from '../os/apps';
+import type { ScholarFeed } from '../lib/scholarFeed';
 import { DEFAULT_ATTRS, hourlyFrom } from './defaults';
 import { defaultRates } from './assets';
 import { readyGoals, scheduledDailies } from './links';
@@ -548,7 +549,7 @@ export const actions = {
     let added = 0;
     let updated = 0;
     commit((d) => {
-      const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9一-龥]/g, '');
+      const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
       for (const r of rows) {
         const hit = d.papers.find((p) => norm(p.title) === norm(r.title));
         if (hit) {
@@ -569,6 +570,52 @@ export const actions = {
       logCitations(d);
     });
     return { added, updated };
+  },
+  /**
+   * Merge the Google Scholar feed (built by the scheduled workflow). Idempotent per fetch:
+   * papers matched by Scholar id, then title; new ones added; vanished ones flagged, never deleted.
+   */
+  applyScholarFeed(f: ScholarFeed) {
+    if (!f.lastFetch || !f.totals || getState().scholar.gsFetch === f.lastFetch) return null;
+    const firstImport = getState().scholar.gsTotal == null;
+    let added = 0;
+    let gained = 0;
+    commit((d) => {
+      const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]/g, '');
+      for (const fp of f.papers) {
+        let p = d.papers.find((x) => x.scholarId === fp.id) ?? d.papers.find((x) => !x.scholarId && norm(x.title) === norm(fp.title));
+        if (!p) {
+          if (fp.removed) continue;
+          p = { id: uid(), title: fp.title, venue: fp.venue, year: fp.year ?? undefined, status: 'published', citations: fp.citations ?? 0, firstAuthor: false, url: fp.link || undefined, source: 'gscholar', updatedAt: Date.now() };
+          d.papers.push(p);
+          syncPaper(d, p);
+          added++;
+        }
+        p.scholarId = fp.id;
+        p.removed = !!fp.removed || undefined;
+        if (fp.citations != null) p.citations = fp.citations;
+        p.venue ||= fp.venue;
+        p.year ||= fp.year ?? undefined;
+        p.url ||= fp.link || undefined;
+        p.updatedAt = Date.now();
+      }
+      // Backfill the citation curve from Scholar's daily history.
+      const have = new Set(d.citationLog.map((x) => x.date));
+      for (const h of f.history) if (!have.has(h.date)) d.citationLog.push({ date: h.date, total: h.total });
+      d.citationLog.sort((a, b) => a.date.localeCompare(b.date));
+      logCitations(d);
+      // XP for new citations since the last applied fetch (2 XP each, capped).
+      const prev = d.scholar.gsTotal;
+      if (prev != null && f.totals!.citations > prev) {
+        gained = Math.min(200, (f.totals!.citations - prev) * 2);
+        grant(d, `cite:${f.lastFetch}`, 'paper', gained, tr(`新增 ${f.totals!.citations - prev} 次引用`, `${f.totals!.citations - prev} new citations`), d.attributes.some((a) => a.id === 'mind') ? 'mind' : d.attributes[0]?.id);
+      }
+      Object.assign(d.scholar, { provider: 'gscholar', authorId: f.authorId, lastSync: f.lastFetch, gsFetch: f.lastFetch, gsTotal: f.totals!.citations, byYear: f.profile.byYear?.length ? f.profile.byYear : d.scholar.byYear });
+    }, { silent: firstImport });
+    const delta = firstImport ? 0 : gained / 2;
+    if (firstImport) notify({ title: tr('已连接 Google Scholar', 'Google Scholar connected'), body: tr(`导入了 ${f.papers.filter((p) => !p.removed).length} 篇论文`, `Imported ${f.papers.filter((p) => !p.removed).length} papers`), icon: 'graduation', tone: 'good' });
+    else if (delta > 0 || added) notify({ title: 'Google Scholar', body: [delta > 0 ? tr(`+${delta} 次引用`, `+${delta} citations`) : '', added ? tr(`新增 ${added} 篇论文`, `${added} new paper(s)`) : ''].filter(Boolean).join(' · '), icon: 'quote', tone: 'gold' }, 7000);
+    return { added, delta };
   },
   setScholar(s: Partial<State['scholar']>) {
     commit((d) => Object.assign(d.scholar, s), { silent: true });
@@ -737,7 +784,7 @@ function syncPaper(d: State, p: Paper) {
 }
 
 function logCitations(d: State) {
-  const total = d.papers.reduce((a, p) => a + (p.citations || 0), 0);
+  const total = d.papers.filter((p) => !p.removed).reduce((a, p) => a + (p.citations || 0), 0);
   const today = dayKey();
   const last = d.citationLog[d.citationLog.length - 1];
   if (last && last.date === today) last.total = total;

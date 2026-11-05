@@ -3,12 +3,13 @@ import { parseDay } from '../lib/date';
 import { num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { syncScholar } from '../lib/scholar';
+import { useScholarFeed, type ScholarFeed } from '../lib/scholarFeed';
 import { notify } from '../os/notify';
 import { useMetrics } from '../store/hooks';
 import { PAPER_XP } from '../store/rules';
 import { actions, useStore } from '../store/store';
 import { PAPER_FLOW, type Paper, type PaperStatus } from '../store/types';
-import { AreaChart, Columns } from '../ui/charts';
+import { AreaChart, Columns, Sparkline } from '../ui/charts';
 import { Icon } from '../ui/Icon';
 import { Button, Card, Chip, Empty, Field, Modal, Segmented, Stat } from '../ui/kit';
 
@@ -39,7 +40,10 @@ export function Research() {
 
   const log = s.citationLog.map((x) => ({ x: parseDay(x.date).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: '2-digit', month: 'short' }), y: x.total }));
   const pipeline = s.papers.filter((p) => p.status !== 'published').length;
-  const sortedPapers = [...s.papers].sort((a, b) => b.citations - a.citations);
+  const feed = useScholarFeed();
+  const fmap = new Map((feed?.papers ?? []).map((p) => [p.id, p]));
+  const fOf = (p: Paper) => (p.scholarId ? fmap.get(p.scholarId) : undefined);
+  const sortedPapers = [...s.papers].sort((a, b) => Number(!!a.removed) - Number(!!b.removed) || b.citations - a.citations);
 
   return (
     <div className="app">
@@ -59,11 +63,13 @@ export function Research() {
       </div>
 
       <div className="stats-row">
-        <Stat label={L('总引用', 'Citations')} value={num(m.totalCitations)} tone="spirit" />
+        <Stat label={L('总引用', 'Citations')} value={num(m.totalCitations)} tone="spirit" sub={feed?.deltas.d7 != null ? L(`近 7 天 ${feed.deltas.d7 >= 0 ? '+' : ''}${feed.deltas.d7}`, `7d ${feed.deltas.d7 >= 0 ? '+' : ''}${feed.deltas.d7}`) : undefined} />
         <Stat label="h-index" value={m.hIndex} />
         <Stat label="i10-index" value={m.i10} />
         <Stat label={L('已发表 / 接收', 'Published')} value={m.papersPublished} sub={L(`管线中 ${pipeline} 篇`, `${pipeline} in pipeline`)} />
       </div>
+
+      {feed && <ScholarCard feed={feed} />}
 
       <div className="grid-2-1">
         <Card title={L('累计引用', 'Citations over time')} icon="chart">
@@ -118,10 +124,12 @@ export function Research() {
                           {p.venue && <span>{p.venue}</span>}
                           {p.year && <span className="num">{p.year}</span>}
                           {p.firstAuthor && <Chip tone="spirit">{L('一作', '1st')}</Chip>}
+                          {p.removed && <Chip>{L('已从主页消失', 'Gone from profile')}</Chip>}
                         </div>
                         <div className="paper-foot">
                           <span className="num cite">
                             <Icon name="quote" size={12} /> {p.citations}
+                            {(fOf(p)?.d7 ?? 0) > 0 && <span className="cite-up">+{fOf(p)!.d7}</span>}
                           </span>
                           <span className="spacer" />
                           <Button size="sm" variant="ghost" icon="chevron-left" title={L('后退', 'Move back')} disabled={i === 0} onClick={() => actions.setPaperStatus(p.id, PAPER_FLOW[i - 1])} />
@@ -143,6 +151,7 @@ export function Research() {
                   <th>{L('会议/期刊', 'Venue')}</th>
                   <th className="r">{L('年份', 'Year')}</th>
                   <th>{L('状态', 'Status')}</th>
+                  <th className="r">{L('近 7 天', '7d')}</th>
                   <th className="r">{L('引用', 'Cites')}</th>
                 </tr>
               </thead>
@@ -158,12 +167,19 @@ export function Research() {
                           <Icon name="external" size={12} />
                         </a>
                       )}
+                      {p.removed && (
+                        <>
+                          {' '}
+                          <Chip>{L('已从主页消失', 'Gone from profile')}</Chip>
+                        </>
+                      )}
                     </td>
                     <td className="muted">{p.venue}</td>
                     <td className="r num">{p.year ?? '—'}</td>
                     <td>
                       <Chip icon={STATUS_ICON[p.status]}>{label(p.status)}</Chip>
                     </td>
+                    <td className="r num">{fOf(p)?.d7 != null ? <span className={fOf(p)!.d7! > 0 ? 'pos' : 'muted'}>{fOf(p)!.d7! > 0 ? `+${fOf(p)!.d7}` : '0'}</span> : <span className="muted">—</span>}</td>
                     <td className="r">
                       <input className="input input-num" type="number" min={0} value={p.citations} onChange={(e) => actions.setCitations(p.id, +e.target.value)} aria-label={L('引用数', 'Citations')} />
                     </td>
@@ -273,10 +289,11 @@ function SyncModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [err, setErr] = useState('');
 
   const run = async () => {
+    if (provider === 'gscholar') return;
     setBusy(true);
     setErr('');
     try {
-      const res = await syncScholar(provider, id);
+      const res = await syncScholar(provider as 'openalex' | 's2', id);
       const { added, updated } = actions.importPapers(res.papers, { provider, authorId: id, byYear: res.byYear });
       notify({ title: L('引用已同步', 'Citations synced'), body: L(`${res.name}：新增 ${added} 篇，更新 ${updated} 篇`, `${res.name}: ${added} added, ${updated} updated`), icon: 'refresh', tone: 'good' });
       onClose();
@@ -298,7 +315,7 @@ function SyncModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           <Button variant="ghost" onClick={onClose}>
             {L('取消', 'Cancel')}
           </Button>
-          <Button variant="primary" icon="refresh" onClick={run} disabled={busy || !id.trim()}>
+          <Button variant="primary" icon="refresh" onClick={run} disabled={busy || !id.trim() || provider === 'gscholar'}>
             {busy ? L('同步中…', 'Syncing…') : L('开始同步', 'Sync now')}
           </Button>
         </>
@@ -312,9 +329,28 @@ function SyncModal({ open, onClose }: { open: boolean; onClose: () => void }) {
             options={[
               { value: 'openalex', label: 'OpenAlex' },
               { value: 's2', label: 'Semantic Scholar' },
+              { value: 'gscholar', label: 'Google Scholar' },
             ]}
           />
         </Field>
+        {provider === 'gscholar' ? (
+          <div className="gs-setup">
+            <p>{L('Google Scholar 通过仓库的定时任务自动同步（借助 SerpAPI），每 8 小时一次，每月最多 100 次调用。浏览器端不需要做任何事。', 'Google Scholar syncs automatically through the repo’s scheduled workflow (via SerpAPI) every 8 hours, capped at 100 calls a month. Nothing to do in the browser.')}</p>
+            <ol>
+              <li>{L('GitHub 仓库 → Settings → Secrets and variables → Actions', 'GitHub repo → Settings → Secrets and variables → Actions')}</li>
+              <li>
+                {L('Secret：', 'Secret: ')}
+                <code>SERPAPI_KEY</code>
+              </li>
+              <li>
+                {L('Variable：', 'Variable: ')}
+                <code>SCHOLAR_ID</code> {L('（Scholar 主页网址中 user= 后面的部分）', '(the user= part of your Scholar profile URL)')}
+              </li>
+              <li>{L('可选 Variable：SCHOLAR_INTERVAL_HOURS（默认 8）、SCHOLAR_MONTHLY_LIMIT（默认 100）', 'Optional variables: SCHOLAR_INTERVAL_HOURS (default 8), SCHOLAR_MONTHLY_LIMIT (default 100)')}</li>
+            </ol>
+          </div>
+        ) : (
+        <>
         <Field
           label={provider === 'openalex' ? L('OpenAlex 作者 ID 或 ORCID', 'OpenAlex author ID or ORCID') : L('Semantic Scholar 作者 ID', 'Semantic Scholar author ID')}
           hint={
@@ -326,10 +362,93 @@ function SyncModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           <input className="input" value={id} onChange={(e) => setId(e.target.value)} placeholder={provider === 'openalex' ? 'A5023888391' : '1741101'} />
         </Field>
         <p className="muted small">
-          {L('按标题匹配：已有论文只更新引用数，新论文以「已发表」加入。Google Scholar 没有公开 API，无法在浏览器中同步。', 'Matched by title: existing papers get fresh citation counts, new ones are added as published. Google Scholar has no public API, so it cannot be synced from a browser.')}
+          {L('按标题匹配：已有论文只更新引用数，新论文以「已发表」加入。', 'Matched by title: existing papers get fresh citation counts, new ones are added as published.')}
         </p>
+        </>
+        )}
         {err && <p className="error">{err}</p>}
       </div>
     </Modal>
+  );
+}
+
+function ago(ts: number, L: (zh: string, en: string) => string) {
+  const m = Math.max(0, Math.round((Date.now() - ts) / 60_000));
+  if (m < 60) return L(`${m} 分钟前`, `${m} min ago`);
+  const h = Math.round(m / 60);
+  if (h < 48) return L(`${h} 小时前`, `${h} h ago`);
+  return L(`${Math.round(h / 24)} 天前`, `${Math.round(h / 24)} d ago`);
+}
+
+function ScholarCard({ feed }: { feed: ScholarFeed }) {
+  const L = useL();
+  const movers = feed.papers.filter((p) => !p.removed && (p.d7 ?? 0) > 0).sort((a, b) => (b.d7 ?? 0) - (a.d7 ?? 0));
+  const added = feed.papers.filter((p) => feed.changes.added.includes(p.id));
+  const removed = feed.papers.filter((p) => p.removed);
+  const D = ({ v, label }: { v: number | null; label: string }) => (
+    <div className="gs-delta">
+      <span className="muted small">{label}</span>
+      <strong className={`num ${v != null && v > 0 ? 'pos' : ''}`}>{v == null ? '—' : `${v > 0 ? '+' : ''}${v}`}</strong>
+    </div>
+  );
+  return (
+    <Card
+      title="Google Scholar"
+      icon="graduation"
+      action={
+        <span className="muted small">
+          {feed.lastFetch ? L(`${ago(feed.lastFetch, L)}同步 · 每 8 小时自动更新 · 本月 API ${feed.callsThisMonth}/100`, `Synced ${ago(feed.lastFetch, L)} · auto every 8 h · ${feed.callsThisMonth}/100 calls this month`) : ''}
+        </span>
+      }
+    >
+      <div className="gs-grid">
+        <div className="gs-left">
+          {feed.profile.name && (
+            <p className="gs-name">
+              <strong>{feed.profile.name}</strong>
+              {feed.profile.affiliations && <span className="muted small"> · {feed.profile.affiliations}</span>}
+            </p>
+          )}
+          <div className="gs-deltas">
+            <D v={feed.deltas.d1} label={L('较上次', 'Since last day')} />
+            <D v={feed.deltas.d7} label={L('近 7 天', '7 days')} />
+            <D v={feed.deltas.d30} label={L('近 30 天', '30 days')} />
+          </div>
+          {(added.length > 0 || removed.length > 0) && (
+            <div className="gs-changes">
+              {added.map((p) => (
+                <p key={p.id}>
+                  <Chip tone="wealth">{L('新增', 'New')}</Chip> {p.title}
+                </p>
+              ))}
+              {removed.map((p) => (
+                <p key={p.id} className="muted">
+                  <Chip>{L('已消失', 'Removed')}</Chip> {p.title}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+        <div>
+          <p className="muted small" style={{ marginBottom: 8 }}>
+            {L('本周引用增长最多', 'Top movers this week')}
+          </p>
+          {movers.length === 0 ? (
+            <p className="muted small">{L('这周还没有新的引用，数据会每 8 小时刷新。', 'No new citations this week yet — refreshes every 8 hours.')}</p>
+          ) : (
+            <ul className="gs-movers">
+              {movers.slice(0, 5).map((p) => (
+                <li key={p.id}>
+                  <span className="gs-title">{p.title}</span>
+                  <Sparkline values={p.series.filter((v): v is number => v != null)} tone="spirit" width={70} height={24} />
+                  <span className="num pos">+{p.d7}</span>
+                  <span className="num muted small">{p.citations}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }

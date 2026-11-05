@@ -179,14 +179,18 @@ export interface Paper {
   citations: number;
   firstAuthor: boolean;
   url?: string;
-  source?: 'manual' | 'openalex' | 's2';
+  source?: 'manual' | 'openalex' | 's2' | 'gscholar';
+  scholarId?: string; // Google Scholar citation_id
+  removed?: boolean; // no longer on the Scholar profile (kept, not deleted)
   updatedAt: number;
 }
 
 export interface ScholarConfig {
-  provider: 'openalex' | 's2';
+  provider: 'openalex' | 's2' | 'gscholar';
   authorId: string;
   lastSync?: number;
+  gsFetch?: number; // lastFetch of the Google Scholar feed already applied
+  gsTotal?: number; // total citations at that fetch
   byYear?: { year: number; citations: number }[];
 }
 

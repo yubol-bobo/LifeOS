@@ -113,6 +113,21 @@ Fork 之后同样适用，只需对自己的 fork 做第 1 步。
 - 换设备或清理浏览器之前，请在 **系统设置 → 数据 → 导出备份** 下载 JSON；在新设备上导入即可。
 - 只有你主动点击「同步引用」或「在线更新汇率」时，浏览器才会直接请求 OpenAlex / Semantic Scholar / open.er-api.com 的公开 API。Google Scholar 没有公开 API，无法在浏览器里同步。
 
+### Google Scholar 自动同步（每 8 小时）
+
+Google Scholar 没有公开 API，所以由仓库里的定时任务通过 [SerpAPI](https://serpapi.com) 抓取你的 Scholar 主页：每篇论文的引用数、新增 / 消失的论文、总引用、h-index、i10、每年引用。
+
+1. 在 SerpAPI 注册，拿到 API key（免费额度够用）。
+2. 仓库 **Settings → Secrets and variables → Actions**：
+   - **Secrets** 新建 `SERPAPI_KEY`
+   - **Variables** 新建 `SCHOLAR_ID`（Scholar 主页网址中 `user=` 后面那串）
+   - 可选 Variables：`SCHOLAR_INTERVAL_HOURS`（默认 `8`）、`SCHOLAR_MONTHLY_LIMIT`（默认 `100`）、`SCHOLAR_TZ`（默认 `UTC`）
+3. 定时任务只在默认分支（`main`）上运行。
+
+保险措施：无论工作流被触发多少次（定时、推送、手动），脚本都保证两次抓取至少间隔 `SCHOLAR_INTERVAL_HOURS`，并且每个自然月的 SerpAPI 调用不超过 `SCHOLAR_MONTHLY_LIMIT`。100 篇论文以内每次只用 1 次调用，每 8 小时一次，约每月 90 次。
+
+历史数据保存在 `scholar-data` 分支（不污染主分支历史），发布时打包进网站。打开 LifeOS 时会自动合并：按 Scholar 论文 ID 匹配，新论文自动加入，消失的论文只标记、不删除，新增引用每次 +2 XP，并显示每篇论文近 7 / 30 天的变化。
+
 ### 如何找到学术 ID
 
 - **OpenAlex**：在 [openalex.org](https://openalex.org) 搜索你的名字，作者页 URL 里的 `A50...` 就是 ID；也可以直接填 `orcid:0000-0000-0000-0000`。

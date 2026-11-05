@@ -3,16 +3,20 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main, 'claude/**']
+  # Google Scholar sync: every 8 hours (≈ 90 SerpAPI calls / month for ≤ 100 papers).
+  # Schedules only run on the default branch.
+  schedule:
+    - cron: '17 */8 * * *'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write # push the scholar-data branch
   pages: write
   id-token: write
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -23,6 +27,42 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      # ---- Google Scholar data (optional; needs SERPAPI_KEY secret + SCHOLAR_ID variable) ----
+      - name: Load scholar-data branch
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          remote="https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$remote" scholar-data >/dev/null 2>&1; then
+            git clone --quiet --depth 1 --branch scholar-data "$remote" .scholar-data
+          else
+            mkdir -p .scholar-data && cd .scholar-data && git init --quiet -b scholar-data && git remote add origin "$remote"
+          fi
+
+      - name: Sync Google Scholar (rate-limited inside the script)
+        continue-on-error: true
+        env:
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          SCHOLAR_ID: ${{ vars.SCHOLAR_ID }}
+          SCHOLAR_INTERVAL_HOURS: ${{ vars.SCHOLAR_INTERVAL_HOURS || '8' }}
+          SCHOLAR_MONTHLY_LIMIT: ${{ vars.SCHOLAR_MONTHLY_LIMIT || '100' }}
+          SCHOLAR_TZ: ${{ vars.SCHOLAR_TZ || 'UTC' }}
+        run: node scripts/scholar-sync.mjs .scholar-data
+
+      - name: Save scholar data
+        run: |
+          cd .scholar-data
+          git add -A
+          if git diff --cached --quiet; then echo "No scholar changes."; exit 0; fi
+          git -c user.name="lifeos-bot" -c user.email="lifeos-bot@users.noreply.github.com" commit --quiet -m "scholar: $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push --quiet origin HEAD:scholar-data
+
+      - name: Bundle scholar data into the site
+        run: |
+          mkdir -p public/data
+          if [ -f .scholar-data/scholar.json ]; then cp .scholar-data/scholar.json public/data/scholar.json; fi
+
       - run: npm ci
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
