@@ -9,6 +9,7 @@ import {
   Palette, Code, Camera, Globe, Sprout, Briefcase, Languages, Droplets, PawPrint, Hand, Cookie, LocateFixed, Eye, EyeOff,
   GripVertical, ArrowUp, ArrowDown, Volume2, VolumeX, Smile, NotebookPen, Utensils, Armchair, BellRing,
   Cloud, CloudOff, CloudCheck, KeyRound, Smartphone, Laptop, ShieldCheck, Unplug,
+  Maximize, Minimize, LayoutDashboard, PanelsTopLeft,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -27,6 +28,7 @@ const MAP: Record<string, LucideIcon> = {
   'shopping-bag': ShoppingBag, sigma: Sigma, sparkles: Sparkles, square: Square, star: Star, store: Store,
   sun: Sun, target: Target, telescope: Telescope, timer: Timer, trash: Trash2, 'trending-up': TrendingUp, 'trending-down': TrendingDown,
   trophy: Trophy, tv: Tv, upload: Upload, users: Users, wallet: Wallet, x: X, zap: Zap,
+  fullscreen: Maximize, 'fullscreen-exit': Minimize, 'layout-wide': LayoutDashboard, 'layout-tall': PanelsTopLeft,
   palette: Palette, code: Code, camera: Camera, globe: Globe, sprout: Sprout, briefcase: Briefcase, languages: Languages,
   droplets: Droplets, paw: PawPrint, hand: Hand, cookie: Cookie, locate: LocateFixed, eye: Eye, 'eye-off': EyeOff,
   grip: GripVertical, 'arrow-up': ArrowUp, 'arrow-down': ArrowDown, volume: Volume2, 'volume-off': VolumeX, smile: Smile,

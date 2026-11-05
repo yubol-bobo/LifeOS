@@ -1,3 +1,4 @@
+import { setLayout, useLayout } from '../os/display';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -70,6 +71,7 @@ export function Settings() {
 function General() {
   const L = useL();
   const p = useStore((s) => s.profile);
+  const layout = useLayout();
   const demo = useStore((s) => s.demo);
   const file = useRef<HTMLInputElement>(null);
   const [confirm, setConfirm] = useState<null | 'reset' | 'demo'>(null);
@@ -129,6 +131,16 @@ function General() {
                   { value: 'light', label: L('明亮', 'Light'), icon: 'sun' },
                   { value: 'dark', label: L('暗夜', 'Dark'), icon: 'moon' },
                   { value: 'system', label: L('跟随系统', 'System'), icon: 'monitor' },
+                ]}
+              />
+            </Field>
+            <Field label={L('桌面布局（仅本设备）', 'Desktop layout (this device)')}>
+              <Segmented
+                value={layout}
+                onChange={(v) => setLayout(v)}
+                options={[
+                  { value: 'portrait', label: L('竖版', 'Portrait'), icon: 'layout-tall' },
+                  { value: 'landscape', label: L('横版仪表盘', 'Landscape'), icon: 'layout-wide' },
                 ]}
               />
             </Field>

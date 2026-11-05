@@ -10,6 +10,7 @@ import './styles/pet.css';
 import './styles/round3.css';
 import './styles/plans.css';
 import './styles/growth.css';
+import './styles/layout.css';
 import { Shell } from './os/Shell';
 
 createRoot(document.getElementById('root')!).render(
