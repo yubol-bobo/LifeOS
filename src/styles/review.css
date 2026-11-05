@@ -284,9 +284,7 @@
   gap: 12px;
   padding: 16px 16px 14px;
   border-radius: 26px;
-  background: color-mix(in oklab, var(--bg) 88%, transparent);
-  backdrop-filter: blur(30px) saturate(1.5);
-  -webkit-backdrop-filter: blur(30px) saturate(1.5);
+  background: var(--bg);
   box-shadow: var(--shadow-lg), 0 0 0 1px var(--line-2);
   animation: sum-in 0.55s var(--ease-out) both;
   isolation: isolate;

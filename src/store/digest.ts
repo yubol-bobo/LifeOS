@@ -100,14 +100,18 @@ export function dayDigest(s: State, day = dayKey(), lang: Lang = s.profile.lang)
   const ci = cl.findIndex((x) => x.date === day);
   const citations = ci >= 0 ? { total: cl[ci].total, delta: ci > 0 ? cl[ci].total - cl[ci - 1].total : 0 } : undefined;
 
-  const countdowns = upcoming(s)
-    .filter((c) => c.daysLeft >= 0 && c.daysLeft <= 30)
-    .slice(0, 4)
-    .map((c) => ({ title: c.title, days: c.daysLeft }));
+  // count days from the digest's day, not from today (summaries can be written for past days)
+  const fromDay = (c: { date: string }) => Math.round((parseDay(c.date).getTime() - date.getTime()) / 86_400_000);
+  const ahead = upcoming(s, true).filter((c) => c.date >= day);
+  const countdowns = ahead
+    .map((c) => ({ title: c.title, days: fromDay(c) }))
+    .filter((c) => c.days >= 0 && c.days <= 30)
+    .sort((a, b) => a.days - b.days)
+    .slice(0, 4);
 
   const specials: string[] = [];
   if (s.profile.birthDate?.slice(5) === day.slice(5)) specials.push(zh ? '今天是你的生日' : "It's your birthday");
-  for (const c of upcoming(s)) if (c.daysLeft === 0) specials.push(zh ? `今天就是「${c.title}」` : `Today is “${c.title}”`);
+  for (const c of ahead) if (c.date === day) specials.push(zh ? `今天就是「${c.title}」` : `Today is “${c.title}”`);
 
   let streak = 0;
   for (let d = day; (s.completions[d]?.length ?? 0) > 0; d = addDays(d, -1)) streak++;
