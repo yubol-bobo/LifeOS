@@ -5,7 +5,10 @@ import { Icon } from './Icon';
 
 type Tone = 'accent' | 'gold' | 'mind' | 'body' | 'wealth' | 'craft' | 'bond' | 'spirit' | 'ink';
 
-export const toneVar = (t: Tone | Attr) => (t === 'accent' ? 'var(--accent)' : t === 'gold' ? 'var(--gold)' : t === 'ink' ? 'var(--ink)' : `var(--c-${t})`);
+const PALETTE_KEYS = new Set(['blue', 'orange', 'jade', 'amber', 'pink', 'violet', 'teal', 'red', 'lime', 'indigo', 'slate', 'brown']);
+/** Accent / gold / ink, a palette color name, or an attribute id. */
+export const toneVar = (t: Tone | Attr) =>
+  t === 'accent' ? 'var(--accent)' : t === 'gold' ? 'var(--gold)' : t === 'ink' ? 'var(--ink)' : PALETTE_KEYS.has(t) ? `var(--p-${t})` : `var(--c-${t})`;
 
 /* ---------------- Buttons ---------------- */
 

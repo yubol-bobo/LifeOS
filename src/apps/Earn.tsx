@@ -12,8 +12,7 @@ import { Odometer } from '../ui/Odometer';
 import { AttrPicker } from './Quests';
 import { PayCard, ProjectsEditor } from './Settings';
 import { Icon } from '../ui/Icon';
-import type { CSSProperties } from 'react';
-import { GoalTag } from './goals';
+import { GoalTag, ProjectTag } from './goals';
 import { isScheduled } from '../store/links';
 
 export function Earn() {
@@ -374,13 +373,3 @@ function ManualSession({ open, onClose }: { open: boolean; onClose: () => void }
   );
 }
 
-function ProjectTag({ id }: { id: string }) {
-  const p = useStore((s) => s.projects.find((x) => x.id === id));
-  if (!p) return null;
-  return (
-    <span className="goal-tag" style={{ '--tone': `var(--p-${p.color})` } as CSSProperties}>
-      <Icon name="briefcase" size={11} stroke={2.6} />
-      <span>{p.name}</span>
-    </span>
-  );
-}

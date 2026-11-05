@@ -9,6 +9,8 @@ import { Shop } from '../apps/Shop';
 import { Trophies } from '../apps/Trophies';
 import { Settings } from '../apps/Settings';
 import { Mood } from '../apps/Mood';
+import { Plan } from '../apps/Plan';
+import { Projects } from '../apps/Projects';
 import { Assets, CheckinSheet } from '../apps/Assets';
 import { attrCss, DEFAULT_ATTRS } from '../store/defaults';
 import { PetLayer } from '../pet/PetLayer';
@@ -37,6 +39,8 @@ const APP_VIEWS: Record<Exclude<AppId, 'home'>, () => ReactNode> = {
   earn: () => <Earn />,
   trackers: () => <Trackers />,
   mood: () => <Mood />,
+  plan: () => <Plan />,
+  projects: () => <Projects />,
   assets: () => <Assets />,
   shop: () => <Shop />,
   trophies: () => <Trophies />,

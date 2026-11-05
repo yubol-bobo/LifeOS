@@ -5,6 +5,8 @@ import type { AppId } from '../os/apps';
 import { onAppEvent } from '../os/notify';
 import { open } from '../os/router';
 import { checkinDue } from '../store/assets';
+import { upcoming } from '../store/countdowns';
+import { periodOf } from '../lib/period';
 import { scheduledDailies } from '../store/links';
 import { actions, getState, useStore } from '../store/store';
 import type { MoodEntry, PetKind } from '../store/types';
@@ -838,6 +840,66 @@ export function PetLayer({ app }: { app: AppId }) {
           'sleep',
         );
         return;
+      }
+      // Planning nudges: a new week / month with nothing planned yet
+      const hr = new Date(now).getHours();
+      const dnow = new Date(now);
+      if (inputRecent && hr >= 8 && hr < 21) {
+        const wk = periodOf('week');
+        const mo = periodOf('month');
+        const needMonth = dnow.getDate() <= 3 && !s.plans.some((p) => p.scope === 'month' && p.period === mo) && localStorage.getItem('lifeos:pet:askedPlan') !== mo;
+        const needWeek = (dnow.getDay() + 6) % 7 <= 1 && !s.plans.some((p) => p.scope === 'week' && p.period === wk) && localStorage.getItem('lifeos:pet:askedPlan') !== wk;
+        if (needMonth || needWeek) {
+          try {
+            localStorage.setItem('lifeos:pet:askedPlan', needMonth ? mo : wk);
+          } catch {
+            /* ignore */
+          }
+          remind(
+            {
+              id: 'plan',
+              text: needMonth ? L('新的一个月开始啦！花两分钟写下这个月最重要的几件事？', 'A new month! Two minutes to write down what matters most this month?') : L('新的一周～要不要先把本周计划定下来？我会帮你盯进度。', 'New week! Set this week’s plan? I’ll keep an eye on progress.'),
+              actions: [
+                {
+                  label: L('去写计划', 'Plan it'),
+                  primary: true,
+                  icon: 'calendar',
+                  run: () => {
+                    try {
+                      sessionStorage.setItem('lifeos:plan-tab', needMonth ? 'month' : 'week');
+                    } catch {
+                      /* ignore */
+                    }
+                    release();
+                    open('plan');
+                  },
+                },
+                { label: L('稍后', 'Later'), run: () => (setBubble(null), setMood('idle'), next()) },
+              ],
+            },
+            needMonth ? L('写下本月计划', 'Plan your month') : L('写下本周计划', 'Plan your week'),
+            'happy',
+          );
+          return;
+        }
+      }
+      // Countdown heads-up (7 / 3 / 1 / 0 days), once per day per item
+      if (inputRecent && !bubbleRef.current) {
+        const soonItem = upcoming(s).find((c) => [0, 1, 3, 7].includes(c.daysLeft) && localStorage.getItem(`lifeos:pet:cd:${c.id}`) !== dayKey());
+        if (soonItem) {
+          try {
+            localStorage.setItem(`lifeos:pet:cd:${soonItem.id}`, dayKey());
+          } catch {
+            /* ignore */
+          }
+          say(
+            {
+              id: `cd-${now}`,
+              text: soonItem.daysLeft === 0 ? L(`就是今天：「${soonItem.title}」！`, `It’s today: “${soonItem.title}”!`) : L(`距离「${soonItem.title}」还有 ${soonItem.daysLeft} 天`, `${soonItem.daysLeft} day${soonItem.daysLeft > 1 ? 's' : ''} until “${soonItem.title}”`),
+            },
+            9000,
+          );
+        }
       }
       // Eyes: 20-20-20 (gentle, no buttons)
       if (c.eye20 && inputRecent && now - eyeAt >= 20 * 60_000 && !bubbleRef.current) {

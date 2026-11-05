@@ -8,6 +8,7 @@ import './styles/shell.css';
 import './styles/apps.css';
 import './styles/pet.css';
 import './styles/round3.css';
+import './styles/plans.css';
 import { Shell } from './os/Shell';
 
 createRoot(document.getElementById('root')!).render(

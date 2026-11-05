@@ -17,13 +17,17 @@ import {
 } from './rules';
 import { DEFAULT_DOCK, PINNED, type AppId } from '../os/apps';
 import type { ScholarFeed } from '../lib/scholarFeed';
-import { DEFAULT_ATTRS, hourlyFrom } from './defaults';
+import { DEFAULT_ATTRS, DEFAULT_CATEGORIES, hourlyFrom } from './defaults';
+import { PLAN_XP, planProgress } from './plans';
 import { defaultRates } from './assets';
 import { readyGoals, scheduledDailies } from './links';
 import type {
   Attr,
   AttrDef,
   Account,
+  Category,
+  Countdown,
+  Plan,
   MoodEntry,
   Project,
   EventKind,
@@ -79,6 +83,9 @@ export function defaultState(): State {
     accounts: [],
     snapshots: [],
     assets: { base: 'USD', rates: defaultRates('USD'), cadence: 'weekly' },
+    categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
+    plans: [],
+    countdowns: [],
   };
 }
 
@@ -95,7 +102,10 @@ export function migrate(parsed: Partial<State>): State {
     pet: { ...d.pet, ...parsed.pet },
     assets: { ...d.assets, ...parsed.assets },
     attributes: parsed.attributes?.length ? parsed.attributes : d.attributes,
+    categories: parsed.categories?.length ? parsed.categories : d.categories,
   };
+  // Older "working for" entries become full projects.
+  s.projects = s.projects.map((p) => ({ category: 'work', status: 'active', ...p }));
   // New apps appear in the dock automatically.
   for (const id of DEFAULT_DOCK) if (!s.ui.dock.includes(id)) s.ui.dock.splice(Math.max(0, s.ui.dock.length - 1), 0, id);
   s.ui.dock = s.ui.dock.filter((id) => DEFAULT_DOCK.includes(id));
@@ -191,6 +201,27 @@ export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
   const draft: State = structuredClone(state);
   mutate(draft);
 
+  // Plans complete themselves when everything attached to them is done (and reopen if that changes).
+  const planDone: string[] = [];
+  if (draft.plans?.length) {
+    const mx0 = metrics(draft);
+    // Evaluate weeks first so months/years see fresh children.
+    for (const scope of ['week', 'month', 'year'] as const)
+      for (const p of draft.plans.filter((x) => x.scope === scope)) {
+        const pr = planProgress(draft, p, mx0);
+        if (pr.parts === 0) continue;
+        if (!p.done && pr.pct >= 0.999) {
+          p.done = true;
+          p.auto = true;
+          if (grant(draft, `plan:${p.id}`, 'plan', PLAN_XP[p.scope], p.title)) planDone.push(p.title);
+        } else if (p.done && p.auto && pr.pct < 0.999) {
+          p.done = false;
+          p.auto = false;
+          revoke(draft, `plan:${p.id}`);
+        }
+      }
+  }
+
   // Achievements are re-evaluated after every change and stay unlocked once earned.
   let m = metrics(draft);
   const unlocked: string[] = [];
@@ -210,6 +241,7 @@ export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
   subs.forEach((f) => f());
 
   if (opts.silent) return;
+  for (const t of planDone.slice(0, 2)) notify({ title: tr('计划完成', 'Plan complete'), body: `「${t}」 · ${tr('全部完成', 'all done')}`, icon: 'circle-check', tone: 'gold' });
   for (const id of readyGoals(state).filter((g) => !readyBefore.has(g))) {
     const g = state.milestones.find((x) => x.id === id)!;
     notify({ title: tr('目标条件已全部满足', 'Goal complete'), body: tr(`「${g.title}」可以领取了 →`, `“${g.title}” is ready to claim →`), icon: 'flag', tone: 'accent' }, 8000);
@@ -473,6 +505,122 @@ export const actions = {
     commit(
       (d) => {
         d.pomo = p;
+      },
+      { silent: true },
+    );
+  },
+
+  /* ---- projects, plans, countdowns ---- */
+  saveCategory(c: Omit<Category, 'id'> & { id?: string }) {
+    commit(
+      (d) => {
+        const hit = c.id && d.categories.find((x) => x.id === c.id);
+        if (hit) Object.assign(hit, c);
+        else d.categories.push({ ...c, id: `c-${uid()}` } as Category);
+      },
+      { silent: true },
+    );
+  },
+  removeCategory(id: string) {
+    commit(
+      (d) => {
+        if (d.categories.length <= 1) return;
+        d.categories = d.categories.filter((c) => c.id !== id);
+        const fallback = d.categories[0].id;
+        for (const p of d.projects) if (p.category === id) p.category = fallback;
+      },
+      { silent: true },
+    );
+  },
+  /** Create or update a project; returns its id. */
+  upsertProject(p: Partial<Project> & { name: string }): string {
+    let id = p.id ?? '';
+    commit((d) => {
+      const hit = id && d.projects.find((x) => x.id === id);
+      if (hit) Object.assign(hit, p);
+      else {
+        id = uid();
+        d.projects.push({ color: 'blue', category: d.categories[0]?.id, status: 'active', createdAt: Date.now(), ...p, id } as Project);
+      }
+    });
+    return id;
+  },
+  deleteProject(id: string) {
+    commit((d) => {
+      d.projects = d.projects.filter((p) => p.id !== id);
+      for (const x of [...d.quests, ...d.milestones, ...d.papers, ...d.plans, ...d.countdowns, ...d.sessions] as { projectId?: string }[]) if (x.projectId === id) x.projectId = undefined;
+      if (d.active?.projectId === id) d.active.projectId = undefined;
+    });
+  },
+  linkProject(kind: 'quests' | 'milestones' | 'papers' | 'plans' | 'countdowns', itemId: string, projectId?: string) {
+    commit((d) => {
+      const x = (d[kind] as { id: string; projectId?: string }[]).find((y) => y.id === itemId);
+      if (x) x.projectId = projectId || undefined;
+    });
+  },
+  savePlan(p: Partial<Plan> & { scope: Plan['scope']; period: string; title: string }): string {
+    let id = p.id ?? '';
+    commit((d) => {
+      const hit = id && d.plans.find((x) => x.id === id);
+      if (hit) Object.assign(hit, p);
+      else {
+        id = uid();
+        const parent = p.parentId ? d.plans.find((x) => x.id === p.parentId) : undefined;
+        d.plans.push({ createdAt: Date.now(), projectId: parent?.projectId, goalId: undefined, ...p, id } as Plan);
+      }
+    });
+    return id;
+  },
+  togglePlan(id: string) {
+    let gained = 0;
+    commit((d) => {
+      const p = d.plans.find((x) => x.id === id);
+      if (!p) return;
+      p.done = !p.done;
+      p.auto = false;
+      if (p.done) {
+        if (grant(d, `plan:${p.id}`, 'plan', PLAN_XP[p.scope], p.title)) gained = PLAN_XP[p.scope];
+      } else revoke(d, `plan:${p.id}`);
+    });
+    if (gained) burst(`+${gained} XP`);
+  },
+  removePlan(id: string) {
+    commit((d) => {
+      const kill = new Set([id]);
+      // remove the whole subtree
+      let grew = true;
+      while (grew) {
+        grew = false;
+        for (const p of d.plans) if (p.parentId && kill.has(p.parentId) && !kill.has(p.id)) (kill.add(p.id), (grew = true));
+      }
+      d.plans = d.plans.filter((p) => !kill.has(p.id));
+      for (const q of d.quests) if (q.planId && kill.has(q.planId)) q.planId = undefined;
+      for (const k of kill) revoke(d, `plan:${k}`);
+    });
+  },
+  /** Turn a week plan item into a one-off quest for today (keeps project + plan links). */
+  pullToToday(planId: string) {
+    const p = state.plans.find((x) => x.id === planId);
+    if (!p) return;
+    commit((d) => {
+      d.quests.push({ id: uid(), title: p.title, kind: 'once', attr: d.attributes[0]?.id ?? 'mind', difficulty: 'normal', createdAt: Date.now(), planId: p.id, projectId: p.projectId });
+    });
+    notify({ title: tr('已加入今日任务', 'Added to today'), body: p.title, icon: 'list-checks', tone: 'good' });
+  },
+  saveCountdown(c: Omit<Countdown, 'id' | 'createdAt'> & { id?: string }) {
+    commit(
+      (d) => {
+        const hit = c.id && d.countdowns.find((x) => x.id === c.id);
+        if (hit) Object.assign(hit, c);
+        else d.countdowns.push({ ...c, id: uid(), createdAt: dayKey() } as Countdown);
+      },
+      { silent: true },
+    );
+  },
+  removeCountdown(id: string) {
+    commit(
+      (d) => {
+        d.countdowns = d.countdowns.filter((c) => c.id !== id);
       },
       { silent: true },
     );

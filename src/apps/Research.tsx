@@ -12,6 +12,7 @@ import { PAPER_FLOW, type Paper, type PaperStatus } from '../store/types';
 import { AreaChart, Columns, Sparkline } from '../ui/charts';
 import { Icon } from '../ui/Icon';
 import { Button, Card, Chip, Empty, Field, Modal, Segmented, Stat } from '../ui/kit';
+import { ProjectSelect, ProjectTag } from './goals';
 
 export function useStatusLabel() {
   const L = useL();
@@ -125,6 +126,7 @@ export function Research() {
                           {p.year && <span className="num">{p.year}</span>}
                           {p.firstAuthor && <Chip tone="spirit">{L('一作', '1st')}</Chip>}
                           {p.removed && <Chip>{L('已从主页消失', 'Gone from profile')}</Chip>}
+                          <ProjectTag id={p.projectId} />
                         </div>
                         <div className="paper-foot">
                           <span className="num cite">
@@ -272,6 +274,9 @@ function PaperEditor({ value, onClose }: { value: Partial<Paper> | null; onClose
             />
           </Field>
         </div>
+        <Field label={L('属于哪个项目', 'Project')}>
+          <ProjectSelect value={p.projectId} onChange={(v) => setD({ ...p, projectId: v })} />
+        </Field>
         <Field label={L('链接', 'Link')}>
           <input className="input" value={p.url ?? ''} onChange={(e) => setD({ ...p, url: e.target.value })} placeholder="https://doi.org/…" />
         </Field>

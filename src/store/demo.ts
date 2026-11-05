@@ -4,6 +4,7 @@ import { coinsFor, PAPER_XP, QUEST_XP, STEP_XP, MILESTONE_XP, TRACKER_XP } from 
 import { defaultState } from './store';
 import { defaultRates } from './assets';
 import { hourlyFrom } from './defaults';
+import { periodOf } from '../lib/period';
 import type { Account, Milestone, Paper, Quest, State, XpEvent } from './types';
 
 /**
@@ -192,9 +193,10 @@ export function demoState(profile: Partial<State['profile']>): State {
   s.pay = { mode: 'year', amount: 93600, hoursPerDay: 8, daysPerWeek: 5 }; // ≈ 45/h
   s.profile.hourlyRate = Math.round(hourlyFrom(s.pay) * 100) / 100;
   s.projects = [
-    { id: uid(), name: T('博士研究', 'PhD research'), color: 'violet' },
-    { id: uid(), name: T('助教', 'Teaching assistant'), color: 'teal', rate: 30 },
-    { id: uid(), name: T('咨询副业', 'Consulting gig'), color: 'amber', rate: 120 },
+    { id: uid(), name: T('博士研究', 'PhD research'), color: 'violet', category: 'research', status: 'active', note: T('资格答辩 + 两篇顶会', 'Proposal defense + two top-venue papers'), createdAt: Date.now() - 120 * DAY },
+    { id: uid(), name: T('助教', 'Teaching assistant'), color: 'teal', rate: 30, category: 'work', status: 'active', deadline: addDays(today, 38), createdAt: Date.now() - 70 * DAY },
+    { id: uid(), name: T('咨询副业', 'Consulting gig'), color: 'amber', rate: 120, category: 'work', status: 'active', createdAt: Date.now() - 40 * DAY },
+    { id: uid(), name: T('全马训练', 'Marathon training'), color: 'orange', category: 'life', status: 'active', createdAt: Date.now() - 30 * DAY },
   ];
   for (const x of s.sessions) {
     const pr = x.note === notes[3] ? s.projects[1] : r() < 0.14 ? s.projects[2] : s.projects[0];
@@ -202,6 +204,52 @@ export function demoState(profile: Partial<State['profile']>): State {
     x.rate = pr.rate ?? s.profile.hourlyRate;
     x.earned = (x.activeMs / 3_600_000) * x.rate;
   }
+
+  /* ---- projects ↔ everything, and cascading plans ---- */
+  const [phd, , consult, marathonP] = s.projects;
+  const g = (en: string) => s.milestones.find((m) => m.title === T(({ 'PhD proposal defense': '博士资格答辩', 'Full marathon': '全程马拉松', 'Oral at a top venue': '顶会 Oral' } as Record<string, string>)[en], en))!;
+  g('PhD proposal defense').projectId = phd.id;
+  g('Oral at a top venue').projectId = phd.id;
+  g('Full marathon').projectId = marathonP.id;
+  s.papers.forEach((p) => (p.projectId = phd.id));
+  dailies[0].projectId = phd.id;
+  dailies[1].projectId = phd.id;
+  dailies[2].projectId = marathonP.id;
+  const reviewQ = s.quests.find((q) => q.kind === 'once' && q.difficulty === 'hard')!;
+  reviewQ.projectId = phd.id;
+  s.quests.push({ id: uid(), title: T('整理客户需求文档', 'Write up client requirements'), kind: 'once', attr: 'wealth', difficulty: 'normal', createdAt: Date.now() - 3 * DAY, projectId: consult.id });
+  s.quests.push({ id: uid(), title: T('交付第一版原型', 'Ship first prototype'), kind: 'once', attr: 'craft', difficulty: 'hard', createdAt: Date.now() - 2 * DAY, projectId: consult.id, doneAt: Date.now() - DAY });
+
+  const Y = periodOf('year');
+  const M = periodOf('month');
+  const W = periodOf('week');
+  const plan = (scope: 'year' | 'month' | 'week', period: string, title: string, extra: Partial<import('./types').Plan> = {}) => {
+    const p = { id: uid(), scope, period, title, createdAt: Date.now() - 20 * DAY, ...extra };
+    s.plans.push(p);
+    return p;
+  };
+  const yDefense = plan('year', Y, T('通过博士资格答辩', 'Pass the PhD proposal defense'), { goalId: g('PhD proposal defense').id, projectId: phd.id });
+  const yPapers = plan('year', Y, T('两篇顶会论文', 'Two top-venue papers'), { projectId: phd.id });
+  const yRun = plan('year', Y, T('为全马打好基础', 'Build the base for a marathon'), { goalId: g('Full marathon').id, projectId: marathonP.id });
+  plan('year', Y, T('存款达到 3 万美元', 'Savings reach $30k'));
+  const mProposal = plan('month', M, T('proposal 定稿交给导师', 'Final proposal draft to advisor'), { parentId: yDefense.id, projectId: phd.id });
+  const mRebuttal = plan('month', M, T('完成 ICLR rebuttal', 'Finish the ICLR rebuttal'), { parentId: yPapers.id, projectId: phd.id });
+  const mRun = plan('month', M, T('本月跑量 120 km', '120 km this month'), { parentId: yRun.id, projectId: marathonP.id });
+  plan('month', M, T('给爸妈订感恩节机票', 'Book Thanksgiving flights for parents'), { done: true });
+  const wCh3 = plan('week', W, T('写完 proposal 第 3 章', 'Finish proposal chapter 3'), { parentId: mProposal.id, projectId: phd.id });
+  const wReply = plan('week', W, T('逐条回复审稿意见', 'Answer every reviewer point'), { parentId: mRebuttal.id, projectId: phd.id });
+  const wRun = plan('week', W, T('这周跑 3 次', 'Run 3 times this week'), { parentId: mRun.id, projectId: marathonP.id });
+  plan('week', W, T('周日和家人视频', 'Sunday video call with family'));
+  reviewQ.planId = wReply.id;
+  dailies[2].planId = wRun.id;
+  dailies[0].planId = wCh3.id;
+
+  s.countdowns = [
+    { id: uid(), title: T('ICLR rebuttal 截止', 'ICLR rebuttal deadline'), date: addDays(today, 6), icon: 'send', color: 'violet', projectId: phd.id, createdAt: addDays(today, -14) },
+    { id: uid(), title: T('感恩节回家', 'Thanksgiving trip home'), date: addDays(today, 21), icon: 'plane', color: 'amber', createdAt: addDays(today, -30) },
+    { id: uid(), title: T('妈妈生日', "Mom's birthday"), date: '1968-12-14', icon: 'cake', color: 'pink', repeat: 'yearly', createdAt: addDays(today, -200) },
+    { id: uid(), title: T('NeurIPS 2027 截稿', 'NeurIPS 2027 deadline'), date: addDays(today, 190), icon: 'graduation', color: 'blue', projectId: phd.id, createdAt: addDays(today, -10) },
+  ];
 
   /* ---- wellness & mood (correlated, so the insights have something to find) ---- */
   const runQ = dailies[2];

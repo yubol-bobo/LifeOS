@@ -3,6 +3,7 @@ import { money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { APPS, PINNED, type AppId } from '../os/apps';
 import { notify } from '../os/notify';
+import { open } from '../os/router';
 import { PET_KINDS, PetAvatar } from '../pet/sprites';
 import { ATTR_ICONS, PALETTE, attrName, hourlyFrom, useAttrs } from '../store/attrs';
 import { demoState } from '../store/demo';
@@ -215,6 +216,8 @@ function General() {
 const WIDGETS: { id: string; zh: string; en: string }[] = [
   { id: 'hero', zh: '星球与等级', en: 'Planet & level' },
   { id: 'quests', zh: '今日任务', en: "Today's quests" },
+  { id: 'plans', zh: '本周计划', en: 'This week' },
+  { id: 'countdown', zh: '倒计时', en: 'Countdown' },
   { id: 'mood', zh: '心情打卡', en: 'Mood check-in' },
   { id: 'life', zh: '人生进度', en: 'Life progress' },
   { id: 'earn', zh: '时薪计', en: 'Wage timer' },
@@ -438,7 +441,7 @@ function WorkSettings() {
   return (
     <div className="grid-1-1">
       <PayCard pay={pay} currency={p.currency} />
-      <Card title={L('为谁工作', 'Working for')} icon="briefcase">
+      <Card title={L('为谁工作（项目）', 'Working for (projects)')} icon="briefcase" action={<Button size="sm" variant="ghost" icon="chevron-right" onClick={() => open('projects')}>{L('完整项目管理', 'Full project view')}</Button>}>
         <p className="muted small">{L('老板、客户、项目、副业……每一项都可以有自己的时薪，不填就用默认时薪。时薪计会按项目统计收入。', 'Employers, clients, projects, side gigs — each can have its own rate (blank = default). The wage timer breaks income down by these.')}</p>
         <ProjectsEditor />
       </Card>

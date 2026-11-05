@@ -10,7 +10,7 @@ import type { Milestone, MilestoneSize } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, Card, CheckBubble, Chip, Empty, Field, Modal, Segmented, Stat } from '../ui/kit';
 import { AttrPicker } from './Quests';
-import { GoalParts, KR_ICON, useKrText } from './goals';
+import { GoalParts, KR_ICON, ProjectSelect, ProjectTag, useKrText } from './goals';
 import { goalProgress } from '../store/links';
 import { useMetrics } from '../store/hooks';
 import type { KeyResult, KrKind, KrMetric } from '../store/types';
@@ -129,6 +129,7 @@ function MilestoneItem({ m, onEdit }: { m: Milestone; onEdit: () => void }) {
         {m.note && <p className="tl-note">{m.note}</p>}
         <div className="tl-meta">
           <Chip tone={m.attr}>{attrs.label(m.attr)}</Chip>
+          <ProjectTag id={m.projectId} />
           <Chip icon={m.size === 'epic' ? 'mountain' : 'flag'}>
             {{ small: L('小目标', 'Small'), big: L('大目标', 'Big'), epic: L('史诗', 'Epic') }[m.size]} · {MILESTONE_XP[m.size]} XP
           </Chip>
@@ -390,6 +391,9 @@ function MilestoneEditor({ value, onClose }: { value: Partial<Milestone> | null;
         </Field>
         <Field label={L('属性', 'Attribute')}>
           <AttrPicker value={m.attr} onChange={(a) => setD({ ...m, attr: a })} />
+        </Field>
+        <Field label={L('属于哪个项目', 'Project')}>
+          <ProjectSelect value={m.projectId} onChange={(v) => setD({ ...m, projectId: v })} />
         </Field>
         <KrBuilder krs={m.krs ?? []} onChange={(krs) => setD({ ...m, krs })} />
         <Field label={L('拆解步骤（每步 +15 XP）', 'Steps (+15 XP each)')}>

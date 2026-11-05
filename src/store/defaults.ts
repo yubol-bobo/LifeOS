@@ -37,3 +37,12 @@ export function hourlyFrom(p: PayConfig) {
       return p.amount;
   }
 }
+
+import type { Category } from './types';
+
+export const DEFAULT_CATEGORIES: Category[] = [
+  { id: 'research', zh: '学术', en: 'Research', icon: 'graduation', color: 'violet' },
+  { id: 'work', zh: '工作', en: 'Work', icon: 'briefcase', color: 'blue' },
+  { id: 'life', zh: '生活', en: 'Life', icon: 'leaf', color: 'jade' },
+  { id: 'other', zh: '其他', en: 'Other', icon: 'sparkles', color: 'slate' },
+];
