@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useAttrs } from '../store/attrs';
+import { Pie3D } from '../scene/Pie3D';
+import { useTheme } from '../os/theme';
 import { dayKey, lastNDays, parseDay, startOfWeek } from '../lib/date';
 import { duration, money } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -486,42 +488,85 @@ export function clock(ms: number) {
   return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
 }
 
-/** Today (and this week): where the focused time went — paid work and unpaid effort side by side. */
+/** Today (and this week): where the focused time went — paid work and unpaid effort, as an interactive 3D donut. */
+const SLICE_COLORS = ['orange', 'blue', 'jade', 'violet', 'amber', 'pink', 'teal', 'indigo', 'red', 'lime', 'brown', 'slate'];
+const cssVar = (name: string, fallback: string) => {
+  try {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+  } catch {
+    return fallback;
+  }
+};
+
 function EffortCard({ live }: { live: ReturnType<typeof useLiveSession> }) {
   const L = useL();
+  const dark = useTheme();
   const sessions = useStore((s) => s.sessions);
   const projects = useStore((s) => s.projects);
   const cur = useStore((s) => s.profile.currency);
+  const reduce = useStore((s) => s.profile.reduceMotion);
   const [range, setRange] = useState<'today' | 'week'>('today');
+  const [show, setShow] = useState<'all' | 'paid' | 'free'>('all');
+  const [sel, setSel] = useState<string | null>(null);
+  const [hov, setHov] = useState<string | null>(null);
   const from = range === 'today' ? new Date(new Date().setHours(0, 0, 0, 0)).getTime() : startOfWeek().getTime();
-  const rows = new Map<string, { label: string; ms: number; paid: boolean; earned: number; attr: Attr }>();
-  const add = (label: string, ms: number, paid: boolean, earned: number, attr: Attr) => {
-    const k = `${paid ? 'p' : 'f'}:${label}`;
-    const r = rows.get(k) ?? { label, ms: 0, paid, earned: 0, attr };
+  const rows = new Map<string, { id: string; label: string; ms: number; paid: boolean; earned: number; n: number }>();
+  const add = (label: string, ms: number, paid: boolean, earned: number) => {
+    const id = `${paid ? 'p' : 'f'}:${label}`;
+    const r = rows.get(id) ?? { id, label, ms: 0, paid, earned: 0, n: 0 };
     r.ms += ms;
     r.earned += earned;
-    rows.set(k, r);
+    r.n += 1;
+    rows.set(id, r);
   };
   const nameOf = (x: { note?: string; projectId?: string }) => x.note || projects.find((p) => p.id === x.projectId)?.name || L('专注', 'Focus');
-  for (const x of sessions) if (x.start >= from) add(nameOf(x), x.activeMs, x.rate > 0, x.earned, x.attr);
-  if (live) add(nameOf(live.active), live.ms, live.paid, live.earned, live.active.attr);
-  const list = [...rows.values()].sort((a, b) => b.ms - a.ms);
-  const total = list.reduce((a, r) => a + r.ms, 0);
-  const paidMs = list.filter((r) => r.paid).reduce((a, r) => a + r.ms, 0);
+  for (const x of sessions) if (x.start >= from) add(nameOf(x), x.activeMs, x.rate > 0, x.earned);
+  if (live) add(nameOf(live.active), live.ms, live.paid, live.earned);
+  const all = [...rows.values()].sort((a, b) => b.ms - a.ms);
+  const total = all.reduce((a, r) => a + r.ms, 0);
+  const paidMs = all.filter((r) => r.paid).reduce((a, r) => a + r.ms, 0);
+  const list = all.filter((r) => show === 'all' || (show === 'paid') === r.paid);
+  const shown = list.reduce((a, r) => a + r.ms, 0);
+  // stable colour per activity (by first appearance in the full list)
+  const colorOf = (id: string) => {
+    const i = all.findIndex((r) => r.id === id);
+    const k = SLICE_COLORS[i % SLICE_COLORS.length];
+    return cssVar(`--p-${k}`, '#888');
+  };
+  const paidRim = cssVar('--c-wealth', '#1ba677');
+  const freeRim = cssVar('--p-violet', '#7a5ae6');
+  const slices = list.map((r) => ({ id: r.id, value: Math.max(1, Math.round(r.ms / 60_000)), color: colorOf(r.id), rim: r.paid ? paidRim : freeRim }));
+  const byId = new Map(all.map((r) => [r.id, r]));
+  const h = (ms: number) => (ms / 3_600_000).toFixed(1);
+  const focusId = sel ?? hov;
+  const focusRow = focusId ? byId.get(focusId) : undefined;
+
   return (
     <Card
       title={L('努力都去哪了', 'Where the effort went')}
       icon="activity"
       action={
-        <Segmented
-          size="sm"
-          value={range}
-          onChange={setRange}
-          options={[
-            { value: 'today', label: L('今天', 'Today') },
-            { value: 'week', label: L('本周', 'This week') },
-          ]}
-        />
+        <div className="row-gap wrap">
+          <Segmented
+            size="sm"
+            value={show}
+            onChange={(v) => (setShow(v), setSel(null))}
+            options={[
+              { value: 'all', label: L('全部', 'All') },
+              { value: 'paid', label: L('赚钱', 'Paid'), icon: 'coins' },
+              { value: 'free', label: L('不计薪', 'Unpaid'), icon: 'sprout' },
+            ]}
+          />
+          <Segmented
+            size="sm"
+            value={range}
+            onChange={(v) => (setRange(v), setSel(null))}
+            options={[
+              { value: 'today', label: L('今天', 'Today') },
+              { value: 'week', label: L('本周', 'This week') },
+            ]}
+          />
+        </div>
       }
     >
       {total === 0 ? (
@@ -529,35 +574,75 @@ function EffortCard({ live }: { live: ReturnType<typeof useLiveSession> }) {
       ) : (
         <>
           <div className="effort-split">
-            <span className="es-paid" style={{ flex: paidMs || 0.0001 }} />
-            <span className="es-free" style={{ flex: total - paidMs || 0.0001 }} />
+            <span className="es-paid" style={{ flex: paidMs || 0.0001, opacity: show === 'free' ? 0.25 : 1 }} />
+            <span className="es-free" style={{ flex: total - paidMs || 0.0001, opacity: show === 'paid' ? 0.25 : 1 }} />
           </div>
           <div className="effort-legend muted small">
             <span>
-              <i className="es-paid" /> {L('赚钱的工作', 'Paid')} <b className="num">{(paidMs / 3_600_000).toFixed(1)}h</b>
+              <i className="es-paid" /> {L('赚钱的工作', 'Paid')} <b className="num">{h(paidMs)}h</b>
             </span>
             <span>
-              <i className="es-free" /> {L('不计薪的努力', 'Unpaid')} <b className="num">{((total - paidMs) / 3_600_000).toFixed(1)}h</b>
+              <i className="es-free" /> {L('不计薪的努力', 'Unpaid')} <b className="num">{h(total - paidMs)}h</b>
             </span>
             <span>
-              {L('合计', 'Total')} <b className="num">{(total / 3_600_000).toFixed(1)}h</b> · <b className="num">+{Math.round(total / 60_000)}</b> XP
+              {L('合计', 'Total')} <b className="num">{h(total)}h</b> · <b className="num">+{Math.round(total / 60_000)}</b> XP
             </span>
           </div>
-          <ul className="proj-break">
-            {list.map((r) => (
-              <li key={(r.paid ? 'p' : 'f') + r.label}>
-                <i style={{ background: `var(--c-${r.attr})` }} />
-                <span className="pb-name">
-                  {r.label} {!r.paid && <small className="muted">🌱</small>}
-                </span>
-                <span className="pb-bar">
-                  <span style={{ width: `${(r.ms / list[0].ms) * 100}%`, background: `var(--c-${r.attr})` }} />
-                </span>
-                <span className="num muted small">{(r.ms / 3_600_000).toFixed(1)}h</span>
-                <strong className="num">{r.paid ? money(r.earned, cur, 0) : `+${Math.round(r.ms / 60_000)} XP`}</strong>
-              </li>
-            ))}
-          </ul>
+          {list.length === 0 ? (
+            <p className="muted small">{show === 'paid' ? L('这段时间还没有赚钱的专注。', 'No paid focus in this range yet.') : L('这段时间还没有不计薪的专注。', 'No unpaid focus in this range yet.')}</p>
+          ) : (
+            <div className="effort-viz">
+              <Pie3D
+                slices={slices}
+                dark={dark}
+                height={360}
+                still={reduce}
+                selected={sel}
+                onSelect={setSel}
+                onHover={setHov}
+                center={
+                  <>
+                    <b className="num">{focusRow ? h(focusRow.ms) : h(shown)}h</b>
+                    <span>{focusRow ? `${Math.round((focusRow.ms / shown) * 100)}%` : show === 'all' ? L('全部专注', 'all focus') : show === 'paid' ? L('赚钱的', 'paid') : L('不计薪', 'unpaid')}</span>
+                  </>
+                }
+                tooltip={(id) => {
+                  const r = byId.get(id);
+                  if (!r) return null;
+                  return (
+                    <>
+                      <span className="tip-k">
+                        {r.label} {r.paid ? '' : '🌱'}
+                      </span>
+                      <span className="tip-v num">
+                        {h(r.ms)}h · {Math.round((r.ms / shown) * 100)}% · {r.paid ? money(r.earned, cur, 0) : `+${Math.round(r.ms / 60_000)} XP`}
+                      </span>
+                    </>
+                  );
+                }}
+              />
+              <ul className="proj-break effort-list">
+                {list.map((r) => (
+                  <li
+                    key={r.id}
+                    className={`${focusId === r.id ? 'is-focus' : ''} ${focusId && focusId !== r.id ? 'is-dim' : ''}`}
+                    onMouseEnter={() => setHov(r.id)}
+                    onMouseLeave={() => setHov(null)}
+                    onClick={() => setSel((v) => (v === r.id ? null : r.id))}
+                  >
+                    <i style={{ background: colorOf(r.id) }} />
+                    <span className="pb-name">
+                      {r.label} {!r.paid && <small className="muted">🌱</small>}
+                    </span>
+                    <span className="num muted small">
+                      {h(r.ms)}h · {Math.round((r.ms / shown) * 100)}%
+                    </span>
+                    <strong className="num">{r.paid ? money(r.earned, cur, 0) : `+${Math.round(r.ms / 60_000)} XP`}</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </>
       )}
     </Card>

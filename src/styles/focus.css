@@ -260,3 +260,76 @@
     flex-basis: 100%;
   }
 }
+
+/* ---------------- 3D effort donut ---------------- */
+
+.effort-viz {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+@media (max-width: 860px) {
+  .effort-viz {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.pie3d {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  border-radius: 22px;
+  background: radial-gradient(ellipse at 50% 62%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 70%);
+  user-select: none;
+}
+.pie3d canvas {
+  display: block;
+  cursor: grab;
+}
+.pie3d canvas:active {
+  cursor: grabbing;
+}
+.pie3d-center {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 10px;
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--surface) 78%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-sm);
+  text-align: center;
+}
+.pie3d-center b {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.pie3d-center span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.pie3d-tip {
+  transform: translate(-50%, calc(-100% - 14px));
+}
+.effort-list li {
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  padding: 6px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+.effort-list li:hover,
+.effort-list li.is-focus {
+  background: color-mix(in oklab, var(--ink) 6%, transparent);
+}
+.effort-list li.is-dim {
+  opacity: 0.5;
+}
