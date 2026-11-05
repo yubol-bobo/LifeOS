@@ -120,9 +120,8 @@ Google Scholar 没有公开 API，所以由仓库里的定时任务通过 [SerpA
 1. 在 SerpAPI 注册，拿到 API key（免费额度够用）。
 2. 仓库 **Settings → Secrets and variables → Actions**：
    - **Secrets** 新建 `SERPAPI_KEY`
-   - **Variables** 新建 `SCHOLAR_ID`（Scholar 主页网址中 `user=` 后面那串）
-   - 可选 Variables：`SCHOLAR_INTERVAL_HOURS`（默认 `8`）、`SCHOLAR_MONTHLY_LIMIT`（默认 `100`）、`SCHOLAR_TZ`（默认 `UTC`）
-3. 定时任务只在默认分支（`main`）上运行。
+3. 把仓库根目录 `lifeos.config.json` 里的 `scholar.id` 改成你的 Scholar ID（主页网址中 `user=` 后面那串）。也可以在同一个文件里调整 `intervalHours`、`monthlyLimit`、`timezone`；同名的仓库 Variables（`SCHOLAR_ID` 等）优先级更高。
+4. 定时任务只在默认分支（`main`）上运行。
 
 保险措施：无论工作流被触发多少次（定时、推送、手动），脚本都保证两次抓取至少间隔 `SCHOLAR_INTERVAL_HOURS`，并且每个自然月的 SerpAPI 调用不超过 `SCHOLAR_MONTHLY_LIMIT`。100 篇论文以内每次只用 1 次调用，每 8 小时一次，约每月 90 次。
 

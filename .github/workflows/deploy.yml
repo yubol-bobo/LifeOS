@@ -28,7 +28,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      # ---- Google Scholar data (optional; needs SERPAPI_KEY secret + SCHOLAR_ID variable) ----
+      # ---- Google Scholar data (optional; needs SERPAPI_KEY secret; Scholar ID from lifeos.config.json or SCHOLAR_ID) ----
       - name: Load scholar-data branch
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -45,9 +45,9 @@ jobs:
         env:
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
           SCHOLAR_ID: ${{ vars.SCHOLAR_ID || secrets.SCHOLAR_ID }}
-          SCHOLAR_INTERVAL_HOURS: ${{ vars.SCHOLAR_INTERVAL_HOURS || '8' }}
-          SCHOLAR_MONTHLY_LIMIT: ${{ vars.SCHOLAR_MONTHLY_LIMIT || '100' }}
-          SCHOLAR_TZ: ${{ vars.SCHOLAR_TZ || 'UTC' }}
+          SCHOLAR_INTERVAL_HOURS: ${{ vars.SCHOLAR_INTERVAL_HOURS }}
+          SCHOLAR_MONTHLY_LIMIT: ${{ vars.SCHOLAR_MONTHLY_LIMIT }}
+          SCHOLAR_TZ: ${{ vars.SCHOLAR_TZ }}
         run: node scripts/scholar-sync.mjs .scholar-data
 
       - name: Save scholar data

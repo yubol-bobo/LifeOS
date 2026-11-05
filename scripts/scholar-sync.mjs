@@ -7,6 +7,7 @@
  *   - never more than SCHOLAR_MONTHLY_LIMIT SerpAPI calls per calendar month (default 100, the free plan)
  *
  * Usage: node scripts/scholar-sync.mjs <data-dir>
+ * Config: lifeos.config.json → scholar.{id, intervalHours, monthlyLimit, timezone}; env vars override.
  * Env:   SERPAPI_KEY (secret), SCHOLAR_ID (variable), optional SCHOLAR_INTERVAL_HOURS, SCHOLAR_MONTHLY_LIMIT,
  *        SCHOLAR_TZ (IANA zone for "today", default UTC), SERPAPI_MOCK (path to a JSON fixture, for tests)
  *
@@ -18,11 +19,18 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const dir = process.argv[2] || '.scholar-data';
+// Settings: environment (repo variables/secrets) first, then lifeos.config.json in the repo root.
+let cfg = {};
+try {
+  cfg = JSON.parse(readFileSync(new URL('../lifeos.config.json', import.meta.url), 'utf8')).scholar || {};
+} catch {
+  /* no config file */
+}
 const KEY = process.env.SERPAPI_KEY || '';
-const ID = (process.env.SCHOLAR_ID || '').trim();
-const INTERVAL_H = Number(process.env.SCHOLAR_INTERVAL_HOURS || 8);
-const MONTHLY_LIMIT = Number(process.env.SCHOLAR_MONTHLY_LIMIT || 100);
-const TZ = process.env.SCHOLAR_TZ || 'UTC';
+const ID = (process.env.SCHOLAR_ID || cfg.id || '').trim();
+const INTERVAL_H = Number(process.env.SCHOLAR_INTERVAL_HOURS || cfg.intervalHours || 8);
+const MONTHLY_LIMIT = Number(process.env.SCHOLAR_MONTHLY_LIMIT || cfg.monthlyLimit || 100);
+const TZ = process.env.SCHOLAR_TZ || cfg.timezone || 'UTC';
 const MOCK = process.env.SERPAPI_MOCK || '';
 const MAX_PAGES = 5;
 
