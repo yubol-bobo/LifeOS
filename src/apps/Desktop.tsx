@@ -1,4 +1,5 @@
-import { useMemo, type CSSProperties, type ReactNode } from 'react';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { LifeSettingsModal } from './LifeSettings';
 import { addDays, dayKey, daysBetween, lastNDays, lifeProgress, parseDay } from '../lib/date';
 import { compact, money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -40,6 +41,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const statusLabel = useStatusLabel();
   const attrs = useAttrs();
   const hide = new Set(s.ui.widgets);
+  const [lifeOpen, setLifeOpen] = useState(false);
   const thisWeek = periodOf('week');
   const weekPlans = s.plans.filter((p) => p.scope === 'week' && p.period === thisWeek);
   const soon = upcoming(s);
@@ -86,6 +88,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
 
   return (
     <div className={`desktop ${hidden ? 'is-hidden' : ''}`} aria-hidden={hidden}>
+      <LifeSettingsModal open={lifeOpen} onClose={() => setLifeOpen(false)} />
       {/* ---------- hero / planet ---------- */}
       {!hide.has('hero') && (
       <section className="widget w-hero">
@@ -172,7 +175,11 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       {/* ---------- life progress ---------- */}
       {!hide.has('life') && (
       <section className="widget w-life">
-        <WidgetHead icon="hourglass" title={L('人生进度', 'Life progress')} onOpen={() => open('roadmap')} />
+        <WidgetHead icon="hourglass" title={L('人生进度', 'Life progress')} onOpen={() => open('roadmap')}>
+          <button className="w-open" onClick={() => setLifeOpen(true)} aria-label={L('设置出生日期和预期寿命', 'Set birth date and life expectancy')} title={L('设置出生日期和预期寿命', 'Set birth date and life expectancy')}>
+            <Icon name="pencil" size={14} />
+          </button>
+        </WidgetHead>
         <div className="life-rows">
           {[
             [L('今天', 'Today'), lp.day, 'accent'],

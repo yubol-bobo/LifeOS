@@ -6,7 +6,7 @@ import { useL, useLang } from '../lib/i18n';
 import { ACHIEVEMENTS } from '../store/achievements';
 import { dayDigest } from '../store/digest';
 import { bestReviewStreak, deepQuestion, hasReview, reviewFilled, reviewStreak, reviewWords, type ReviewField } from '../store/review';
-import { actions, useStore } from '../store/store';
+import { actions, getState, useStore } from '../store/store';
 import type { Review as ReviewT } from '../store/types';
 import { Heatmap } from '../ui/charts';
 import { Icon } from '../ui/Icon';
@@ -26,12 +26,20 @@ const PROMPTS: Prompt[] = [
 function ReviewField({ day, field, value, placeholder, rows = 2 }: { day: string; field: ReviewField; value: string; placeholder: string; rows?: number }) {
   const [draft, setDraft] = useState(value);
   const t = useRef<number>(0);
+  const pending = useRef<{ day: string; v: string } | null>(null);
   useEffect(() => setDraft(value), [value, day]);
-  useEffect(() => () => window.clearTimeout(t.current), []);
-  const save = (v: string) => {
+  const save = (v: string, d = day) => {
     window.clearTimeout(t.current);
-    if (v !== value) actions.saveReview(day, { [field]: v } as Partial<ReviewT>);
+    pending.current = null;
+    if (v !== (getState().reviews[d]?.[field] ?? '')) actions.saveReview(d, { [field]: v } as Partial<ReviewT>);
   };
+  // Typing then closing the window (or switching day) within the debounce must not lose the text.
+  useEffect(
+    () => () => {
+      if (pending.current) save(pending.current.v, pending.current.day);
+    },
+    [day], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   return (
     <textarea
       className="input rv-input"
@@ -42,6 +50,7 @@ function ReviewField({ day, field, value, placeholder, rows = 2 }: { day: string
         const v = e.target.value;
         setDraft(v);
         window.clearTimeout(t.current);
+        pending.current = { day, v };
         t.current = window.setTimeout(() => save(v), 700);
       }}
       onBlur={(e) => save(e.target.value)}

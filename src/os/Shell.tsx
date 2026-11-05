@@ -33,6 +33,7 @@ import { dismiss, useBursts, useNotices } from './notify';
 import { Onboarding } from './Onboarding';
 import { LevelUp } from './LevelUp';
 import { SummaryCard } from '../ai/SummaryCard';
+import { closeSummary } from '../ai/summary';
 import { FocusCelebrate } from './FocusCelebrate';
 import { clock } from '../apps/Earn';
 import { open, useRoute } from './router';
@@ -87,6 +88,10 @@ export function Shell() {
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
       // Esc closes the app window (unless a dialog, menu or input has focus)
+      if (e.key === 'Escape' && document.querySelector('.sumcard') && !document.querySelector('.modal, .spotlight, .fc-card')) {
+        closeSummary();
+        return;
+      }
       if (e.key === 'Escape' && !document.querySelector('.modal, .spotlight, .fc-card, .sumcard') && !(e.target as HTMLElement)?.closest?.('input, textarea, select')) {
         if (location.hash.replace(/^#\/?/, '')) open('home');
       }

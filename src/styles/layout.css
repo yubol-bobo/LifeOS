@@ -132,3 +132,11 @@
     width: min(var(--win-w, 1280px), calc(100% - 48px));
   }
 }
+
+/* phones: no landscape dashboard and no element full screen — keep the menu bar compact */
+@media (max-width: 760px) {
+  .mb-layout,
+  .mb-fs {
+    display: none;
+  }
+}

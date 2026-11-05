@@ -315,7 +315,8 @@ function revoke(d: State, ref: string) {
 
 export const actions = {
   replace(next: State) {
-    commit((d) => Object.assign(d, next), { silent: true });
+    // imported / synced data: bring built-in text in line with the current language
+    commit((d) => (Object.assign(d, next), void localizeState(d as unknown as Record<string, unknown>, d.profile.lang)), { silent: true });
   },
   /** Bring built-in text in line with the current language (runs once the dictionary is loaded). */
   localize() {
@@ -495,6 +496,7 @@ export const actions = {
         d.trackers.forEach(swap);
         d.sessions.forEach(swap);
         d.events.forEach(swap);
+        d.focusPresets.forEach(swap);
         if (d.active) swap(d.active);
       },
       { silent: true },
@@ -510,15 +512,9 @@ export const actions = {
       { silent: true },
     );
   },
+  /** Same as deleteProject: unlink everything that pointed at it. */
   removeProject(id: string) {
-    commit(
-      (d) => {
-        d.projects = d.projects.filter((p) => p.id !== id);
-        for (const s of d.sessions) if (s.projectId === id) s.projectId = undefined;
-        if (d.active?.projectId === id) d.active.projectId = undefined;
-      },
-      { silent: true },
-    );
+    actions.deleteProject(id);
   },
 
   /* ---- mood & wellness ---- */
