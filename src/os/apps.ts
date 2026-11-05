@@ -23,7 +23,7 @@ export const APPS: AppDef[] = [
   { id: 'assets', icon: 'landmark', hue: '#2E9E6E', zh: '资产', en: 'Assets', blurbZh: '账户余额与净资产曲线', blurbEn: 'Balances & net worth', key: '6' },
   { id: 'mood', icon: 'smile', hue: '#14A3B8', zh: '心情', en: 'Mood', blurbZh: '每日心情与身心关联', blurbEn: 'Mood & what moves it', key: '7' },
   { id: 'shop', icon: 'store', hue: '#E09B12', zh: '奖励商店', en: 'Reward Shop', blurbZh: '用金币兑换犒劳', blurbEn: 'Spend coins on treats', key: '7' },
-  { id: 'trophies', icon: 'trophy', hue: '#C9A227', zh: '成就', en: 'Trophies', blurbZh: '徽章与荣誉墙', blurbEn: 'Badges & honors', key: '8' },
+  { id: 'trophies', icon: 'trophy', hue: '#C9A227', zh: '成长', en: 'Growth', blurbZh: '升级之路、成就馆与装扮', blurbEn: 'Level road, trophy hall & style', key: '8' },
   { id: 'settings', icon: 'settings', hue: '#7C8594', zh: '系统设置', en: 'Settings', blurbZh: '个人资料、外观与数据', blurbEn: 'Profile, look & data', key: '9' },
 ];
 

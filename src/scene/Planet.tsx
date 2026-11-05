@@ -13,6 +13,8 @@ export interface PlanetProps {
   streak: number;
   dark: boolean;
   still?: boolean;
+  /** Unlocked on the level road: moon2, houses, ring, satellite, aurora, gold */
+  features?: string[];
 }
 
 type Three = typeof import('three');
@@ -38,7 +40,7 @@ export default function Planet(props: PlanetProps) {
 
   useEffect(() => {
     api.current?.update(props);
-  }, [props.trees, props.flags, props.streak, props.dark, props.still]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [props.trees, props.flags, props.streak, props.dark, props.still, (props.features ?? []).join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <div ref={host} className="planet" aria-hidden />;
 }
@@ -180,6 +182,13 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
     deco.add(obj);
   };
 
+  const houseGeo = new THREE.BoxGeometry(0.06, 0.06, 0.06);
+  const roofGeo = new THREE.ConeGeometry(0.055, 0.05, 4);
+  const winGeo = new THREE.PlaneGeometry(0.018, 0.018);
+  const houseMat = new THREE.MeshStandardMaterial({ color: '#FFF4E4', flatShading: true });
+  const roofMats = ['#E0473C', '#3F7BE0', '#7A5AE6'].map((c) => new THREE.MeshStandardMaterial({ color: c, flatShading: true }));
+  const winMat = new THREE.MeshBasicMaterial({ color: '#FFD25E' });
+  let houses = false;
   function buildDeco(trees: number, flags: number) {
     deco.clear();
     let k = 0;
@@ -196,7 +205,17 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
     for (let i = 0; i < Math.min(trees, 140) && k < landSpots.length; i++, k++) {
       const g = new THREE.Group();
       const s = 0.75 + hash3(i, 9, 2) * 0.6;
-      if (i % 5 === 4) {
+      if (houses && i % 6 === 2) {
+        // a little house: body + roof + glowing window
+        const body = new THREE.Mesh(houseGeo, houseMat);
+        body.position.y = 0.03;
+        const roof = new THREE.Mesh(roofGeo, roofMats[i % 3]);
+        roof.position.y = 0.075;
+        roof.rotation.y = Math.PI / 4;
+        const win = new THREE.Mesh(winGeo, winMat);
+        win.position.set(0, 0.032, 0.0305);
+        g.add(body, roof, win);
+      } else if (i % 5 === 4) {
         const b = new THREE.Mesh(bushGeo, leafMats[1]);
         b.position.y = 0.02;
         g.add(b);
@@ -243,6 +262,49 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
   orbit.rotation.x = Math.PI / 2;
   moonPivot.add(orbit);
 
+  /* ---- unlockable features ---- */
+  const moon2Pivot = new THREE.Group();
+  moon2Pivot.rotation.set(-0.6, 0, 0.5);
+  const moon2 = new THREE.Mesh(new THREE.IcosahedronGeometry(0.09, 1), new THREE.MeshStandardMaterial({ color: '#C9B6FF', flatShading: true, roughness: 0.7 }));
+  moon2.position.set(-2.05, 0, 0);
+  moon2Pivot.add(moon2);
+  scene.add(moon2Pivot);
+
+  const ringGroup = new THREE.Group();
+  ringGroup.rotation.set(Math.PI / 2 - 0.35, 0.15, 0);
+  const ringA = new THREE.Mesh(new THREE.TorusGeometry(1.55, 0.05, 3, 120), new THREE.MeshStandardMaterial({ color: '#F2C27A', flatShading: true, transparent: true, opacity: 0.85 }));
+  ringA.scale.z = 0.25;
+  const ringB = new THREE.Mesh(new THREE.TorusGeometry(1.72, 0.022, 3, 120), new THREE.MeshStandardMaterial({ color: '#FFE3B0', flatShading: true, transparent: true, opacity: 0.6 }));
+  ringB.scale.z = 0.25;
+  ringGroup.add(ringA, ringB);
+  scene.add(ringGroup);
+
+  const satPivot = new THREE.Group();
+  satPivot.rotation.set(1.1, 0, 0.3);
+  const sat = new THREE.Group();
+  const satBody = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.1), new THREE.MeshStandardMaterial({ color: '#E8E8EE', metalness: 0.6, roughness: 0.3 }));
+  const panelMat = new THREE.MeshStandardMaterial({ color: '#3F7BE0', metalness: 0.4, roughness: 0.35, side: THREE.DoubleSide });
+  const panelL = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.06), panelMat);
+  panelL.position.x = -0.12;
+  const panelR = panelL.clone();
+  panelR.position.x = 0.12;
+  sat.add(satBody, panelL, panelR);
+  sat.position.set(0, 0, 1.9);
+  satPivot.add(sat);
+  scene.add(satPivot);
+
+  const sparkGeo = new THREE.BufferGeometry();
+  const sg = new Float32Array(90 * 3);
+  for (let i = 0; i < 90; i++) {
+    const th = hash3(i, 7, 7) * Math.PI * 2;
+    const ph = Math.acos(2 * hash3(i, 8, 1) - 1);
+    const r = 1.35 + hash3(i, 3, 9) * 0.5;
+    sg.set([r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph), r * Math.sin(ph) * Math.sin(th)], i * 3);
+  }
+  sparkGeo.setAttribute('position', new THREE.BufferAttribute(sg, 3));
+  const sparkles = new THREE.Points(sparkGeo, new THREE.PointsMaterial({ color: '#FFD66B', size: 0.05, transparent: true, opacity: 0.9 }));
+  world.add(sparkles);
+
   /* ---- stars (dark mode) ---- */
   const starGeo = new THREE.BufferGeometry();
   const sp = new Float32Array(240 * 3);
@@ -268,6 +330,17 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
     rim.intensity = p.dark ? 2.2 : 0.9;
     (halo.material as InstanceType<Three['ShaderMaterial']>).uniforms.tint.value.set(p.dark ? '#7D8CFF' : '#FFB38A');
     (orbit.material as InstanceType<Three['MeshBasicMaterial']>).opacity = p.dark ? 0.25 : 0.45;
+    const f = new Set(p.features ?? []);
+    moon2Pivot.visible = f.has('moon2');
+    ringGroup.visible = f.has('ring');
+    satPivot.visible = f.has('satellite');
+    sparkles.visible = f.has('gold');
+    const tint = f.has('gold') ? '#FFC94D' : f.has('aurora') ? (p.dark ? '#5CF2C0' : '#7BE0C3') : p.dark ? '#7D8CFF' : '#FFB38A';
+    (halo.material as InstanceType<Three['ShaderMaterial']>).uniforms.tint.value.set(tint);
+    if (f.has('houses') !== houses) {
+      houses = f.has('houses');
+      buildDeco(p.trees, p.flags);
+    }
   }
   buildDeco(p.trees, p.flags);
   applyTheme();
@@ -329,6 +402,11 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
       world.rotation.y += vel;
       clouds.rotation.y += dt * 0.05;
       moonPivot.rotation.y += dt * (0.25 + Math.min(p.streak, 60) * 0.012);
+      moon2Pivot.rotation.y -= dt * 0.18;
+      satPivot.rotation.y += dt * 0.6;
+      sat.rotation.y += dt * 0.8;
+      ringGroup.rotation.z += dt * 0.03;
+      sparkles.rotation.y -= dt * 0.04;
       world.position.y = Math.sin(t * 0.8) * 0.03;
     }
     renderer.render(scene, camera);
@@ -340,6 +418,7 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
       const rebuild = next.trees !== p.trees || next.flags !== p.flags;
       p = next;
       if (rebuild) buildDeco(p.trees, p.flags);
+      // (features are applied in applyTheme)
       applyTheme();
       dirty = true;
     },

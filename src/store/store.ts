@@ -3,8 +3,8 @@ import { dayKey } from '../lib/date';
 import { uid } from '../lib/id';
 import { burst, notify } from '../os/notify';
 import { celebrate } from '../ui/celebrate';
+import { ACHIEVEMENTS, ACH_BY_ID, achContext } from './achievements';
 import {
-  ACHIEVEMENTS,
   MILESTONE_XP,
   PAPER_XP,
   PERFECT_DAY_XP,
@@ -86,6 +86,8 @@ export function defaultState(): State {
     categories: DEFAULT_CATEGORIES.map((c) => ({ ...c })),
     plans: [],
     countdowns: [],
+    stats: {},
+    equip: {},
   };
 }
 
@@ -101,6 +103,8 @@ export function migrate(parsed: Partial<State>): State {
     ui: { ...d.ui, ...parsed.ui },
     pet: { ...d.pet, ...parsed.pet },
     assets: { ...d.assets, ...parsed.assets },
+    stats: { ...parsed.stats },
+    equip: { ...parsed.equip },
     attributes: parsed.attributes?.length ? parsed.attributes : d.attributes,
     categories: parsed.categories?.length ? parsed.categories : d.categories,
   };
@@ -223,16 +227,23 @@ export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
   }
 
   // Achievements are re-evaluated after every change and stay unlocked once earned.
+  // Loop because some achievements (the collector series) depend on how many others are unlocked.
   let m = metrics(draft);
   const unlocked: string[] = [];
-  for (const a of ACHIEVEMENTS) {
-    if (!draft.achievements[a.id] && a.value(m) >= a.target) {
+  for (let pass = 0; pass < 4; pass++) {
+    const ctx = achContext(draft, m);
+    let added = 0;
+    for (const a of ACHIEVEMENTS) {
+      if (draft.achievements[a.id] || a.value(ctx) < a.target) continue;
       draft.achievements[a.id] = Date.now();
       draft.events.push(ev(`ach:${a.id}`, 'achievement', a.xp, `🏆 ${a.zh[0]} / ${a.en[0]}`));
       unlocked.push(a.id);
+      added++;
     }
+    if (!added) break;
+    m = metrics(draft);
   }
-  if (unlocked.length) m = metrics(draft);
+
 
   const prevState = state;
   state = draft;
@@ -246,12 +257,17 @@ export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
     const g = state.milestones.find((x) => x.id === id)!;
     notify({ title: tr('目标条件已全部满足', 'Goal complete'), body: tr(`「${g.title}」可以领取了 →`, `“${g.title}” is ready to claim →`), icon: 'flag', tone: 'accent' }, 8000);
   }
-  for (const id of unlocked.slice(0, 3)) {
-    const a = ACHIEVEMENTS.find((x) => x.id === id)!;
+  const tierRank = { bronze: 0, silver: 1, gold: 2, mythic: 3 };
+  const shown = unlocked.map((id) => ACH_BY_ID.get(id)!).sort((x, y) => tierRank[y.tier] - tierRank[x.tier]);
+  for (const a of shown.slice(0, 3)) {
     const [title] = state.profile.lang === 'zh' ? a.zh : a.en;
-    notify({ title: tr('成就解锁', 'Achievement unlocked'), body: `${title} · +${a.xp} XP`, icon: a.icon, tone: 'gold' }, 6500);
+    const tierName = { bronze: tr('青铜', 'Bronze'), silver: tr('白银', 'Silver'), gold: tr('黄金', 'Gold'), mythic: tr('传说', 'Mythic') }[a.tier];
+    notify({ title: a.hidden ? tr('隐藏成就解锁！', 'Secret achievement!') : tr(`${tierName}成就解锁`, `${tierName} achievement`), body: `${title} · +${a.xp} XP`, icon: a.icon, tone: 'gold' }, 6500);
   }
+  if (shown.length > 3) notify({ title: tr(`还有 ${shown.length - 3} 个成就`, `${shown.length - 3} more achievements`), body: tr('去成就馆看看', 'See the Trophy hall'), icon: 'trophy', tone: 'gold' });
+  if (shown.some((a) => a.tier === 'gold' || a.tier === 'mythic') && !state.profile.reduceMotion) celebrate();
   const after = m.level.level;
+  if (after > before) window.dispatchEvent(new CustomEvent('lifeos:levelup', { detail: { from: before, to: after } }));
   if (after > before) {
     notify(
       {
@@ -293,7 +309,14 @@ export const actions = {
     commit((d) => Object.assign(d, defaultState(), { profile: keep, onboarded: true }), { silent: true });
   },
   profile(p: Partial<State['profile']>) {
-    commit((d) => Object.assign(d.profile, p), { silent: true });
+    const themeChange = p.theme && p.theme !== state.profile.theme;
+    commit(
+      (d) => {
+        if (themeChange) d.stats.themeSwitch = (d.stats.themeSwitch ?? 0) + 1;
+        Object.assign(d.profile, p);
+      },
+      { silent: !themeChange },
+    );
   },
   onboard(p: Partial<State['profile']>) {
     commit(
@@ -324,7 +347,17 @@ export const actions = {
     let gained = 0;
     commit((d) => {
       const q = d.quests.find((x) => x.id === id);
-      if (q) gained = setQuestDone(d, q, day, !isDone(d, q, day));
+      if (!q) return;
+      const on = !isDone(d, q, day);
+      gained = setQuestDone(d, q, day, on);
+      const bump = (k: string) => (d.stats[k] = (d.stats[k] ?? 0) + 1);
+      if (!on) bump('unticks');
+      else {
+        const h = new Date().getHours();
+        if (h < 4) bump('nightQuests');
+        else if (h < 6) bump('earlyQuests');
+        if (day !== dayKey()) bump('backfill');
+      }
     });
     if (gained) burst(`+${gained} XP`);
   },
@@ -508,6 +541,17 @@ export const actions = {
       },
       { silent: true },
     );
+  },
+
+  /* ---- progression ---- */
+  /** Count something for achievements (pet pats, spotlight uses…). */
+  bump(key: string, n = 1) {
+    commit((d) => {
+      d.stats[key] = (d.stats[key] ?? 0) + n;
+    });
+  },
+  equip(p: Partial<State['equip']>) {
+    commit((d) => Object.assign(d.equip, p), { silent: true });
   },
 
   /* ---- projects, plans, countdowns ---- */

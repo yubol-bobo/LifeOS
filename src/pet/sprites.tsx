@@ -14,14 +14,89 @@ export const PET_KINDS: { id: PetKind; zh: string; en: string; blurbZh: string; 
   { id: 'nova', zh: '星灵', en: 'Nova', blurbZh: '带着星环的紫色小星球', blurbEn: 'A tiny ringed star spirit' },
 ];
 
-export function PetAvatar({ kind, size = 80, mood = 'idle', style }: { kind: PetKind; size?: number; mood?: PetMood; style?: CSSProperties }) {
+export function PetAvatar({ kind, size = 80, mood = 'idle', style, acc }: { kind: PetKind; size?: number; mood?: PetMood; style?: CSSProperties; acc?: string }) {
   const uid = useId().replace(/:/g, '');
   const Body = kind === 'bolt' ? Bolt : kind === 'nova' ? Nova : Mochi;
   return (
     <svg className={`pet-svg pet-${kind} mood-${mood}`} width={size} height={size} viewBox="0 0 100 100" style={style} aria-hidden>
+      {acc === 'halo' && <Accessory kind={kind} acc="halo" id={uid} back />}
       <Body id={uid} mood={mood} />
+      {acc && acc !== 'none' && <Accessory kind={kind} acc={acc} id={uid} />}
     </svg>
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Accessories (unlocked on the level road)                            */
+/* ------------------------------------------------------------------ */
+
+const ANCHOR: Record<PetKind, { top: number; hatX: number; eyes: [number, number, number]; neck: number; w: number }> = {
+  mochi: { top: 24, hatX: 50, eyes: [37, 63, 59], neck: 79, w: 38 },
+  bolt: { top: 21, hatX: 66, eyes: [37, 63, 54], neck: 84, w: 36 },
+  nova: { top: 29, hatX: 50, eyes: [39, 61, 58], neck: 80, w: 30 },
+};
+
+function Accessory({ kind, acc, id, back = false }: { kind: PetKind; acc: string; id: string; back?: boolean }) {
+  const a = ANCHOR[kind];
+  if (acc === 'halo')
+    return back ? (
+      <g className="acc-halo">
+        <ellipse cx="50" cy={a.top - 10} rx="20" ry="5.5" fill="none" stroke="#FFE08A" strokeWidth="3.5" opacity=".9" />
+        <ellipse cx="50" cy={a.top - 10} rx="20" ry="5.5" fill="none" stroke="#FFF7D6" strokeWidth="1.2" />
+      </g>
+    ) : null;
+  if (acc === 'sprout')
+    return (
+      <g className="acc-sprout" transform={`translate(${kind === 'bolt' ? 64 : 50} ${a.top + 1})`}>
+        <path d="M0 0 C0 -6 0 -8 0 -10" stroke="#3E9B5F" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+        <path d="M0 -9 C-9 -14 -12 -6 -6 -4 C-3 -3 -1 -6 0 -9 Z" fill="#6CC27A" />
+        <path d="M0 -10 C8 -17 13 -8 7 -5 C4 -4 1 -7 0 -10 Z" fill="#8BD88E" />
+      </g>
+    );
+  if (acc === 'party')
+    return (
+      <g className="acc-party" transform={`translate(${a.hatX} ${a.top + 2}) rotate(12)`}>
+        <defs>
+          <linearGradient id={`${id}ph`} x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#7A5AE6" />
+            <stop offset="1" stopColor="#B69CFF" />
+          </linearGradient>
+        </defs>
+        <path d="M-9 0 L0 -24 L9 0 Z" fill={`url(#${id}ph)`} />
+        <path d="M-6 -8 L6 -8 M-3.5 -15 L3.5 -15" stroke="#FFD25E" strokeWidth="2.2" strokeLinecap="round" />
+        <circle cx="0" cy="-25" r="3.6" fill="#FF6F96" />
+        <ellipse cx="0" cy="0" rx="10" ry="2.6" fill="#5B3FC9" />
+      </g>
+    );
+  if (acc === 'scarf')
+    return (
+      <g className="acc-scarf">
+        <path d={`M${50 - a.w} ${a.neck - 4} Q50 ${a.neck + 6} ${50 + a.w} ${a.neck - 4} L${50 + a.w - 2} ${a.neck + 3} Q50 ${a.neck + 13} ${50 - a.w + 2} ${a.neck + 3} Z`} fill="#E0473C" />
+        <path d={`M${50 - a.w + 4} ${a.neck} Q50 ${a.neck + 9} ${50 + a.w - 4} ${a.neck}`} stroke="#fff" strokeOpacity=".35" strokeWidth="1.5" fill="none" />
+        <path d={`M${50 + a.w - 12} ${a.neck + 4} l4 14 l7 -2 l-3 -13 z`} fill="#C9372D" />
+      </g>
+    );
+  if (acc === 'glasses') {
+    const [lx, rx, y] = a.eyes;
+    return (
+      <g className="acc-glasses" stroke="#2B1B12" strokeWidth="2" fill="rgba(255,255,255,.18)">
+        <circle cx={lx} cy={y} r="8.5" />
+        <circle cx={rx} cy={y} r="8.5" />
+        <path d={`M${lx + 8.5} ${y - 1} Q50 ${y - 5} ${rx - 8.5} ${y - 1}`} fill="none" />
+      </g>
+    );
+  }
+  if (acc === 'crown')
+    return (
+      <g className="acc-crown" transform={`translate(${a.hatX} ${a.top + 3})`}>
+        <path d="M-12 0 L-12 -11 L-6 -5 L0 -15 L6 -5 L12 -11 L12 0 Z" fill="#F5B83D" stroke="#C98A12" strokeWidth="1.2" strokeLinejoin="round" />
+        <circle cx="0" cy="-15" r="2.2" fill="#FF6F96" />
+        <circle cx="-12" cy="-11" r="1.8" fill="#4FB6F2" />
+        <circle cx="12" cy="-11" r="1.8" fill="#4FB6F2" />
+        <rect x="-12" y="-3" width="24" height="3" fill="#FFE08A" />
+      </g>
+    );
+  return null;
 }
 
 /* ------------------------------------------------------------------ */

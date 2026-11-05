@@ -28,6 +28,7 @@ import { useLiveSession } from './live';
 import { MenuBar } from './MenuBar';
 import { dismiss, useBursts, useNotices } from './notify';
 import { Onboarding } from './Onboarding';
+import { LevelUp } from './LevelUp';
 import { open, useRoute } from './router';
 import { Spotlight } from './Spotlight';
 import { useTheme } from './theme';
@@ -60,6 +61,7 @@ export function Shell() {
   const lang = useLang();
   const attributes = useStore((s) => s.attributes);
   const petOn = useStore((s) => s.pet.enabled);
+  const equipWall = useStore((s) => (s.equip?.wall && s.equip.wall !== 'default' ? s.equip.wall : ''));
 
   useEffect(() => {
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
@@ -78,7 +80,10 @@ export function Shell() {
     const k = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setSpot((v) => !v);
+        setSpot((v) => {
+          if (!v) actions.bump('spotlight');
+          return !v;
+        });
       }
     };
     window.addEventListener('keydown', k);
@@ -104,10 +109,10 @@ export function Shell() {
     );
 
   return (
-    <div className="os">
+    <div className="os" data-wall={equipWall || undefined}>
       <style>{attrCss(DEFAULT_ATTRS) + attrCss(attributes)}</style>
       <Wallpaper />
-      <MenuBar app={app} dark={dark} onSpotlight={() => setSpot(true)} />
+      <MenuBar app={app} dark={dark} onSpotlight={() => (actions.bump('spotlight'), setSpot(true))} />
       <main className="desk">
         <Desktop dark={dark} hidden={app !== 'home'} />
         {app !== 'home' && (
@@ -137,6 +142,7 @@ export function Shell() {
       <Dock app={app} />
       {petOn && onboarded && <PetLayer app={app} />}
       <CheckinSheet />
+      <LevelUp />
       <Notifications />
       <Bursts />
       {spot && <Spotlight dark={dark} onClose={() => setSpot(false)} />}

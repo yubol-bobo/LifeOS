@@ -339,4 +339,6 @@ export interface State {
   categories: Category[];
   plans: Plan[];
   countdowns: Countdown[];
+  stats: Record<string, number>; // counters for achievements (pet pats, spotlight uses, night quests…)
+  equip: { title?: string; wall?: string; acc?: string };
 }

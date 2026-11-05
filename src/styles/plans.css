@@ -603,3 +603,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ---------------- unlockable wallpapers ---------------- */
+.os[data-wall='sunrise'] { --wall-a: #ffc9a8; --wall-b: #ffe7a8; --wall-c: #ffb3c1; --wall-base: #f6eadf; }
+.os[data-wall='ocean'] { --wall-a: #bfe6f2; --wall-b: #cfe0ff; --wall-c: #c9f2e0; --wall-base: #e8f1f3; }
+.os[data-wall='sakura'] { --wall-a: #ffd1df; --wall-b: #f8e1f0; --wall-c: #ffe9d6; --wall-base: #f7ecee; }
+.os[data-wall='aurora'] { --wall-a: #c7f5e2; --wall-b: #d9ccff; --wall-c: #bfe8ff; --wall-base: #ecf0f2; }
+.os[data-wall='galaxy'] { --wall-a: #d9d2ff; --wall-b: #c8daff; --wall-c: #ffd9ec; --wall-base: #eceaf4; }
+:root[data-theme='dark'] .os[data-wall='sunrise'] { --wall-a: #4a2330; --wall-b: #3b2a16; --wall-c: #2b1f3e; --wall-base: #120e16; }
+:root[data-theme='dark'] .os[data-wall='ocean'] { --wall-a: #0f3a4a; --wall-b: #14275a; --wall-c: #0e3b35; --wall-base: #0a1218; }
+:root[data-theme='dark'] .os[data-wall='sakura'] { --wall-a: #4a2033; --wall-b: #2e1a3a; --wall-c: #3d2226; --wall-base: #140e14; }
+:root[data-theme='dark'] .os[data-wall='aurora'] { --wall-a: #0e4a3c; --wall-b: #2c1f5c; --wall-c: #0b3550; --wall-base: #070d14; }
+:root[data-theme='dark'] .os[data-wall='galaxy'] { --wall-a: #2a1660; --wall-b: #0b1f4d; --wall-c: #4a1747; --wall-base: #06050d; }

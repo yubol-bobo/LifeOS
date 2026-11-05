@@ -7,7 +7,7 @@ import { useLiveSession } from '../os/live';
 import Planet from '../scene/Planet';
 import { useMetrics } from '../store/hooks';
 import { useAttrs } from '../store/attrs';
-import { attrLevel, levelTitle, QUEST_XP } from '../store/rules';
+import { attrLevel, QUEST_XP } from '../store/rules';
 import { actions, useStore } from '../store/store';
 import { Heatmap, Radar, Sparkline } from '../ui/charts';
 import { Icon } from '../ui/Icon';
@@ -22,6 +22,7 @@ import { QuickAdd } from './Quests';
 import { MoodPicker } from './Mood';
 import { MoodFace } from '../ui/MoodFace';
 import { checkinDue, filledSeries } from '../store/assets';
+import { titleName, unlockedAt } from '../store/progression';
 import { periodOf } from '../lib/period';
 import { planProgress } from '../store/plans';
 import { upcoming } from '../store/countdowns';
@@ -104,6 +105,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
             streak={m.streak.current}
             dark={dark}
             still={s.profile.reduceMotion || hidden}
+            features={unlockedAt(m.level.level, 'planet').map((u) => u.id)}
           />
           <span className="planet-hint">{L('拖动旋转 · 树木随等级生长，旗帜是你的里程碑', 'Drag to spin · trees grow with level, flags are milestones')}</span>
         </div>
@@ -113,7 +115,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
             <span className="ring-cap">LV</span>
           </Ring>
           <div className="hero-level-text">
-            <strong>{levelTitle(m.level.level, lang)}</strong>
+            <strong>{titleName(s.equip?.title, m.level.level, lang)}</strong>
             <span className="num">
               {num(m.level.into)} / {num(m.level.span)} XP
             </span>

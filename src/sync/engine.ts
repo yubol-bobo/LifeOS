@@ -234,6 +234,7 @@ export async function connect(input: { token: string; pass: string; device: stri
 function save(c: SyncConfig) {
   cfg = c;
   write(CFG, c);
+  if (!getState().stats?.syncOn) actions.bump('syncOn');
   setStatus({ state: 'idle', device: c.device, gistId: c.gistId, error: undefined });
 }
 

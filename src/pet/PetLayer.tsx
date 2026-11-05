@@ -93,6 +93,7 @@ export function PetLayer({ app }: { app: AppId }) {
   const pet = useStore((s) => s.pet);
   const pomo = useStore((s) => s.pomo);
   const reduce = useStore((s) => s.profile.reduceMotion);
+  const acc = useStore((s) => s.equip?.acc);
   const [mood, setMood] = useState<PetMood>('idle');
   const [bubble, setBubble] = useState<Bubble | null>(null);
   const [menu, setMenu] = useState(false);
@@ -167,6 +168,10 @@ export function PetLayer({ app }: { app: AppId }) {
 
   /* ---------------- bubble helpers ---------------- */
   const say = (b: Bubble, ms = 5200) => {
+    // Never let small talk replace a reminder that is waiting for an answer.
+    // The ref is updated right away so two ticks in a row (throttled tabs) see it.
+    if (bubbleRef.current?.sticky && !b.sticky) return;
+    bubbleRef.current = b;
     setBubble(b);
     if (!b.sticky) window.setTimeout(() => setBubble((cur) => (cur?.id === b.id ? null : cur)), ms);
   };
@@ -608,6 +613,7 @@ export function PetLayer({ app }: { app: AppId }) {
           g.until = performance.now() + rand(9000, 16000);
           g.squash = 1.2;
           spawn('dust', g.x, r.top, 4, 36);
+          actions.bump('petPerch');
           return;
         }
       }
@@ -644,6 +650,7 @@ export function PetLayer({ app }: { app: AppId }) {
     spawn('heart', g.x, g.y - S, 3, 40);
     g.squash = 1;
     setMenu((m) => !m);
+    actions.bump('petPats');
   };
 
   /* ---------------- reactions to what happens in LifeOS ---------------- */
@@ -678,6 +685,7 @@ export function PetLayer({ app }: { app: AppId }) {
   /* ---------------- locate ---------------- */
   useEffect(() => {
     const locate = () => {
+      actions.bump('petLocate');
       const g = e.current;
       spawn('puff', g.x, g.y - S / 2, 8, 50);
       g.anchor = null;
@@ -827,6 +835,7 @@ export function PetLayer({ app }: { app: AppId }) {
                   } catch {
                     /* ignore */
                   }
+                  actions.bump('bedtimeOk');
                   setBubble(null);
                   setMood('sleep');
                   e.current.mode = 'sleep';
@@ -963,7 +972,7 @@ export function PetLayer({ app }: { app: AppId }) {
   const nearTop = g.y - S < 200;
 
   const menuItems: { icon: string; label: string; run: () => void; on?: boolean }[] = [
-    { icon: 'hand', label: L('摸摸', 'Pet'), run: () => (spawn('heart', g.x, g.y - S, 6, 50), setMood('happy'), window.setTimeout(() => setMood('idle'), 1500)) },
+    { icon: 'hand', label: L('摸摸', 'Pet'), run: () => (spawn('heart', g.x, g.y - S, 6, 50), setMood('happy'), actions.bump('petPats'), window.setTimeout(() => setMood('idle'), 1500)) },
     { icon: 'droplets', label: L('喝水 +1', 'Water +1'), run: () => (actions.logWellness('water'), spawn('drop', g.x, g.y - S, 5, 40), ls.set('water', Date.now())) },
     { icon: 'footprints', label: L('起身了', 'Stood up'), run: () => actions.logWellness('breaks') },
     {
@@ -972,7 +981,7 @@ export function PetLayer({ app }: { app: AppId }) {
       on: !!pomo,
       run: () => actions.setPomo(pomo ? null : { phase: 'work', startedAt: Date.now(), endsAt: Date.now() + pet.pomoWork * 60_000 }),
     },
-    { icon: 'gamepad', label: L('一起玩', 'Play'), run: () => ((g.mode = 'idle'), (g.until = 0), setMood('happy'), (g.ball = null), window.setTimeout(() => ((g.mode = 'play'), (g.until = performance.now() + 8000), (g.ball = { x: g.x + 120, y: g.y - 120, vx: 200, vy: -150 }), force((n) => n + 1)), 50)) },
+    { icon: 'gamepad', label: L('一起玩', 'Play'), run: () => (actions.bump('petPlay'), (g.mode = 'idle'), (g.until = 0), setMood('happy'), (g.ball = null), window.setTimeout(() => ((g.mode = 'play'), (g.until = performance.now() + 8000), (g.ball = { x: g.x + 120, y: g.y - 120, vx: 200, vy: -150 }), force((n) => n + 1)), 50)) },
     { icon: 'moon', label: L('去睡觉', 'Nap'), run: () => ((g.mode = 'sleep'), (g.until = performance.now() + 30000), setMood('sleep')) },
     { icon: 'settings', label: L('设置', 'Settings'), run: () => (sessionStorage.setItem('lifeos:settings-tab', 'pet'), open('settings'), window.dispatchEvent(new Event('lifeos:settings-tab'))) },
   ];
@@ -986,7 +995,7 @@ export function PetLayer({ app }: { app: AppId }) {
         {spot && <div className="pet-ripple" />}
         <div className="pet-wrap" ref={wrap}>
           <div className="pet-flip" ref={flip}>
-            <PetAvatar kind={kind} size={S} mood={mood} />
+            <PetAvatar kind={kind} size={S} mood={mood} acc={acc} />
           </div>
           <button className="pet-hit" onPointerDown={onDown} onClick={onClick} aria-label={pet.name} title={pet.name} />
         </div>
