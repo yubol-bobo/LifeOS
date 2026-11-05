@@ -11,7 +11,7 @@
 
 </div>
 
-> 🚀 **第一次使用？** 看 [**SETUP.md 上手指南**](SETUP.md)：开启 Pages、Google Scholar ID、SerpAPI Key 等所有需要配置的东西，一步一步写清楚了。
+> 🚀 **第一次使用？** 看 [**SETUP.md 上手指南**](SETUP.md)：开启 Pages、Google Scholar ID、SerpAPI Key、多设备同步（Gist token + 同步密码）、AI 宠物的 Key，以及公开 / fork 时的隐私——所有需要配置的东西，一张总览表 + 一步一步写清楚了。
 
 ![LifeOS desktop — light](docs/desktop-light.jpg)
 
