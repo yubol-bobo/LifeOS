@@ -41,6 +41,39 @@ export function useLayout(): Layout {
 }
 
 /* ------------------------------------------------------------------ */
+/* App windows: fit their content (default) or open wide; click outside */
+/* the window to go back to the desktop (default on). Per device.     */
+/* ------------------------------------------------------------------ */
+
+export interface WindowPrefs {
+  size: 'fit' | 'wide';
+  clickOut: boolean;
+}
+const WKEY = 'lifeos:windows';
+const wsubs = new Set<() => void>();
+let wprefs: WindowPrefs = (() => {
+  try {
+    return { size: 'fit', clickOut: true, ...JSON.parse(localStorage.getItem(WKEY) ?? '{}') } as WindowPrefs;
+  } catch {
+    return { size: 'fit', clickOut: true };
+  }
+})();
+export function setWindowPrefs(p: Partial<WindowPrefs>) {
+  wprefs = { ...wprefs, ...p };
+  try {
+    localStorage.setItem(WKEY, JSON.stringify(wprefs));
+  } catch {
+    /* ignore */
+  }
+  wsubs.forEach((f) => f());
+}
+export const useWindowPrefs = () =>
+  useSyncExternalStore(
+    (f) => (wsubs.add(f), () => wsubs.delete(f)),
+    () => wprefs,
+  );
+
+/* ------------------------------------------------------------------ */
 /* Fullscreen                                                          */
 /* ------------------------------------------------------------------ */
 

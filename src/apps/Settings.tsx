@@ -1,5 +1,5 @@
 import { AiSettings } from './AiSettings';
-import { setLayout, useLayout } from '../os/display';
+import { setLayout, setWindowPrefs, useLayout, useWindowPrefs } from '../os/display';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -75,6 +75,7 @@ function General() {
   const L = useL();
   const p = useStore((s) => s.profile);
   const layout = useLayout();
+  const win = useWindowPrefs();
   const demo = useStore((s) => s.demo);
   const file = useRef<HTMLInputElement>(null);
   const [confirm, setConfirm] = useState<null | 'reset' | 'demo'>(null);
@@ -144,6 +145,26 @@ function General() {
                 options={[
                   { value: 'portrait', label: L('竖版', 'Portrait'), icon: 'layout-tall' },
                   { value: 'landscape', label: L('横版仪表盘', 'Landscape'), icon: 'layout-wide' },
+                ]}
+              />
+            </Field>
+            <Field label={L('应用窗口（仅本设备）', 'App windows (this device)')} hint={L('贴合内容：窗口只占内容需要的宽度，两边露出桌面；绿色按钮仍可放大。', 'Fit: windows take only the width their content needs, with the desktop showing at the sides; the green button still maximizes.')}>
+              <Segmented
+                value={win.size}
+                onChange={(v) => setWindowPrefs({ size: v })}
+                options={[
+                  { value: 'fit', label: L('贴合内容', 'Fit content') },
+                  { value: 'wide', label: L('宽屏', 'Wide') },
+                ]}
+              />
+            </Field>
+            <Field label={L('点窗口外面', 'Clicking outside a window')}>
+              <Segmented
+                value={win.clickOut ? 'close' : 'stay'}
+                onChange={(v) => setWindowPrefs({ clickOut: v === 'close' })}
+                options={[
+                  { value: 'close', label: L('返回桌面', 'Back to desktop') },
+                  { value: 'stay', label: L('不做任何事', 'Do nothing') },
                 ]}
               />
             </Field>

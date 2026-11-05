@@ -87,7 +87,7 @@
 
 
   /* app windows use the full width too */
-  .os[data-layout='landscape'] .window {
+  .os[data-layout='landscape'] .window:not(.is-fit) {
     width: calc(100% - 36px);
   }
 
@@ -116,5 +116,19 @@
   }
   .research-mini svg {
     max-width: 44%;
+  }
+}
+
+/* ---------------- app windows fit their content ---------------- */
+
+.win-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+}
+
+@media (min-width: 761px) {
+  .window.is-fit:not(.is-zoom) {
+    width: min(var(--win-w, 1280px), calc(100% - 48px));
   }
 }

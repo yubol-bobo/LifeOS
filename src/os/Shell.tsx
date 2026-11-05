@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Desktop } from '../apps/Desktop';
 import { Quests } from '../apps/Quests';
 import { Roadmap } from '../apps/Roadmap';
@@ -28,7 +28,7 @@ import { Boot } from './Boot';
 import { Dock } from './Dock';
 import { useLiveSession } from './live';
 import { MenuBar } from './MenuBar';
-import { useFullscreen, useLayout } from './display';
+import { useFullscreen, useLayout, useWindowPrefs } from './display';
 import { dismiss, useBursts, useNotices } from './notify';
 import { Onboarding } from './Onboarding';
 import { LevelUp } from './LevelUp';
@@ -86,6 +86,10 @@ export function Shell() {
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
+      // Esc closes the app window (unless a dialog, menu or input has focus)
+      if (e.key === 'Escape' && !document.querySelector('.modal, .spotlight, .fc-card, .sumcard') && !(e.target as HTMLElement)?.closest?.('input, textarea, select')) {
+        if (location.hash.replace(/^#\/?/, '')) open('home');
+      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setSpot((v) => {
@@ -106,6 +110,7 @@ export function Shell() {
   }, [live ? Math.floor(live.ms / 1000) : -1, live?.paused, app, lang, currency]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const layout = useLayout();
+  const winPrefs = useWindowPrefs();
   const fullscreen = useFullscreen();
   if (!booted)
     return (
@@ -125,8 +130,17 @@ export function Shell() {
       <MenuBar app={app} dark={dark} onSpotlight={() => (actions.bump('spotlight'), setSpot(true))} />
       <main className="desk">
         <Desktop dark={dark} hidden={app !== 'home'} />
+        {app !== 'home' && winPrefs.clickOut && !zoom && (
+          <div className="win-scrim" onClick={() => open('home')} title={lang === 'zh' ? '点击空白处返回桌面' : 'Click outside to go back to the desktop'} aria-hidden />
+        )}
         {app !== 'home' && (
-          <div className={`window ${zoom ? 'is-zoom' : ''}`} key={app} role="region" aria-label={lang === 'zh' ? def.zh : def.en}>
+          <div
+            className={`window ${zoom ? 'is-zoom' : ''} ${winPrefs.size === 'fit' ? 'is-fit' : ''}`}
+            key={app}
+            role="region"
+            aria-label={lang === 'zh' ? def.zh : def.en}
+            style={{ '--win-w': `${def.width ?? 1280}px` } as CSSProperties}
+          >
             <div className="win-bar" onDoubleClick={() => setZoom((z) => !z)}>
               <div className="lights">
                 <button className="light l-close" aria-label="Close" onClick={() => open('home')}>
