@@ -5,12 +5,15 @@ import type { AppId } from '../os/apps';
 import { onAppEvent } from '../os/notify';
 import { open } from '../os/router';
 import { checkinDue } from '../store/assets';
+import { upcoming } from '../store/countdowns';
+import { periodOf } from '../lib/period';
 import { scheduledDailies } from '../store/links';
 import { actions, getState, useStore } from '../store/store';
 import type { MoodEntry, PetKind } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { MoodFace } from '../ui/MoodFace';
 import { chime, sysNotify } from './sound';
+import { BREAK_IDLE_MIN, MIN_SIT_STRETCH_FOR_AUTO_BREAK, nightKey, pastBedtime, waterPlan } from './health';
 import { PetAvatar, type PetMood } from './sprites';
 
 /* =====================================================================
@@ -90,6 +93,7 @@ export function PetLayer({ app }: { app: AppId }) {
   const pet = useStore((s) => s.pet);
   const pomo = useStore((s) => s.pomo);
   const reduce = useStore((s) => s.profile.reduceMotion);
+  const acc = useStore((s) => s.equip?.acc);
   const [mood, setMood] = useState<PetMood>('idle');
   const [bubble, setBubble] = useState<Bubble | null>(null);
   const [menu, setMenu] = useState(false);
@@ -164,6 +168,10 @@ export function PetLayer({ app }: { app: AppId }) {
 
   /* ---------------- bubble helpers ---------------- */
   const say = (b: Bubble, ms = 5200) => {
+    // Never let small talk replace a reminder that is waiting for an answer.
+    // The ref is updated right away so two ticks in a row (throttled tabs) see it.
+    if (bubbleRef.current?.sticky && !b.sticky) return;
+    bubbleRef.current = b;
     setBubble(b);
     if (!b.sticky) window.setTimeout(() => setBubble((cur) => (cur?.id === b.id ? null : cur)), ms);
   };
@@ -605,6 +613,7 @@ export function PetLayer({ app }: { app: AppId }) {
           g.until = performance.now() + rand(9000, 16000);
           g.squash = 1.2;
           spawn('dust', g.x, r.top, 4, 36);
+          actions.bump('petPerch');
           return;
         }
       }
@@ -641,6 +650,7 @@ export function PetLayer({ app }: { app: AppId }) {
     spawn('heart', g.x, g.y - S, 3, 40);
     g.squash = 1;
     setMenu((m) => !m);
+    actions.bump('petPats');
   };
 
   /* ---------------- reactions to what happens in LifeOS ---------------- */
@@ -675,6 +685,7 @@ export function PetLayer({ app }: { app: AppId }) {
   /* ---------------- locate ---------------- */
   useEffect(() => {
     const locate = () => {
+      actions.bump('petLocate');
       const g = e.current;
       spawn('puff', g.x, g.y - S / 2, 8, 50);
       g.anchor = null;
@@ -701,16 +712,36 @@ export function PetLayer({ app }: { app: AppId }) {
 
   /* ---------------- reminders, pomodoro, check-ins ---------------- */
   useEffect(() => {
+    // "Sitting" = you're at the computer (input in the last 5 min) or a focus timer is running.
     let sitStart = Date.now();
     let lastActive = Date.now();
+    let eyeAt = Date.now();
+    let lastDrank = -1;
     let chatterAt = Date.now() + 90_000;
+    if (!ls.get('waterAt')) ls.set('waterAt', Date.now() - (cfg.current.waterMin - 2) * 60_000); // first check ~2 min after opening
     const tick = () => {
       const now = Date.now();
       const s = getState();
       const c = cfg.current;
-      const active = now - pointer.current.t < 5 * 60_000 || (!!s.active && !s.active.pausedAt);
-      if (!active && now - lastActive > 5 * 60_000) sitStart = now; // a real break happened
+      const L = Lr.current;
+      const timerOn = !!s.active && !s.active.pausedAt;
+      const inputRecent = now - pointer.current.t < BREAK_IDLE_MIN * 60_000;
+      const active = inputRecent || timerOn;
+      // Back after stepping away ≥ 5 min? That was a real break — log it automatically.
+      if (active && now - lastActive > BREAK_IDLE_MIN * 60_000) {
+        const sat = (lastActive - sitStart) / 60_000;
+        sitStart = now;
+        eyeAt = now;
+        if (sat >= MIN_SIT_STRETCH_FOR_AUTO_BREAK) {
+          actions.logWellness('breaks');
+          if (!bubbleRef.current) say({ id: `back-${now}`, text: L('欢迎回来～刚才的离开已经自动记作一次起身活动', 'Welcome back — that time away counted as a stand-up break') }, 5000);
+        }
+      }
       if (active) lastActive = now;
+      // Any drink logged anywhere (pet, Mood app, reminder) resets the water clock.
+      const drank = s.wellness[dayKey()]?.water ?? 0;
+      if (lastDrank >= 0 && drank > lastDrank) ls.set('waterAt', now);
+      lastDrank = drank;
 
       // Pomodoro phase changes
       const p = s.pomo;
@@ -750,36 +781,140 @@ export function PetLayer({ app }: { app: AppId }) {
       if (bubbleRef.current?.sticky || e.current.mode === 'drag') return;
       const inBreak = s.pomo?.phase === 'break';
 
-      // Water
-      if (c.waterMin && active && now - ls.get('water', now - 1) >= c.waterMin * 60_000) {
-        ls.set('water', now);
+      // Water — keep pace with the daily goal across waking hours
+      const plan = waterPlan(new Date(now), drank, c.waterGoal, c.cupMl, c.wakeHour, c.sleepHour);
+      if (c.waterMin && active && plan.inWindow && plan.behind > 0 && now - ls.get('waterAt') >= c.waterMin * 60_000) {
+        ls.set('waterAt', now);
         remind(
           {
             id: 'water',
-            text: Lr.current('喝口水吧～今天已经喝了 ' + (s.wellness[dayKey()]?.water ?? 0) + ' 杯', `Time for some water! ${s.wellness[dayKey()]?.water ?? 0} cups so far today`),
+            text: L(
+              `该喝水啦！今天 ${plan.drank}/${plan.goal} 杯（${plan.ml.drank}/${plan.ml.goal} ml），按节奏现在应该到 ${plan.expected} 杯了。`,
+              `Water time! ${plan.drank}/${plan.goal} cups today (${plan.ml.drank}/${plan.ml.goal} ml) — by now you'd be at ${plan.expected}.`,
+            ),
             actions: [
-              { label: Lr.current('喝了 +1', 'Done +1'), primary: true, icon: 'droplets', run: () => (actions.logWellness('water'), spawn('drop', e.current.x, e.current.y - S, 5, 40), release()) },
-              { label: Lr.current('等会儿', 'Later'), run: () => (ls.set('water', now - (c.waterMin - 10) * 60_000), setBubble(null), setMood('idle'), next()) },
+              { label: L('喝了一杯', 'Had a cup'), primary: true, icon: 'droplets', run: () => (actions.logWellness('water'), spawn('drop', e.current.x, e.current.y - S, 6, 40), release()) },
+              { label: L('15 分钟后', 'In 15 min'), run: () => (ls.set('waterAt', now - (c.waterMin - 15) * 60_000), setBubble(null), setMood('idle'), next()) },
             ],
           },
-          Lr.current('该喝水了', 'Time to drink water'),
+          L(`该喝水了 · ${plan.drank}/${plan.goal} 杯`, `Time to drink water · ${plan.drank}/${plan.goal} cups`),
         );
         return;
       }
       // Sitting too long
       if (c.sitMin && active && !inBreak && now - sitStart >= c.sitMin * 60_000 && now > ls.get('sitSnooze')) {
+        const sat = Math.round((now - sitStart) / 60_000);
         remind(
           {
             id: 'sit',
-            text: Lr.current(`已经连续坐了 ${Math.round((now - sitStart) / 60_000)} 分钟，起来活动一下！`, `You’ve been sitting ${Math.round((now - sitStart) / 60_000)} min — stand up and stretch!`),
+            text: L(`已经连续坐了 ${sat} 分钟。起来走动 2–3 分钟吧：伸展、倒杯水、看看窗外。`, `You've been sitting for ${sat} minutes. Get up and move for 2–3 minutes — stretch, refill water, look outside.`),
             actions: [
-              { label: Lr.current('我起来了', 'I’m up'), primary: true, icon: 'footprints', run: () => ((sitStart = Date.now()), actions.logWellness('breaks'), release()) },
-              { label: Lr.current('10 分钟后', 'In 10 min'), run: () => (ls.set('sitSnooze', Date.now() + 10 * 60_000), setBubble(null), setMood('idle'), next()) },
+              { label: L('我起来了', "I'm up"), primary: true, icon: 'footprints', run: () => ((sitStart = Date.now()), (eyeAt = Date.now()), actions.logWellness('breaks'), release()) },
+              { label: L('10 分钟后', 'In 10 min'), run: () => (ls.set('sitSnooze', Date.now() + 10 * 60_000), setBubble(null), setMood('idle'), next()) },
             ],
           },
-          Lr.current('久坐提醒', 'Time to stand up'),
+          L(`久坐 ${sat} 分钟了，起来活动一下`, `Sitting for ${sat} min — time to move`),
         );
         return;
+      }
+      // Bedtime
+      const night = nightKey(new Date(now));
+      if (c.bedtime && inputRecent && pastBedtime(new Date(now), c.bedtime) && localStorage.getItem('lifeos:pet:bedNight') !== night && now > ls.get('bedSnooze')) {
+        remind(
+          {
+            id: 'bed',
+            text: L('到睡觉时间啦。成年人每晚需要 7–9 小时睡眠，明天的你会感谢现在的你。', "It's bedtime. Adults need 7–9 hours of sleep — tomorrow-you will be grateful."),
+            actions: [
+              {
+                label: L('好，晚安', 'Okay, good night'),
+                primary: true,
+                icon: 'moon',
+                run: () => {
+                  try {
+                    localStorage.setItem('lifeos:pet:bedNight', night);
+                  } catch {
+                    /* ignore */
+                  }
+                  actions.bump('bedtimeOk');
+                  setBubble(null);
+                  setMood('sleep');
+                  e.current.mode = 'sleep';
+                  e.current.until = performance.now() + 60_000;
+                },
+              },
+              { label: L('再 15 分钟', '15 more min'), run: () => (ls.set('bedSnooze', Date.now() + 15 * 60_000), setBubble(null), setMood('idle'), next()) },
+            ],
+          },
+          L('该睡觉了', 'Time for bed'),
+          'sleep',
+        );
+        return;
+      }
+      // Planning nudges: a new week / month with nothing planned yet
+      const hr = new Date(now).getHours();
+      const dnow = new Date(now);
+      if (inputRecent && hr >= 8 && hr < 21) {
+        const wk = periodOf('week');
+        const mo = periodOf('month');
+        const needMonth = dnow.getDate() <= 3 && !s.plans.some((p) => p.scope === 'month' && p.period === mo) && localStorage.getItem('lifeos:pet:askedPlan') !== mo;
+        const needWeek = (dnow.getDay() + 6) % 7 <= 1 && !s.plans.some((p) => p.scope === 'week' && p.period === wk) && localStorage.getItem('lifeos:pet:askedPlan') !== wk;
+        if (needMonth || needWeek) {
+          try {
+            localStorage.setItem('lifeos:pet:askedPlan', needMonth ? mo : wk);
+          } catch {
+            /* ignore */
+          }
+          remind(
+            {
+              id: 'plan',
+              text: needMonth ? L('新的一个月开始啦！花两分钟写下这个月最重要的几件事？', 'A new month! Two minutes to write down what matters most this month?') : L('新的一周～要不要先把本周计划定下来？我会帮你盯进度。', 'New week! Set this week’s plan? I’ll keep an eye on progress.'),
+              actions: [
+                {
+                  label: L('去写计划', 'Plan it'),
+                  primary: true,
+                  icon: 'calendar',
+                  run: () => {
+                    try {
+                      sessionStorage.setItem('lifeos:plan-tab', needMonth ? 'month' : 'week');
+                    } catch {
+                      /* ignore */
+                    }
+                    release();
+                    open('plan');
+                  },
+                },
+                { label: L('稍后', 'Later'), run: () => (setBubble(null), setMood('idle'), next()) },
+              ],
+            },
+            needMonth ? L('写下本月计划', 'Plan your month') : L('写下本周计划', 'Plan your week'),
+            'happy',
+          );
+          return;
+        }
+      }
+      // Countdown heads-up (7 / 3 / 1 / 0 days), once per day per item
+      if (inputRecent && !bubbleRef.current) {
+        const soonItem = upcoming(s).find((c) => [0, 1, 3, 7].includes(c.daysLeft) && localStorage.getItem(`lifeos:pet:cd:${c.id}`) !== dayKey());
+        if (soonItem) {
+          try {
+            localStorage.setItem(`lifeos:pet:cd:${soonItem.id}`, dayKey());
+          } catch {
+            /* ignore */
+          }
+          say(
+            {
+              id: `cd-${now}`,
+              text: soonItem.daysLeft === 0 ? L(`就是今天：「${soonItem.title}」！`, `It’s today: “${soonItem.title}”!`) : L(`距离「${soonItem.title}」还有 ${soonItem.daysLeft} 天`, `${soonItem.daysLeft} day${soonItem.daysLeft > 1 ? 's' : ''} until “${soonItem.title}”`),
+            },
+            9000,
+          );
+        }
+      }
+      // Eyes: 20-20-20 (gentle, no buttons)
+      if (c.eye20 && inputRecent && now - eyeAt >= 20 * 60_000 && !bubbleRef.current) {
+        eyeAt = now;
+        say({ id: `eye-${now}`, text: L('护眼时间：看向 6 米外的地方 20 秒～', 'Eye break: look at something ~6 m away for 20 seconds') }, 20_000);
+        if (c.sysNotify) sysNotify(`${c.name} · LifeOS`, L('护眼时间：看向远处 20 秒', 'Eye break: look far away for 20 s'));
       }
       // Asset check-in due (at most once per day)
       if (active && checkinDue(s) && ls.get('assetsAsked') < new Date().setHours(0, 0, 0, 0)) {
@@ -837,7 +972,7 @@ export function PetLayer({ app }: { app: AppId }) {
   const nearTop = g.y - S < 200;
 
   const menuItems: { icon: string; label: string; run: () => void; on?: boolean }[] = [
-    { icon: 'hand', label: L('摸摸', 'Pet'), run: () => (spawn('heart', g.x, g.y - S, 6, 50), setMood('happy'), window.setTimeout(() => setMood('idle'), 1500)) },
+    { icon: 'hand', label: L('摸摸', 'Pet'), run: () => (spawn('heart', g.x, g.y - S, 6, 50), setMood('happy'), actions.bump('petPats'), window.setTimeout(() => setMood('idle'), 1500)) },
     { icon: 'droplets', label: L('喝水 +1', 'Water +1'), run: () => (actions.logWellness('water'), spawn('drop', g.x, g.y - S, 5, 40), ls.set('water', Date.now())) },
     { icon: 'footprints', label: L('起身了', 'Stood up'), run: () => actions.logWellness('breaks') },
     {
@@ -846,7 +981,7 @@ export function PetLayer({ app }: { app: AppId }) {
       on: !!pomo,
       run: () => actions.setPomo(pomo ? null : { phase: 'work', startedAt: Date.now(), endsAt: Date.now() + pet.pomoWork * 60_000 }),
     },
-    { icon: 'gamepad', label: L('一起玩', 'Play'), run: () => ((g.mode = 'idle'), (g.until = 0), setMood('happy'), (g.ball = null), window.setTimeout(() => ((g.mode = 'play'), (g.until = performance.now() + 8000), (g.ball = { x: g.x + 120, y: g.y - 120, vx: 200, vy: -150 }), force((n) => n + 1)), 50)) },
+    { icon: 'gamepad', label: L('一起玩', 'Play'), run: () => (actions.bump('petPlay'), (g.mode = 'idle'), (g.until = 0), setMood('happy'), (g.ball = null), window.setTimeout(() => ((g.mode = 'play'), (g.until = performance.now() + 8000), (g.ball = { x: g.x + 120, y: g.y - 120, vx: 200, vy: -150 }), force((n) => n + 1)), 50)) },
     { icon: 'moon', label: L('去睡觉', 'Nap'), run: () => ((g.mode = 'sleep'), (g.until = performance.now() + 30000), setMood('sleep')) },
     { icon: 'settings', label: L('设置', 'Settings'), run: () => (sessionStorage.setItem('lifeos:settings-tab', 'pet'), open('settings'), window.dispatchEvent(new Event('lifeos:settings-tab'))) },
   ];
@@ -860,7 +995,7 @@ export function PetLayer({ app }: { app: AppId }) {
         {spot && <div className="pet-ripple" />}
         <div className="pet-wrap" ref={wrap}>
           <div className="pet-flip" ref={flip}>
-            <PetAvatar kind={kind} size={S} mood={mood} />
+            <PetAvatar kind={kind} size={S} mood={mood} acc={acc} />
           </div>
           <button className="pet-hit" onPointerDown={onDown} onClick={onClick} aria-label={pet.name} title={pet.name} />
         </div>

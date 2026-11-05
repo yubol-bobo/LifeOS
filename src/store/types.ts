@@ -13,12 +13,57 @@ export interface AttrDef {
   color: PaletteKey;
 }
 
-/** "Working for" — clients, projects, employers. Each may carry its own rate. */
+/** Editable project categories (Research, Work, Life, …). */
+export interface Category {
+  id: string;
+  zh: string;
+  en: string;
+  icon: string;
+  color: PaletteKey;
+}
+
+/**
+ * A project is the hub everything can hang off: quests (tasks), goals, papers, plans,
+ * focus sessions and income (it doubles as the wage timer's "working for" entry), countdowns.
+ */
 export interface Project {
   id: string;
   name: string;
   color: PaletteKey;
   rate?: number;
+  category?: string;
+  status?: 'active' | 'paused' | 'done';
+  deadline?: string;
+  note?: string;
+  createdAt?: number;
+}
+
+export type PlanScope = 'year' | 'month' | 'week';
+
+/** A plan item at one time scale. Children (the scale below) and linked quests roll progress up. */
+export interface Plan {
+  id: string;
+  scope: PlanScope;
+  period: string; // 2026 · 2026-11 · 2026-W45
+  title: string;
+  parentId?: string;
+  projectId?: string;
+  goalId?: string;
+  done?: boolean;
+  auto?: boolean; // completed automatically by progress roll-up
+  note?: string;
+  createdAt: number;
+}
+
+export interface Countdown {
+  id: string;
+  title: string;
+  date: string;
+  icon: string;
+  color: PaletteKey;
+  projectId?: string;
+  repeat?: 'yearly';
+  createdAt: string;
 }
 
 export interface PayConfig {
@@ -53,8 +98,14 @@ export interface PetConfig {
   enabled: boolean;
   kind: PetKind;
   name: string;
-  waterMin: number; // 0 = off
+  waterMin: number; // minimum minutes between water reminders; 0 = water reminders off
+  waterGoal: number; // cups per day
+  cupMl: number;
+  wakeHour: number;
+  sleepHour: number;
   sitMin: number; // 0 = off
+  eye20: boolean; // 20-20-20 eye breaks
+  bedtime: number; // minutes after midnight; 0 = off
   pomoWork: number;
   pomoBreak: number;
   sound: boolean;
@@ -125,6 +176,8 @@ export interface Quest {
   days?: number[]; // daily quests: scheduled weekdays, 0 = Mon … 6 = Sun (empty = every day)
   focusMin?: number; // auto-completes after this many focused minutes on it today
   log?: { trackerId: string; amount: number }; // logs to a tracker when completed
+  projectId?: string; // a task of this project
+  planId?: string; // pulled in from a week plan item
 }
 
 export type MilestoneSize = 'small' | 'big' | 'epic';
@@ -165,6 +218,7 @@ export interface Milestone {
   since?: string; // start of the counting window for KRs
   steps: Step[];
   krs?: KeyResult[];
+  projectId?: string;
 }
 
 export type PaperStatus = 'idea' | 'drafting' | 'submitted' | 'review' | 'accepted' | 'published';
@@ -181,6 +235,7 @@ export interface Paper {
   url?: string;
   source?: 'manual' | 'openalex' | 's2' | 'gscholar';
   scholarId?: string; // Google Scholar citation_id
+  projectId?: string;
   removed?: boolean; // no longer on the Scholar profile (kept, not deleted)
   updatedAt: number;
 }
@@ -239,7 +294,7 @@ export interface Reward {
   redeemed: number;
 }
 
-export type EventKind = 'quest' | 'perfect' | 'milestone' | 'step' | 'focus' | 'paper' | 'tracker' | 'reward' | 'achievement' | 'mood' | 'wellness' | 'assets';
+export type EventKind = 'quest' | 'perfect' | 'milestone' | 'step' | 'focus' | 'paper' | 'tracker' | 'reward' | 'achievement' | 'mood' | 'wellness' | 'assets' | 'plan';
 
 /** Single ledger for XP & coins. Idempotent by `ref`. */
 export interface XpEvent {
@@ -281,4 +336,9 @@ export interface State {
   accounts: Account[];
   snapshots: Snapshot[];
   assets: AssetConfig;
+  categories: Category[];
+  plans: Plan[];
+  countdowns: Countdown[];
+  stats: Record<string, number>; // counters for achievements (pet pats, spotlight uses, night quests…)
+  equip: { title?: string; wall?: string; acc?: string };
 }

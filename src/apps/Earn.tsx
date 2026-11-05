@@ -12,8 +12,7 @@ import { Odometer } from '../ui/Odometer';
 import { AttrPicker } from './Quests';
 import { PayCard, ProjectsEditor } from './Settings';
 import { Icon } from '../ui/Icon';
-import type { CSSProperties } from 'react';
-import { GoalTag } from './goals';
+import { GoalTag, ProjectTag } from './goals';
 import { isScheduled } from '../store/links';
 
 export function Earn() {
@@ -229,8 +228,12 @@ export function Earn() {
           <div className="goal">
             <div className="goal-top">
               <span>{L('今日专注目标', "Today's focus goal")}</span>
-              <span className="num">
-                {(todayMs / 3_600_000).toFixed(1)} / {(goalMs / 3_600_000).toFixed(1)} h
+              <span className="goal-edit">
+                <span className="num">
+                  {(todayMs / 3_600_000).toFixed(1)} / {(goalMs / 3_600_000).toFixed(1)} h
+                </span>
+                <Button size="sm" variant="ghost" icon="minus" title={L('目标减少 30 分钟', 'Goal −30 min')} disabled={profile.focusGoalMin <= 30} onClick={() => actions.profile({ focusGoalMin: Math.max(30, profile.focusGoalMin - 30) })} />
+                <Button size="sm" variant="ghost" icon="plus" title={L('目标增加 30 分钟', 'Goal +30 min')} disabled={profile.focusGoalMin >= 16 * 60} onClick={() => actions.profile({ focusGoalMin: Math.min(16 * 60, profile.focusGoalMin + 30) })} />
               </span>
             </div>
             <Bar value={todayMs / goalMs} tone="wealth" height={12} />
@@ -370,13 +373,3 @@ function ManualSession({ open, onClose }: { open: boolean; onClose: () => void }
   );
 }
 
-function ProjectTag({ id }: { id: string }) {
-  const p = useStore((s) => s.projects.find((x) => x.id === id));
-  if (!p) return null;
-  return (
-    <span className="goal-tag" style={{ '--tone': `var(--p-${p.color})` } as CSSProperties}>
-      <Icon name="briefcase" size={11} stroke={2.6} />
-      <span>{p.name}</span>
-    </span>
-  );
-}

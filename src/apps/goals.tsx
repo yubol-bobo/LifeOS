@@ -120,3 +120,45 @@ export function GoalTag({ goalId }: { goalId?: string }) {
 export function openGoals(s: State) {
   return s.milestones.filter((m) => m.status !== 'done');
 }
+
+/** "→ project" tag. */
+export function ProjectTag({ id }: { id?: string }) {
+  const p = useStore((s) => s.projects.find((x) => x.id === id));
+  if (!p) return null;
+  return (
+    <button className="goal-tag" style={{ '--tone': `var(--p-${p.color})` } as CSSProperties} onClick={() => open('projects')} title={p.name}>
+      <Icon name="briefcase" size={11} stroke={2.6} />
+      <span>{p.name}</span>
+    </button>
+  );
+}
+
+/** "← plan" tag. */
+export function PlanTag({ id }: { id?: string }) {
+  const p = useStore((s) => s.plans.find((x) => x.id === id));
+  if (!p) return null;
+  return (
+    <button className="goal-tag plan-tag" style={{ '--tone': 'var(--p-teal)' } as CSSProperties} onClick={() => open('plan')} title={p.title}>
+      <Icon name="calendar" size={11} stroke={2.6} />
+      <span>{p.title}</span>
+    </button>
+  );
+}
+
+/** Project picker used by every editor. */
+export function ProjectSelect({ value, onChange }: { value?: string; onChange: (id: string | undefined) => void }) {
+  const L = useL();
+  const projects = useStore((s) => s.projects);
+  return (
+    <select className="input" value={value ?? ''} onChange={(e) => onChange(e.target.value || undefined)}>
+      <option value="">{L('— 不属于任何项目 —', '— No project —')}</option>
+      {projects
+        .filter((p) => p.status !== 'done' || p.id === value)
+        .map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+    </select>
+  );
+}

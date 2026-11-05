@@ -3,6 +3,7 @@ import { money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { APPS, PINNED, type AppId } from '../os/apps';
 import { notify } from '../os/notify';
+import { open } from '../os/router';
 import { PET_KINDS, PetAvatar } from '../pet/sprites';
 import { ATTR_ICONS, PALETTE, attrName, hourlyFrom, useAttrs } from '../store/attrs';
 import { demoState } from '../store/demo';
@@ -215,6 +216,8 @@ function General() {
 const WIDGETS: { id: string; zh: string; en: string }[] = [
   { id: 'hero', zh: '星球与等级', en: 'Planet & level' },
   { id: 'quests', zh: '今日任务', en: "Today's quests" },
+  { id: 'plans', zh: '本周计划', en: 'This week' },
+  { id: 'countdown', zh: '倒计时', en: 'Countdown' },
   { id: 'mood', zh: '心情打卡', en: 'Mood check-in' },
   { id: 'life', zh: '人生进度', en: 'Life progress' },
   { id: 'earn', zh: '时薪计', en: 'Wage timer' },
@@ -438,7 +441,7 @@ function WorkSettings() {
   return (
     <div className="grid-1-1">
       <PayCard pay={pay} currency={p.currency} />
-      <Card title={L('为谁工作', 'Working for')} icon="briefcase">
+      <Card title={L('为谁工作（项目）', 'Working for (projects)')} icon="briefcase" action={<Button size="sm" variant="ghost" icon="chevron-right" onClick={() => open('projects')}>{L('完整项目管理', 'Full project view')}</Button>}>
         <p className="muted small">{L('老板、客户、项目、副业……每一项都可以有自己的时薪，不填就用默认时薪。时薪计会按项目统计收入。', 'Employers, clients, projects, side gigs — each can have its own rate (blank = default). The wage timer breaks income down by these.')}</p>
         <ProjectsEditor />
       </Card>
@@ -566,14 +569,79 @@ function PetSettings() {
           </div>
         </div>
       </Card>
-      <Card title={L('提醒与番茄钟', 'Reminders & pomodoro')} icon="bell-ring">
+      <Card title={L('健康提醒与番茄钟', 'Health reminders & pomodoro')} icon="bell-ring">
         <div className="form">
-          <Field label={L('喝水提醒', 'Water reminder')} hint={L('每次「喝了」都会记录下来，并参与心情关联分析。', 'Every “done” is logged and used in mood insights.')}>
-            <Segmented value={String(pet.waterMin)} onChange={(v) => actions.setPet({ waterMin: +v })} options={[0, 30, 45, 60, 90].map((v) => ({ value: String(v), label: minutes(v) }))} />
+          <div className="health-note">
+            <Icon name="shield" size={15} />
+            <span>
+              {L(
+                '宠物会按健康建议主动提醒你：成人每天约 2 L 饮水（约 8 杯），分散在清醒时间里；每坐 30–60 分钟起身活动 2–3 分钟（WHO 建议减少久坐）；20-20-20 护眼；成年人每晚 7–9 小时睡眠。离开电脑 5 分钟以上会自动记作一次起身。',
+                'Your pet reminds you based on common health guidance: ~2 L of water a day (≈ 8 cups) spread across waking hours; get up and move 2–3 min every 30–60 min of sitting (WHO advises limiting sedentary time); the 20-20-20 eye rule; 7–9 h of sleep for adults. Stepping away ≥ 5 min is logged as a break automatically.',
+              )}
+            </span>
+          </div>
+          <div className="toggle-list">
+            <button className={`toggle-row ${pet.waterMin ? 'is-on' : ''}`} role="switch" aria-checked={!!pet.waterMin} onClick={() => actions.setPet({ waterMin: pet.waterMin ? 0 : 45 })}>
+              <span>{L('喝水提醒', 'Water reminders')}</span>
+              <i className="switch" />
+            </button>
+          </div>
+          {pet.waterMin > 0 && (
+            <div className="row2">
+              <Field label={L('每日目标（杯）', 'Daily goal (cups)')} hint={L(`共 ${((pet.waterGoal * pet.cupMl) / 1000).toFixed(1)} L`, `${((pet.waterGoal * pet.cupMl) / 1000).toFixed(1)} L total`)}>
+                <div className="input-group">
+                  <input className="input" type="number" min={1} max={20} value={pet.waterGoal} onChange={(e) => actions.setPet({ waterGoal: Math.max(1, Math.min(20, +e.target.value || 8)) })} />
+                  <span className="input-addon">×</span>
+                  <input className="input" type="number" min={100} max={1000} step={50} value={pet.cupMl} onChange={(e) => actions.setPet({ cupMl: Math.max(100, +e.target.value || 250) })} aria-label={L('每杯毫升', 'ml per cup')} />
+                  <span className="input-addon">ml</span>
+                </div>
+              </Field>
+              <Field label={L('清醒时间', 'Waking hours')} hint={L('目标会平均分配在这段时间里', 'The goal is spread across these hours')}>
+                <div className="input-group">
+                  <select className="input" value={pet.wakeHour} onChange={(e) => actions.setPet({ wakeHour: +e.target.value })} aria-label={L('起床', 'Wake')}>
+                    {Array.from({ length: 13 }, (_, h) => h + 4).map((h) => (
+                      <option key={h} value={h}>{`${h}:00`}</option>
+                    ))}
+                  </select>
+                  <span className="input-addon">→</span>
+                  <select className="input" value={pet.sleepHour} onChange={(e) => actions.setPet({ sleepHour: +e.target.value })} aria-label={L('睡觉', 'Sleep')}>
+                    {Array.from({ length: 9 }, (_, h) => h + 18).map((h) => (
+                      <option key={h} value={h}>{`${h % 24}:00`}</option>
+                    ))}
+                  </select>
+                </div>
+              </Field>
+            </div>
+          )}
+          <Field label={L('久坐提醒', 'Sitting reminder')} hint={L('建议 30–60 分钟；连续操作电脑或计时器运行时累计。', 'Recommended 30–60 min; counts while you use the computer or a timer runs.')}>
+            <Segmented value={String(pet.sitMin)} onChange={(v) => actions.setPet({ sitMin: +v })} options={[0, 30, 45, 60, 90].map((v) => ({ value: String(v), label: minutes(v) }))} />
           </Field>
-          <Field label={L('久坐提醒', 'Stand-up reminder')} hint={L('计时器在跑或你一直在用电脑时，连续坐够这么久就提醒起身。', 'Nudges you after this long of continuous work.')}>
-            <Segmented value={String(pet.sitMin)} onChange={(v) => actions.setPet({ sitMin: +v })} options={[0, 30, 45, 50, 60, 90].map((v) => ({ value: String(v), label: minutes(v) }))} />
-          </Field>
+          <div className="toggle-list">
+            <button className={`toggle-row ${pet.eye20 ? 'is-on' : ''}`} role="switch" aria-checked={pet.eye20} onClick={() => actions.setPet({ eye20: !pet.eye20 })}>
+              <span>
+                {L('护眼 20-20-20', 'Eye breaks (20-20-20)')}
+                <small className="muted"> {L('（每 20 分钟看远处 20 秒）', '(every 20 min, look far for 20 s)')}</small>
+              </span>
+              <i className="switch" />
+            </button>
+            <button className={`toggle-row ${pet.bedtime ? 'is-on' : ''}`} role="switch" aria-checked={!!pet.bedtime} onClick={() => actions.setPet({ bedtime: pet.bedtime ? 0 : 23 * 60 + 30 })}>
+              <span>{L('睡前提醒', 'Bedtime reminder')}</span>
+              <i className="switch" />
+            </button>
+          </div>
+          {pet.bedtime > 0 && (
+            <Field label={L('几点提醒睡觉', 'Remind me at')}>
+              <input
+                className="input"
+                type="time"
+                value={`${String(Math.floor(pet.bedtime / 60) % 24).padStart(2, '0')}:${String(pet.bedtime % 60).padStart(2, '0')}`}
+                onChange={(e) => {
+                  const [h, m] = e.target.value.split(':').map(Number);
+                  if (Number.isFinite(h)) actions.setPet({ bedtime: h * 60 + (m || 0) || 1 });
+                }}
+              />
+            </Field>
+          )}
           <div className="row2">
             <Field label={L('番茄钟专注（分钟）', 'Pomodoro focus (min)')}>
               <input className="input" type="number" min={5} max={120} value={pet.pomoWork} onChange={(e) => actions.setPet({ pomoWork: Math.max(1, +e.target.value || 25) })} />

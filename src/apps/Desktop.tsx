@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, type CSSProperties, type ReactNode } from 'react';
 import { addDays, dayKey, daysBetween, lastNDays, lifeProgress, parseDay } from '../lib/date';
 import { compact, money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -7,7 +7,7 @@ import { useLiveSession } from '../os/live';
 import Planet from '../scene/Planet';
 import { useMetrics } from '../store/hooks';
 import { useAttrs } from '../store/attrs';
-import { attrLevel, levelTitle, QUEST_XP } from '../store/rules';
+import { attrLevel, QUEST_XP } from '../store/rules';
 import { actions, useStore } from '../store/store';
 import { Heatmap, Radar, Sparkline } from '../ui/charts';
 import { Icon } from '../ui/Icon';
@@ -22,6 +22,10 @@ import { QuickAdd } from './Quests';
 import { MoodPicker } from './Mood';
 import { MoodFace } from '../ui/MoodFace';
 import { checkinDue, filledSeries } from '../store/assets';
+import { titleName, unlockedAt } from '../store/progression';
+import { periodOf } from '../lib/period';
+import { planProgress } from '../store/plans';
+import { upcoming } from '../store/countdowns';
 
 export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const L = useL();
@@ -32,6 +36,9 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const statusLabel = useStatusLabel();
   const attrs = useAttrs();
   const hide = new Set(s.ui.widgets);
+  const thisWeek = periodOf('week');
+  const weekPlans = s.plans.filter((p) => p.scope === 'week' && p.period === thisWeek);
+  const soon = upcoming(s);
   const assetSeries = useMemo(() => filledSeries(s), [s.snapshots, s.accounts, s.assets]); // eslint-disable-line react-hooks/exhaustive-deps
   const assetDelta = assetSeries.length > 1 ? assetSeries.at(-1)!.total - assetSeries.at(-2)!.total : null;
   const today = dayKey();
@@ -98,6 +105,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
             streak={m.streak.current}
             dark={dark}
             still={s.profile.reduceMotion || hidden}
+            features={unlockedAt(m.level.level, 'planet').map((u) => u.id)}
           />
           <span className="planet-hint">{L('拖动旋转 · 树木随等级生长，旗帜是你的里程碑', 'Drag to spin · trees grow with level, flags are milestones')}</span>
         </div>
@@ -107,7 +115,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
             <span className="ring-cap">LV</span>
           </Ring>
           <div className="hero-level-text">
-            <strong>{levelTitle(m.level.level, lang)}</strong>
+            <strong>{titleName(s.equip?.title, m.level.level, lang)}</strong>
             <span className="num">
               {num(m.level.into)} / {num(m.level.span)} XP
             </span>
@@ -307,6 +315,53 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       )}
 
       {/* ---------- activity ---------- */}
+      {!hide.has('plans') && (
+      <section className="widget w-plans">
+        <WidgetHead icon="calendar" title={L('本周计划', 'This week')} onOpen={() => open('plan')}>
+          <span className="muted num small">
+            {weekPlans.filter((p) => p.done).length}/{weekPlans.length}
+          </span>
+        </WidgetHead>
+        {weekPlans.length === 0 ? (
+          <p className="muted small">{L('还没有本周计划。从月计划拆几件事过来？', 'No plan for this week yet — break a few things down from the month?')}</p>
+        ) : (
+          <ul className="mini-plans">
+            {weekPlans.slice(0, 5).map((p) => {
+              const pr = planProgress(s, p, m);
+              return (
+                <li key={p.id} className={p.done ? 'is-done' : ''}>
+                  <CheckBubble checked={!!p.done} onChange={() => actions.togglePlan(p.id)} tone="teal" label={p.title} />
+                  <div>
+                    <span className="mq-title">{p.title}</span>
+                    {pr.parts > 0 && <Bar value={pr.pct} tone="teal" height={4} />}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </section>
+      )}
+
+      {!hide.has('countdown') && (
+      <section className="widget w-countdown">
+        <WidgetHead icon="hourglass" title={L('倒计时', 'Countdown')} onOpen={() => (sessionStorage.setItem('lifeos:plan-tab', 'countdown'), open('plan'))} />
+        {soon.length === 0 ? (
+          <p className="muted small">{L('截稿、旅行、生日……加一个吧。', 'Deadlines, trips, birthdays — add one.')}</p>
+        ) : (
+          <ul className="cd-mini">
+            {soon.slice(0, 4).map((c) => (
+              <li key={c.id} style={{ '--tone': `var(--p-${c.color})` } as CSSProperties}>
+                <span className="cd-days num">{c.daysLeft}</span>
+                <span className="cd-unit">{L('天', 'd')}</span>
+                <span className="mq-title">{c.title}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      )}
+
       {!hide.has('mood') && (
       <section className="widget w-mood">
         <WidgetHead icon="smile" title={L('今天心情', 'Mood today')} onOpen={() => open('mood')} />
