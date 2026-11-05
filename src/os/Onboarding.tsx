@@ -4,7 +4,8 @@ import { demoState } from '../store/demo';
 import { actions, getState } from '../store/store';
 import { defaultRates } from '../store/assets';
 import type { PayConfig } from '../store/types';
-import { Button, Field, Segmented } from '../ui/kit';
+import { Button, Field, Modal, Segmented } from '../ui/kit';
+import { SyncConnect } from '../apps/SyncSettings';
 
 /** First-run setup assistant. */
 export function Onboarding() {
@@ -14,6 +15,7 @@ export function Onboarding() {
   const [birth, setBirth] = useState('1998-01-01');
   const [rate, setRate] = useState(40);
   const [mode, setMode] = useState<PayConfig['mode']>('hour');
+  const [syncOpen, setSyncOpen] = useState(false);
   const [currency, setCurrency] = useState('USD');
 
   const startFresh = () => {
@@ -92,12 +94,20 @@ export function Onboarding() {
             <Button variant="primary" size="lg" icon="power" onClick={startFresh}>
               {L('启动我的 LifeOS', 'Boot my LifeOS')}
             </Button>
-            <Button variant="ghost" icon="sparkles" onClick={loadDemo}>
-              {L('先看看示例数据', 'Explore with demo data')}
-            </Button>
+            <div className="onboard-alt">
+              <Button variant="ghost" icon="sparkles" onClick={loadDemo}>
+                {L('先看看示例数据', 'Explore with demo data')}
+              </Button>
+              <Button variant="ghost" icon="cloud" onClick={() => setSyncOpen(true)}>
+                {L('从其他设备同步', 'Sync from another device')}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
+      <Modal open={syncOpen} onClose={() => setSyncOpen(false)} title={L('从其他设备同步', 'Sync from another device')} width={560}>
+        <SyncConnect onDone={() => setSyncOpen(false)} />
+      </Modal>
     </div>
   );
 }

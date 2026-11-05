@@ -114,6 +114,14 @@ function load(): State {
 
 let state: State = load();
 const subs = new Set<() => void>();
+const commitSubs = new Set<(prev: State, next: State) => void>();
+/** Observe every committed change (used by multi-device sync to stamp what changed). */
+export function onCommit(f: (prev: State, next: State) => void) {
+  commitSubs.add(f);
+  return () => {
+    commitSubs.delete(f);
+  };
+}
 let saveTimer = 0;
 
 function persist() {
@@ -195,7 +203,9 @@ export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
   }
   if (unlocked.length) m = metrics(draft);
 
+  const prevState = state;
   state = draft;
+  commitSubs.forEach((f) => f(prevState, draft));
   persist();
   subs.forEach((f) => f());
 

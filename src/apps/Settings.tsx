@@ -9,9 +9,10 @@ import { demoState } from '../store/demo';
 import { actions, getState, migrate, useStore } from '../store/store';
 import type { PaletteKey, PayConfig, PetKind, State } from '../store/types';
 import { Icon } from '../ui/Icon';
+import { SyncSettings } from './SyncSettings';
 import { AppGlyph, Button, Card, Field, Modal, Segmented } from '../ui/kit';
 
-type Tab = 'general' | 'dock' | 'attrs' | 'work' | 'pet';
+type Tab = 'general' | 'sync' | 'dock' | 'attrs' | 'work' | 'pet';
 
 export function Settings() {
   const L = useL();
@@ -31,6 +32,7 @@ export function Settings() {
   }, []);
   const tabs: { id: Tab; icon: string; zh: string; en: string }[] = [
     { id: 'general', icon: 'settings', zh: '通用', en: 'General' },
+    { id: 'sync', icon: 'cloud', zh: '同步', en: 'Sync' },
     { id: 'dock', icon: 'grid', zh: '程序坞与桌面', en: 'Dock & Desktop' },
     { id: 'attrs', icon: 'sparkles', zh: '属性', en: 'Attributes' },
     { id: 'work', icon: 'wallet', zh: '工作与收入', en: 'Work & Pay' },
@@ -53,6 +55,7 @@ export function Settings() {
         ))}
       </nav>
       {tab === 'general' && <General />}
+      {tab === 'sync' && <SyncSettings />}
       {tab === 'dock' && <DockSettings />}
       {tab === 'attrs' && <AttrSettings />}
       {tab === 'work' && <WorkSettings />}

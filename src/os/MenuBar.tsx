@@ -6,6 +6,7 @@ import { actions, useStore } from '../store/store';
 import { Icon } from '../ui/Icon';
 import { appById, type AppId } from './apps';
 import { useClock, useLiveSession } from './live';
+import { syncNow, useSyncStatus } from '../sync/engine';
 import { open } from './router';
 
 export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: () => void; dark: boolean }) {
@@ -79,6 +80,7 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
             <i style={{ width: `${m.level.progress * 100}%` }} />
           </span>
         </button>
+        <SyncIcon />
         {petOn && (
           <button className="mb-icon" onClick={() => window.dispatchEvent(new Event('lifeos:pet-locate'))} aria-label={L('找到宠物', 'Find my pet')} title={L('找到宠物', 'Find my pet')}>
             <Icon name="paw" size={15} />
@@ -109,4 +111,16 @@ function PomoLeft({ endsAt, pausedLeft }: { endsAt: number; pausedLeft?: number 
   useClock(1000);
   const left = Math.max(0, pausedLeft ?? endsAt - Date.now());
   return <span className="num">{`${String(Math.floor(left / 60000)).padStart(2, '0')}:${String(Math.floor((left % 60000) / 1000)).padStart(2, '0')}`}</span>;
+}
+
+function SyncIcon() {
+  const L = useL();
+  const st = useSyncStatus();
+  if (st.state === 'off') return null;
+  const title = st.state === 'error' ? L('同步出错，点击重试', 'Sync error — click to retry') : st.state === 'syncing' ? L('同步中…', 'Syncing…') : L('已同步', 'Synced');
+  return (
+    <button className={`mb-icon mb-sync is-${st.state}`} onClick={() => (st.state === 'error' ? open('settings') : void syncNow())} aria-label={title} title={title}>
+      <Icon name={st.state === 'error' ? 'cloud-off' : st.state === 'syncing' ? 'refresh' : 'cloud-check'} size={15} />
+    </button>
+  );
 }

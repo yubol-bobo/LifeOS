@@ -16,6 +16,7 @@ import { useLang } from '../lib/i18n';
 import { money } from '../lib/format';
 import { actions, useStore } from '../store/store';
 import { loadFeed } from '../lib/scholarFeed';
+import { initSync } from '../sync/engine';
 import { Icon } from '../ui/Icon';
 import { AppGlyph } from '../ui/kit';
 import { appById, type AppId } from './apps';
@@ -60,6 +61,8 @@ export function Shell() {
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
     document.documentElement.dataset.motion = reduce ? 'reduce' : 'full';
   }, [lang, reduce]);
+
+  useEffect(() => initSync(), []);
 
   // Pull the Google Scholar feed (if the deployment has one) once per page load.
   useEffect(() => {
