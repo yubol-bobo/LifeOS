@@ -13,6 +13,12 @@ import { Heatmap, Radar, Sparkline } from '../ui/charts';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, CheckBubble, Chip, Ring } from '../ui/kit';
 import { Odometer } from '../ui/Odometer';
+import { goalProgress, isScheduled, weeklyReview } from '../store/links';
+import { MILESTONE_XP } from '../store/rules';
+import { GoalTag } from './goals';
+import { useStatusLabel } from './Research';
+import type { PaperStatus } from '../store/types';
+import { QuickAdd } from './Quests';
 
 export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const L = useL();
@@ -20,6 +26,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const s = useStore((x) => x);
   const m = useMetrics();
   const live = useLiveSession(200);
+  const statusLabel = useStatusLabel();
   const today = dayKey();
   const lp = lifeProgress(s.profile.birthDate, s.profile.lifeExpectancy);
   const hour = new Date().getHours();
@@ -27,8 +34,8 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
     hour < 5 ? L('夜深了', 'Burning the midnight oil') : hour < 12 ? L('早上好', 'Good morning') : hour < 18 ? L('下午好', 'Good afternoon') : L('晚上好', 'Good evening');
 
   const doneToday = new Set(s.completions[today] ?? []);
-  const quests = s.quests.filter((q) => !q.archived && (q.kind === 'daily' || !q.doneAt || q.doneAt > Date.now() - 86_400_000));
-  const dailies = s.quests.filter((q) => q.kind === 'daily' && !q.archived);
+  const quests = s.quests.filter((q) => !q.archived && (q.kind === 'daily' ? isScheduled(q, today) : !q.doneAt || q.doneAt > Date.now() - 86_400_000));
+  const dailies = s.quests.filter((q) => isScheduled(q, today));
   const dailyDone = dailies.filter((q) => doneToday.has(q.id)).length;
 
   const todaysFocus = s.sessions.filter((x) => dayKey(x.start) === today);
@@ -37,9 +44,12 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const weekDays = lastNDays(7);
   const weekEarn = weekDays.map((d) => s.sessions.filter((x) => dayKey(x.start) === d).reduce((a, x) => a + x.earned, 0) + (d === today ? (live?.earned ?? 0) : 0));
 
-  const next = s.milestones
-    .filter((x) => x.status !== 'done' && x.targetDate)
-    .sort((a, b) => a.targetDate!.localeCompare(b.targetDate!))[0];
+  const goals = s.milestones
+    .filter((x) => x.status !== 'done')
+    .map((g) => ({ g, p: goalProgress(s, g, m) }))
+    .sort((a, b) => Number(b.p.ready) - Number(a.p.ready) || Number(b.g.status === 'active') - Number(a.g.status === 'active') || (a.g.targetDate ?? '9').localeCompare(b.g.targetDate ?? '9'))
+    .slice(0, 4);
+  const review = useMemo(() => weeklyReview(s), [s]);
 
   const days = useMemo(() => lastNDays(140), [today]); // eslint-disable-line react-hooks/exhaustive-deps
   const xpByDay = useMemo(() => {
@@ -120,12 +130,19 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
               <li key={q.id} className={done ? 'is-done' : ''}>
                 <CheckBubble checked={done} onChange={() => actions.toggleQuest(q.id)} tone={q.attr} label={q.title} />
                 <span className="mq-title">{q.title}</span>
+                <GoalTag goalId={q.goalId} />
                 <span className="mq-xp num">+{QUEST_XP[q.difficulty]}</span>
               </li>
             );
           })}
           {quests.length === 0 && <li className="muted">{L('还没有任务', 'No quests yet')}</li>}
         </ul>
+        {quests.length > 7 && (
+          <button className="more-link" onClick={() => open('quests')}>
+            {L(`还有 ${quests.length - 7} 个 →`, `${quests.length - 7} more →`)}
+          </button>
+        )}
+        <QuickAdd compact />
       </section>
 
       {/* ---------- life progress ---------- */}
@@ -219,31 +236,52 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
             {L('近30天', '30d')} <b className="num">+{lastWeekCites}</b>
           </span>
         </div>
+        <div className="pipeline-mini">
+          {(['idea', 'drafting', 'submitted', 'review', 'accepted'] as PaperStatus[]).map((st) => {
+            const n = s.papers.filter((p) => p.status === st).length;
+            return (
+              <span key={st} className={n ? '' : 'is-zero'}>
+                <b className="num">{n}</b>
+                {statusLabel(st)}
+              </span>
+            );
+          })}
+        </div>
       </section>
 
-      {/* ---------- next milestone ---------- */}
+      {/* ---------- goals ---------- */}
       <section className="widget w-next">
-        <WidgetHead icon="flag" title={L('下一个里程碑', 'Next milestone')} onOpen={() => open('roadmap')} />
-        {next ? (
-          <div className="next-ms">
-            <div className="countdown">
-              <span className="big-num num">{Math.max(0, daysBetween(today, next.targetDate!))}</span>
-              <span className="muted">{L('天', 'days')}</span>
-            </div>
-            <div className="next-body">
-              <strong>{next.title}</strong>
-              {next.steps.length > 0 && (
-                <>
-                  <Bar value={next.steps.filter((x) => x.done).length / next.steps.length} tone={next.attr} height={8} label="steps" />
-                  <span className="muted num">
-                    {next.steps.filter((x) => x.done).length}/{next.steps.length} {L('步', 'steps')}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
+        <WidgetHead icon="flag" title={L('目标进度', 'Goals')} onOpen={() => open('roadmap')} />
+        {goals.length ? (
+          <ul className="goal-mini">
+            {goals.map(({ g, p }) => {
+              const days = g.targetDate ? daysBetween(today, g.targetDate) : null;
+              return (
+                <li key={g.id} className={p.ready ? 'is-ready' : ''}>
+                  <div className="gm-top">
+                    <strong>{g.title}</strong>
+                    {p.ready ? (
+                      <Button size="sm" variant="gold" icon="gift" onClick={() => actions.setMilestoneStatus(g.id, 'done')}>
+                        +{MILESTONE_XP[g.size]}
+                      </Button>
+                    ) : (
+                      <span className="muted small num">{days != null ? (days >= 0 ? L(`${days} 天`, `${days}d`) : L('已逾期', 'late')) : ''}</span>
+                    )}
+                  </div>
+                  {p.pct != null ? (
+                    <div className="gm-bar">
+                      <Bar value={p.pct} tone={g.attr} height={7} />
+                      <span className="num small">{Math.round(p.pct * 100)}%</span>
+                    </div>
+                  ) : (
+                    <span className="muted small">{L('还没有可衡量的关键结果', 'No measurable key results yet')}</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         ) : (
-          <p className="muted">{L('设定一个带日期的里程碑，这里会开始倒计时。', 'Give a milestone a target date to start a countdown.')}</p>
+          <p className="muted">{L('设定一个目标，并给它加上关键结果——之后的每个任务、每次专注都会自动推动它。', 'Set a goal and give it key results — every quest and focus session will then move it automatically.')}</p>
         )}
       </section>
 
@@ -275,24 +313,50 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
         </div>
       </section>
 
-      {/* ---------- recent log ---------- */}
+      {/* ---------- weekly review ---------- */}
       <section className="widget w-log">
-        <WidgetHead icon="zap" title={L('最近获得', 'Recent gains')} />
-        <ul className="xp-log">
-          {[...s.events]
-            .sort((a, b) => b.ts - a.ts)
-            .slice(0, 6)
-            .map((e) => (
-              <li key={e.id}>
-                <span className="xp-dot" style={{ background: e.attr ? `var(--c-${e.attr})` : e.coins < 0 ? 'var(--gold)' : 'var(--accent)' }} />
-                <span className="xp-label">{e.label}</span>
-                <span className="xp-amt num">{e.xp > 0 ? `+${e.xp}` : `${e.coins}`}</span>
-              </li>
-            ))}
-          {s.events.length === 0 && <li className="muted">{L('完成任务后会出现在这里', 'Your gains will show up here')}</li>}
+        <WidgetHead icon="sparkles" title={L('本周回顾', 'This week')} />
+        <div className="review-stats">
+          <div>
+            <span className="muted small">XP</span>
+            <strong className="num">{num(review.xpThis)}</strong>
+            <Delta now={review.xpThis} prev={review.xpLast} />
+          </div>
+          <div>
+            <span className="muted small">{L('专注', 'Focus')}</span>
+            <strong className="num">{review.focusThis.toFixed(1)}h</strong>
+            <Delta now={review.focusThis} prev={review.focusLast} />
+          </div>
+          <div>
+            <span className="muted small">{L('主属性', 'Top stat')}</span>
+            <strong>{review.topAttr ? (lang === 'zh' ? ATTR_META[review.topAttr].zh : ATTR_META[review.topAttr].en) : '—'}</strong>
+          </div>
+        </div>
+        <ul className="insights">
+          {review.insights.slice(0, 3).map((x, i) => (
+            <li key={i}>
+              <span className="ins-ic" style={{ color: x.tone === 'accent' ? 'var(--accent)' : x.tone === 'gold' ? 'var(--gold)' : `var(--c-${x.tone})` }}>
+                <Icon name={x.icon} size={14} />
+              </span>
+              <span>{lang === 'zh' ? x.zh : x.en}</span>
+            </li>
+          ))}
+          {review.insights.length === 0 && <li className="muted">{L('多记录几天，这里会自动生成洞察。', 'Log a few more days and insights will appear here.')}</li>}
         </ul>
       </section>
     </div>
+  );
+}
+
+function Delta({ now, prev }: { now: number; prev: number }) {
+  const L = useL();
+  if (!prev) return <span className="delta muted">{L('与上周同期', 'vs last week')} —</span>;
+  const d = (now - prev) / prev;
+  return (
+    <span className={`delta ${d >= 0 ? 'up' : 'down'}`}>
+      <Icon name={d >= 0 ? 'trending-up' : 'trending-down'} size={11} /> {d >= 0 ? '+' : ''}
+      {Math.round(d * 100)}%
+    </span>
   );
 }
 

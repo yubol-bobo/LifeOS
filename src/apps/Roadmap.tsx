@@ -10,6 +10,10 @@ import type { Milestone, MilestoneSize } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, Card, CheckBubble, Chip, Empty, Field, Modal, Segmented, Stat } from '../ui/kit';
 import { AttrPicker } from './Quests';
+import { GoalParts, KR_ICON, useKrText } from './goals';
+import { goalProgress } from '../store/links';
+import { useMetrics } from '../store/hooks';
+import type { KeyResult, KrKind, KrMetric } from '../store/types';
 
 export function Roadmap() {
   const L = useL();
@@ -21,7 +25,8 @@ export function Roadmap() {
 
   const sorted = useMemo(() => {
     const when = (m: Milestone) => (m.status === 'done' ? m.doneAt : m.targetDate) ?? '9999';
-    return [...s.milestones].sort((a, b) => when(a).localeCompare(when(b)));
+    const rank = (m: Milestone) => (m.status === 'active' ? 0 : 1);
+    return [...s.milestones].sort((a, b) => (a.status === 'done' || b.status === 'done' ? 0 : rank(a) - rank(b)) || when(a).localeCompare(when(b)));
   }, [s.milestones]);
   const past = sorted.filter((m) => m.status === 'done');
   const future = sorted.filter((m) => m.status !== 'done');
@@ -47,14 +52,11 @@ export function Roadmap() {
       </div>
 
       <div className="grid-1-1 roadmap-grid">
-        <Card title={L('时间线', 'Timeline')} icon="route">
-          {sorted.length === 0 ? (
-            <Empty icon="flag" title={L('还没有里程碑', 'No milestones yet')} body={L('毕业、搬家、第一次马拉松……把它们放上地图。', 'Graduation, a move, a first marathon… put them on the map.')} />
+        <Card title={L('目标', 'Goals')} icon="route" action={<span className="muted small">{L('从现在出发 →', 'From now on →')}</span>}>
+          {future.length === 0 ? (
+            <Empty icon="flag" title={L('还没有进行中的目标', 'No open goals')} body={L('毕业、搬家、第一次马拉松……给它加上关键结果，日常行动就会自动推动它。', 'Graduation, a move, a first marathon… add key results and daily actions will push it forward.')} />
           ) : (
             <ol className="timeline">
-              {past.map((m) => (
-                <MilestoneItem key={m.id} m={m} onEdit={() => setEdit(m)} />
-              ))}
               <li className="tl-now">
                 <span className="tl-now-dot" />
                 <span>
@@ -68,10 +70,31 @@ export function Roadmap() {
           )}
         </Card>
 
-        <Card title={L('人生周格', 'Life in weeks')} icon="grid" className="weeks-card">
-          <p className="muted small">{L(`每一格是一周，每一行是一年。共 ${s.profile.lifeExpectancy} 行。彩色圆点是里程碑。`, `Each cell is a week, each row a year — ${s.profile.lifeExpectancy} rows. Colored dots are milestones.`)}</p>
-          <LifeWeeks />
-        </Card>
+        <div className="stack">
+          <Card title={L('人生周格', 'Life in weeks')} icon="grid">
+            <p className="muted small">{L(`每一格是一周，每一行是一年。共 ${s.profile.lifeExpectancy} 行。彩色圆点是里程碑。`, `Each cell is a week, each row a year — ${s.profile.lifeExpectancy} rows. Colored dots are milestones.`)}</p>
+            <LifeWeeks />
+          </Card>
+          <Card title={L('已抵达', 'Reached')} icon="mountain">
+            {past.length === 0 ? (
+              <p className="muted small">{L('达成的里程碑会收藏在这里。', 'Reached milestones are collected here.')}</p>
+            ) : (
+              <ul className="reached">
+                {[...past].reverse().map((m) => (
+                  <li key={m.id} style={{ '--tone': `var(--c-${m.attr})` } as CSSProperties}>
+                    <span className="reached-dot">
+                      <Icon name="check" size={11} stroke={3} />
+                    </span>
+                    <span className="num muted small">{m.doneAt}</span>
+                    <strong>{m.title}</strong>
+                    <span className="num muted small">+{MILESTONE_XP[m.size]}</span>
+                    <Button size="sm" variant="ghost" icon="pencil" title={L('编辑', 'Edit')} onClick={() => setEdit(m)} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
       </div>
 
       <MilestoneEditor value={edit} onClose={() => setEdit(null)} />
@@ -83,12 +106,15 @@ function MilestoneItem({ m, onEdit }: { m: Milestone; onEdit: () => void }) {
   const L = useL();
   const lang = useLang();
   const today = dayKey();
+  const s = useStore((x) => x);
+  const mx = useMetrics();
+  const gp = goalProgress(s, m, mx);
   const done = m.status === 'done';
   const stepsDone = m.steps.filter((x) => x.done).length;
   const days = m.targetDate ? daysBetween(today, m.targetDate) : null;
   const date = done ? m.doneAt : m.targetDate;
   return (
-    <li className={`tl-item is-${m.status}`} style={{ '--tone': `var(--c-${m.attr})` } as CSSProperties}>
+    <li className={`tl-item is-${m.status} ${gp.ready ? 'is-ready' : ''}`} style={{ '--tone': `var(--c-${m.attr})` } as CSSProperties}>
       <span className="tl-node">
         <Icon name={done ? 'check' : m.size === 'epic' ? 'mountain' : 'flag'} size={13} stroke={3} />
       </span>
@@ -107,9 +133,27 @@ function MilestoneItem({ m, onEdit }: { m: Milestone; onEdit: () => void }) {
             {{ small: L('小目标', 'Small'), big: L('大目标', 'Big'), epic: L('史诗', 'Epic') }[m.size]} · {MILESTONE_XP[m.size]} XP
           </Chip>
         </div>
+        {!done && gp.pct != null && (
+          <div className="tl-progress">
+            <Bar value={gp.pct} tone={m.attr} height={8} />
+            <span className="num">{Math.round(gp.pct * 100)}%</span>
+          </div>
+        )}
+        {!done && (m.krs?.length ?? 0) > 0 && <GoalParts m={m} />}
+        {!done && gp.linkedQuests.length > 0 && (
+          <div className="tl-linked">
+            <Icon name="refresh" size={12} />
+            <span className="muted small">{L('推动它的任务：', 'Fed by: ')}</span>
+            {gp.linkedQuests.map((q) => (
+              <span key={q.id} className="linked-q">
+                {q.title}
+              </span>
+            ))}
+          </div>
+        )}
         {m.steps.length > 0 && (
           <div className="tl-steps">
-            <Bar value={stepsDone / m.steps.length} tone={m.attr} height={6} />
+            {(m.krs?.length ?? 0) === 0 && <Bar value={stepsDone / m.steps.length} tone={m.attr} height={6} />}
             <ul>
               {m.steps.map((st) => (
                 <li key={st.id} className={st.done ? 'is-done' : ''}>
@@ -127,9 +171,15 @@ function MilestoneItem({ m, onEdit }: { m: Milestone; onEdit: () => void }) {
                 {L('开始推进', 'Start')}
               </Button>
             )}
-            <Button size="sm" variant="primary" icon="flag" onClick={() => actions.setMilestoneStatus(m.id, 'done')}>
-              {L('标记达成', 'Mark reached')}
-            </Button>
+            {gp.ready ? (
+              <Button size="sm" variant="gold" icon="gift" onClick={() => actions.setMilestoneStatus(m.id, 'done')}>
+                {L(`领取 +${MILESTONE_XP[m.size]} XP`, `Claim +${MILESTONE_XP[m.size]} XP`)}
+              </Button>
+            ) : (
+              <Button size="sm" variant={gp.pct == null ? 'primary' : 'soft'} icon="flag" onClick={() => actions.setMilestoneStatus(m.id, 'done')}>
+                {L('标记达成', 'Mark reached')}
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -342,6 +392,7 @@ function MilestoneEditor({ value, onClose }: { value: Partial<Milestone> | null;
         <Field label={L('属性', 'Attribute')}>
           <AttrPicker value={m.attr} onChange={(a) => setD({ ...m, attr: a })} lang={lang} />
         </Field>
+        <KrBuilder krs={m.krs ?? []} onChange={(krs) => setD({ ...m, krs })} />
         <Field label={L('拆解步骤（每步 +15 XP）', 'Steps (+15 XP each)')}>
           <ul className="step-edit">
             {m.steps.map((st) => (
@@ -369,5 +420,86 @@ function MilestoneEditor({ value, onClose }: { value: Partial<Milestone> | null;
         </Field>
       </div>
     </Modal>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+
+function KrBuilder({ krs, onChange }: { krs: KeyResult[]; onChange: (k: KeyResult[]) => void }) {
+  const L = useL();
+  const trackers = useStore((s) => s.trackers);
+  const { label, metricName } = useKrText();
+  const [kind, setKind] = useState<KrKind>('quests');
+  const [target, setTarget] = useState(20);
+  const [trackerId, setTrackerId] = useState('');
+  const [metric, setMetric] = useState<KrMetric>('citations');
+  const [title, setTitle] = useState('');
+  const kinds: { v: KrKind; zh: string; en: string }[] = [
+    { v: 'quests', zh: '关联任务次数', en: 'Linked quests' },
+    { v: 'focus', zh: '专注小时', en: 'Focus hours' },
+    { v: 'tracker', zh: '追踪数据', en: 'Tracker' },
+    { v: 'metric', zh: '系统指标', en: 'System metric' },
+    { v: 'manual', zh: '手动计数', en: 'Manual count' },
+  ];
+  const add = () => {
+    if (!(target > 0)) return;
+    if (kind === 'tracker' && !trackerId) return;
+    if (kind === 'manual' && !title.trim()) return;
+    onChange([...krs, { id: uid(), kind, target, ...(kind === 'tracker' ? { trackerId } : {}), ...(kind === 'metric' ? { metric } : {}), ...(kind === 'manual' ? { title: title.trim(), current: 0 } : {}) }]);
+    setTitle('');
+  };
+  return (
+    <div className="link-box">
+      <div className="link-box-head">
+        <Icon name="target" size={15} />
+        <strong>{L('关键结果（自动追踪）', 'Key results (auto-tracked)')}</strong>
+      </div>
+      <p className="muted small">{L('定义「怎样算完成」。进度会从任务、专注、追踪和学术数据里自动计算，全部达成后可以领取奖励。', 'Define what “done” means. Progress is computed from quests, focus, trackers and research data — claim the reward when all are met.')}</p>
+      {krs.length > 0 && (
+        <ul className="step-edit">
+          {krs.map((k) => (
+            <li key={k.id}>
+              <span className="kr-row">
+                <Icon name={KR_ICON[k.kind]} size={13} /> {label(k)}
+              </span>
+              <Button size="sm" variant="ghost" icon="x" title={L('移除', 'Remove')} onClick={() => onChange(krs.filter((x) => x.id !== k.id))} />
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="kr-form">
+        <select className="input" value={kind} onChange={(e) => setKind(e.target.value as KrKind)} aria-label={L('类型', 'Kind')}>
+          {kinds.map((k) => (
+            <option key={k.v} value={k.v}>
+              {L(k.zh, k.en)}
+            </option>
+          ))}
+        </select>
+        {kind === 'tracker' && (
+          <select className="input" value={trackerId} onChange={(e) => setTrackerId(e.target.value)} aria-label={L('追踪项', 'Tracker')}>
+            <option value="">{L('选择追踪项', 'Pick a tracker')}</option>
+            {trackers.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.mode === 'total' ? L('累计', 'total') : t.lowerIsBetter ? L('降到', 'down to') : L('达到', 'reach')})
+              </option>
+            ))}
+          </select>
+        )}
+        {kind === 'metric' && (
+          <select className="input" value={metric} onChange={(e) => setMetric(e.target.value as KrMetric)} aria-label={L('指标', 'Metric')}>
+            {(['citations', 'hIndex', 'papers', 'earned', 'level', 'streak'] as KrMetric[]).map((x) => (
+              <option key={x} value={x}>
+                {metricName(x)}
+              </option>
+            ))}
+          </select>
+        )}
+        {kind === 'manual' && <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={L('例如：投递 20 家公司', 'e.g. Apply to 20 companies')} />}
+        <input className="input input-num" type="number" min={0} step="any" value={target} onChange={(e) => setTarget(+e.target.value)} aria-label={L('目标值', 'Target')} />
+        <Button icon="plus" onClick={add}>
+          {L('添加', 'Add')}
+        </Button>
+      </div>
+    </div>
   );
 }

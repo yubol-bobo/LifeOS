@@ -23,7 +23,21 @@ export function Onboarding() {
       ['运动一下', 'Move your body', 'body'],
       ['写三行日记', 'Write three lines of journal', 'spirit'],
     ];
-    for (const [a, b, attr] of starter) actions.addQuest({ title: zh ? a : b, attr, difficulty: 'normal', kind: 'daily' });
+    // A first goal, wired to the starter habits, so the daily → goal chain is visible from day one.
+    actions.saveMilestone({
+      title: zh ? '坚持 30 天' : 'My first 30 days',
+      note: zh ? '每完成一个下面的习惯，这个目标都会自动前进。' : 'Every habit below moves this goal forward automatically.',
+      attr: 'spirit',
+      size: 'big',
+      status: 'active',
+      steps: [],
+      krs: [
+        { id: 'kr-starter-1', kind: 'quests', target: 60 },
+        { id: 'kr-starter-2', kind: 'metric', metric: 'streak', target: 30 },
+      ],
+    });
+    const goalId = getState().milestones[getState().milestones.length - 1]?.id;
+    for (const [a, b, attr] of starter) actions.addQuest({ title: zh ? a : b, attr, difficulty: 'normal', kind: 'daily', goalId });
     actions.saveReward({ title: zh ? '一杯好咖啡' : 'A really good coffee', cost: 60, icon: 'coffee' });
     actions.saveReward({ title: zh ? '看一部电影' : 'Movie night', cost: 250, icon: 'film' });
   };

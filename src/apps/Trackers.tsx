@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { dayKey, parseDay } from '../lib/date';
-import { num } from '../lib/format';
+import { num, smart } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { ATTR_META } from '../store/hooks';
 import { actions, useStore } from '../store/store';
@@ -9,6 +9,7 @@ import { AreaChart } from '../ui/charts';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, Card, Chip, Empty, Field, Modal, Segmented } from '../ui/kit';
 import { AttrPicker } from './Quests';
+import { GoalTag } from './goals';
 
 export function Trackers() {
   const L = useL();
@@ -57,9 +58,15 @@ function TrackerCard({ t, onEdit }: { t: Tracker; onEdit: () => void }) {
       : t.mode === 'total'
         ? total / t.goal
         : t.lowerIsBetter
-          ? Math.min(1, t.goal / headline)
+          ? (() => {
+              // progress measured from the first reading toward the goal
+              const start = t.entries[0].value;
+              return start <= t.goal! ? (headline <= t.goal! ? 1 : 0) : (start - headline) / (start - t.goal!);
+            })()
           : headline / t.goal;
   const loggedToday = t.entries.some((e) => e.date === dayKey());
+  const feeders = useStore((s) => s.quests).filter((q) => q.log?.trackerId === t.id && !q.archived);
+  const goals = useStore((s) => s.milestones).filter((m) => m.status !== 'done' && m.krs?.some((k) => k.trackerId === t.id));
   const good = delta == null ? null : t.lowerIsBetter ? delta <= 0 : delta >= 0;
 
   let series = entries.map((e) => ({ x: parseDay(e.date).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'numeric', day: 'numeric' }), y: e.value }));
@@ -78,11 +85,11 @@ function TrackerCard({ t, onEdit }: { t: Tracker; onEdit: () => void }) {
     >
       <div className="tracker-top">
         <div>
-          <span className="big-num num">{headline == null ? '—' : num(headline, 1)}</span>
+          <span className="big-num num">{headline == null ? '—' : smart(+headline.toFixed(1))}</span>
           <span className="unit">{t.unit}</span>
         </div>
         {delta != null && (
-          <Chip icon={good ? 'trending-up' : 'activity'}>
+          <Chip icon={delta < 0 ? 'trending-down' : 'trending-up'} tone={good ? 'wealth' : undefined}>
             {delta > 0 ? '+' : ''}
             {num(delta, 1)} {good ? L('不错', 'nice') : ''}
           </Chip>
@@ -92,8 +99,20 @@ function TrackerCard({ t, onEdit }: { t: Tracker; onEdit: () => void }) {
         <div className="tracker-goal">
           <Bar value={progress} tone={t.attr} height={8} />
           <span className="muted small num">
-            {L('目标', 'Goal')} {num(t.goal!)} {t.unit} · {Math.round(Math.min(1, progress) * 100)}%
+            {L('目标', 'Goal')} {smart(t.goal!)} {t.unit} · {Math.round(Math.max(0, Math.min(1, progress)) * 100)}%
           </span>
+        </div>
+      )}
+      {(feeders.length > 0 || goals.length > 0) && (
+        <div className="tracker-links">
+          {feeders.map((q) => (
+            <span key={q.id} className="link-hint">
+              <Icon name="refresh" size={11} /> {q.title} +{smart(q.log!.amount)}
+            </span>
+          ))}
+          {goals.map((g) => (
+            <GoalTag key={g.id} goalId={g.id} />
+          ))}
         </div>
       )}
       {series.length > 1 ? <AreaChart data={series} tone={t.attr} height={140} baseline={t.mode === 'total' ? 'zero' : 'auto'} /> : <div className="tracker-empty muted small">{L('记录两次以上显示趋势', 'Log twice to see a trend')}</div>}

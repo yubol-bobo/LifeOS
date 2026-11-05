@@ -10,6 +10,8 @@ import { Columns } from '../ui/charts';
 import { Bar, Button, Card, Empty, Field, Modal, Ring, Stat } from '../ui/kit';
 import { Odometer } from '../ui/Odometer';
 import { AttrPicker } from './Quests';
+import { GoalTag } from './goals';
+import { isScheduled } from '../store/links';
 
 export function Earn() {
   const L = useL();
@@ -20,6 +22,17 @@ export function Earn() {
   const [rate, setRate] = useState(profile.hourlyRate);
   const [note, setNote] = useState('');
   const [attr, setAttr] = useState<Attr>('craft');
+  const [link, setLink] = useState('');
+  const goals = useStore((s) => s.milestones).filter((g) => g.status !== 'done');
+  const quests = useStore((s) => s.quests);
+  const completions = useStore((s) => s.completions);
+  const openQuests = quests.filter((q) => (q.kind === 'daily' ? isScheduled(q, dayKey()) && !(completions[dayKey()] ?? []).includes(q.id) : !q.archived && !q.doneAt));
+  const start = () => {
+    const q = link.startsWith('q:') ? quests.find((x) => x.id === link.slice(2)) : undefined;
+    const goalId = q ? q.goalId : link.startsWith('g:') ? link.slice(2) : undefined;
+    actions.startFocus(rate, q ? q.attr : attr, note || q?.title || '', { goalId, questId: q?.id });
+    if (rate !== profile.hourlyRate) actions.profile({ hourlyRate: rate });
+  };
   const [manual, setManual] = useState(false);
   const cur = profile.currency;
 
@@ -95,10 +108,36 @@ export function Earn() {
                   <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={L('例如：写论文', 'e.g. Paper draft')} />
                 </Field>
               </div>
-              <Field label={L('经验计入', 'XP goes to')}>
-                <AttrPicker value={attr} onChange={setAttr} lang={lang} />
+              <Field label={L('为谁工作', 'Working toward')} hint={L('关联后，专注时长会自动计入目标的「专注小时」，或让任务在达标后自动完成。', 'Linked time counts toward a goal’s focus hours, or auto-completes a quest once its target is reached.')}>
+                <select className="input" value={link} onChange={(e) => setLink(e.target.value)}>
+                  <option value="">{L('— 不关联 —', '— Nothing specific —')}</option>
+                  {openQuests.length > 0 && (
+                    <optgroup label={L('今日任务', "Today's quests")}>
+                      {openQuests.map((q) => (
+                        <option key={q.id} value={`q:${q.id}`}>
+                          {q.title}
+                          {q.focusMin ? ` · ${q.focusMin}′` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {goals.length > 0 && (
+                    <optgroup label={L('目标', 'Goals')}>
+                      {goals.map((g) => (
+                        <option key={g.id} value={`g:${g.id}`}>
+                          {g.title}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
               </Field>
-              <Button variant="primary" size="lg" icon="play" onClick={() => (actions.startFocus(rate, attr, note), rate !== profile.hourlyRate && actions.profile({ hourlyRate: rate }))}>
+              {!link.startsWith('q:') && (
+                <Field label={L('经验计入', 'XP goes to')}>
+                  <AttrPicker value={attr} onChange={setAttr} lang={lang} />
+                </Field>
+              )}
+              <Button variant="primary" size="lg" icon="play" onClick={start}>
                 {L('开始计时', 'Start the clock')}
               </Button>
             </>
@@ -107,6 +146,7 @@ export function Earn() {
               <div className="earn-now">
                 <span className="muted">{L('正在进行', 'Now')}</span>
                 <strong>{live.active.note || L('专注时段', 'Focus session')}</strong>
+                <GoalTag goalId={live.active.goalId} />
                 <span className="muted num">
                   {money(live.active.rate, cur, 0)}/h · {L('开始于', 'since')} {new Date(live.active.start).toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
                 </span>
@@ -129,6 +169,22 @@ export function Earn() {
                 </Button>
                 <Button size="lg" variant="ghost" icon="trash" title={L('丢弃本次', 'Discard')} onClick={() => actions.stopFocus(false)} />
               </div>
+              {(() => {
+                const q = quests.find((x) => x.id === live.active.questId);
+                if (!q?.focusMin) return null;
+                const spent = sessions.filter((x) => x.questId === q.id && dayKey(x.start) === today).reduce((a, x) => a + x.activeMs, 0) + live.ms;
+                return (
+                  <div className="goal">
+                    <div className="goal-top">
+                      <span>{L(`「${q.title}」自动完成进度`, `“${q.title}” auto-complete`)}</span>
+                      <span className="num">
+                        {Math.floor(spent / 60000)} / {q.focusMin}′
+                      </span>
+                    </div>
+                    <Bar value={spent / (q.focusMin * 60000)} tone={q.attr} height={8} />
+                  </div>
+                );
+              })()}
               <p className="muted small">{L('提示：浏览器标签页标题会实时显示收入，切到别的窗口也能看到。', 'Tip: the browser tab title shows your live earnings, even from another window.')}</p>
             </>
           )}
@@ -164,7 +220,9 @@ export function Earn() {
                 <li key={x.id}>
                   <span className="sess-dot" style={{ background: `var(--c-${x.attr})` }} />
                   <div className="sess-main">
-                    <strong>{x.note || L('专注时段', 'Focus session')}</strong>
+                    <strong>
+                      {x.note || L('专注时段', 'Focus session')} <GoalTag goalId={x.goalId} />
+                    </strong>
                     <span className="muted num">
                       {new Date(x.start).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })} · {duration(x.activeMs)}
                     </span>

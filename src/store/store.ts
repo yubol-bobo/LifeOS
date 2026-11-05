@@ -15,6 +15,7 @@ import {
   levelTitle,
   metrics,
 } from './rules';
+import { readyGoals, scheduledDailies } from './links';
 import type {
   Attr,
   EventKind,
@@ -120,6 +121,7 @@ interface CommitOpts {
 
 export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
   const before = metrics(state).level.level;
+  const readyBefore = new Set(readyGoals(state));
   const draft: State = structuredClone(state);
   mutate(draft);
 
@@ -140,6 +142,10 @@ export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
   subs.forEach((f) => f());
 
   if (opts.silent) return;
+  for (const id of readyGoals(state).filter((g) => !readyBefore.has(g))) {
+    const g = state.milestones.find((x) => x.id === id)!;
+    notify({ title: tr('目标条件已全部满足', 'Goal complete'), body: tr(`「${g.title}」可以领取了 →`, `“${g.title}” is ready to claim →`), icon: 'flag', tone: 'accent' }, 8000);
+  }
   for (const id of unlocked.slice(0, 3)) {
     const a = ACHIEVEMENTS.find((x) => x.id === id)!;
     const [title] = state.profile.lang === 'zh' ? a.zh : a.en;
@@ -218,38 +224,7 @@ export const actions = {
     let gained = 0;
     commit((d) => {
       const q = d.quests.find((x) => x.id === id);
-      if (!q) return;
-      const xp = QUEST_XP[q.difficulty];
-      if (q.kind === 'once') {
-        if (q.doneAt) {
-          q.doneAt = undefined;
-          revoke(d, `quest:${id}`);
-        } else {
-          q.doneAt = Date.now();
-          grant(d, `quest:${id}`, 'quest', xp, q.title, q.attr);
-          gained = xp;
-        }
-        return;
-      }
-      const list = (d.completions[day] ??= []);
-      const ref = `quest:${id}:${day}`;
-      if (list.includes(id)) {
-        d.completions[day] = list.filter((x) => x !== id);
-        revoke(d, ref);
-      } else {
-        list.push(id);
-        grant(d, ref, 'quest', xp, q.title, q.attr);
-        gained = xp;
-      }
-      // Perfect day bonus when every active daily quest is done.
-      const dailies = d.quests.filter((x) => x.kind === 'daily' && !x.archived);
-      const done = new Set(d.completions[day] ?? []);
-      const perfect = dailies.length >= 3 && dailies.every((x) => done.has(x.id));
-      if (perfect) {
-        if (grant(d, `perfect:${day}`, 'perfect', PERFECT_DAY_XP, tr('全勤日奖励', 'Perfect day bonus'), 'spirit'))
-          gained += PERFECT_DAY_XP;
-      } else revoke(d, `perfect:${day}`);
-      if (!d.completions[day]?.length) delete d.completions[day];
+      if (q) gained = setQuestDone(d, q, day, !isDone(d, q, day));
     });
     if (gained) burst(`+${gained} XP`);
   },
@@ -259,13 +234,20 @@ export const actions = {
     commit((d) => {
       const existing = m.id && d.milestones.find((x) => x.id === m.id);
       if (existing) Object.assign(existing, m);
-      else d.milestones.push({ ...m, id: uid() } as Milestone);
+      else d.milestones.push({ since: dayKey(), ...m, id: uid() } as Milestone);
       syncMilestone(d, (existing as Milestone) || d.milestones[d.milestones.length - 1]);
+    });
+  },
+  setKrValue(mid: string, krId: string, value: number) {
+    commit((d) => {
+      const kr = d.milestones.find((x) => x.id === mid)?.krs?.find((k) => k.id === krId);
+      if (kr) kr.current = Math.max(0, value);
     });
   },
   removeMilestone(id: string) {
     commit((d) => {
       d.milestones = d.milestones.filter((m) => m.id !== id);
+      for (const q of d.quests) if (q.goalId === id) q.goalId = undefined;
       d.events = d.events.filter((e) => !e.ref.startsWith(`ms:${id}`));
     });
   },
@@ -365,10 +347,16 @@ export const actions = {
   },
 
   /* ---- focus & earnings ---- */
-  startFocus(rate: number, attr: Attr, note = '') {
+  startFocus(rate: number, attr: Attr, note = '', link: { goalId?: string; questId?: string } = {}) {
     commit((d) => {
-      d.active = { start: Date.now(), rate, attr, note, pausedMs: 0 };
+      d.active = { start: Date.now(), rate, attr, note, pausedMs: 0, ...link };
     });
+  },
+  /** Start a focus session on a specific quest — inherits its goal and attribute. */
+  focusOnQuest(questId: string) {
+    const q = state.quests.find((x) => x.id === questId);
+    if (!q) return;
+    actions.startFocus(state.profile.hourlyRate, q.attr, q.title, { questId, goalId: q.goalId });
   },
   pauseFocus() {
     commit((d) => {
@@ -387,6 +375,7 @@ export const actions = {
   },
   stopFocus(keep = true) {
     let summary: WorkSession | null = null;
+    let autoDone = '';
     commit((d) => {
       const a = d.active;
       if (!a) return;
@@ -404,12 +393,25 @@ export const actions = {
         earned: (activeMs / 3_600_000) * a.rate,
         note: a.note,
         attr: a.attr,
+        goalId: a.goalId,
+        questId: a.questId,
       };
       d.sessions.push(s);
       const xp = Math.round(activeMs / 60_000); // 1 XP per focused minute
       grant(d, `focus:${s.id}`, 'focus', xp, a.note || tr('专注时段', 'Focus session'), a.attr);
       summary = s;
+      // Linkage: enough focus on a quest today completes it.
+      const q = a.questId ? d.quests.find((x) => x.id === a.questId) : undefined;
+      const today = dayKey();
+      if (q?.focusMin && !isDone(d, q, today)) {
+        const spent = d.sessions.filter((x) => x.questId === q.id && dayKey(x.start) === today).reduce((acc, x) => acc + x.activeMs, 0);
+        if (spent >= q.focusMin * 60_000) {
+          setQuestDone(d, q, today, true);
+          autoDone = q.title;
+        }
+      }
     });
+    if (autoDone) notify({ title: tr('任务自动完成', 'Quest auto-completed'), body: tr(`专注时长已达标：「${autoDone}」`, `Focus target reached: “${autoDone}”`), icon: 'circle-check', tone: 'good' });
     return summary as WorkSession | null;
   },
   addSession(s: Omit<WorkSession, 'id' | 'earned'>) {
@@ -436,6 +438,7 @@ export const actions = {
   },
   removeTracker(id: string) {
     commit((d) => {
+      for (const q of d.quests) if (q.log?.trackerId === id) q.log = undefined;
       d.trackers = d.trackers.filter((t) => t.id !== id);
       d.events = d.events.filter((e) => !e.ref.startsWith(`trk:${id}:`));
     });
@@ -443,13 +446,7 @@ export const actions = {
   logTracker(id: string, value: number, day = dayKey()) {
     let gained = 0;
     commit((d) => {
-      const t = d.trackers.find((x) => x.id === id);
-      if (!t || !Number.isFinite(value)) return;
-      const hit = t.entries.find((e) => e.date === day);
-      if (hit) hit.value = t.mode === 'total' ? hit.value + value : value;
-      else t.entries.push({ date: day, value });
-      t.entries.sort((a, b) => a.date.localeCompare(b.date));
-      if (grant(d, `trk:${id}:${day}`, 'tracker', TRACKER_XP, t.name, t.attr)) gained = TRACKER_XP;
+      gained = addEntry(d, id, value, day);
     });
     if (gained) burst(`+${gained} XP`);
   },
@@ -516,4 +513,59 @@ function logCitations(d: State) {
   const last = d.citationLog[d.citationLog.length - 1];
   if (last && last.date === today) last.total = total;
   else if (!last || last.total !== total) d.citationLog.push({ date: today, total });
+}
+
+function isDone(d: State, q: Quest, day: string) {
+  return q.kind === 'once' ? !!q.doneAt : (d.completions[day] ?? []).includes(q.id);
+}
+
+/** Single source of truth for completing / un-completing a quest, including all linked effects. */
+function setQuestDone(d: State, q: Quest, day: string, on: boolean): number {
+  let gained = 0;
+  const xp = QUEST_XP[q.difficulty];
+  if (q.kind === 'once') {
+    q.doneAt = on ? Date.now() : undefined;
+    if (on) gained += grant(d, `quest:${q.id}`, 'quest', xp, q.title, q.attr) ? xp : 0;
+    else revoke(d, `quest:${q.id}`);
+  } else {
+    const ref = `quest:${q.id}:${day}`;
+    const list = d.completions[day] ?? [];
+    d.completions[day] = on ? [...new Set([...list, q.id])] : list.filter((x) => x !== q.id);
+    if (on) gained += grant(d, ref, 'quest', xp, q.title, q.attr) ? xp : 0;
+    else revoke(d, ref);
+    // Perfect day: every quest scheduled for that day is done.
+    const due = scheduledDailies(d, day);
+    const done = new Set(d.completions[day]);
+    if (due.length >= 3 && due.every((x) => done.has(x.id))) {
+      if (grant(d, `perfect:${day}`, 'perfect', PERFECT_DAY_XP, tr('全勤日奖励', 'Perfect day bonus'), 'spirit')) gained += PERFECT_DAY_XP;
+    } else revoke(d, `perfect:${day}`);
+    if (!d.completions[day].length) delete d.completions[day];
+  }
+  // Linkage: a quest can log a tracker value (e.g. "Run 5 km" → Running +5).
+  if (q.log && d.trackers.some((t) => t.id === q.log!.trackerId)) {
+    if (on) gained += addEntry(d, q.log.trackerId, q.log.amount, day);
+    else removeAmount(d, q.log.trackerId, q.log.amount, day);
+  }
+  return gained;
+}
+
+function addEntry(d: State, trackerId: string, value: number, day: string): number {
+  const t = d.trackers.find((x) => x.id === trackerId);
+  if (!t || !Number.isFinite(value)) return 0;
+  const hit = t.entries.find((e) => e.date === day);
+  if (hit) hit.value = t.mode === 'total' ? +(hit.value + value).toFixed(4) : value;
+  else t.entries.push({ date: day, value });
+  t.entries.sort((a, b) => a.date.localeCompare(b.date));
+  return grant(d, `trk:${t.id}:${day}`, 'tracker', TRACKER_XP, t.name, t.attr) ? TRACKER_XP : 0;
+}
+
+function removeAmount(d: State, trackerId: string, value: number, day: string) {
+  const t = d.trackers.find((x) => x.id === trackerId);
+  const hit = t?.entries.find((e) => e.date === day);
+  if (!t || !hit) return;
+  if (t.mode === 'total' && hit.value - value > 1e-9) hit.value = +(hit.value - value).toFixed(4);
+  else {
+    t.entries = t.entries.filter((e) => e !== hit);
+    revoke(d, `trk:${t.id}:${day}`);
+  }
 }

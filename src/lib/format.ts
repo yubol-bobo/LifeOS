@@ -44,3 +44,6 @@ export function duration(ms: number): string {
 export function hours(ms: number, digits = 1): string {
   return (ms / 3_600_000).toFixed(digits);
 }
+
+/** Integers without decimals, everything else with one. */
+export const smart = (v: number) => num(v, Number.isInteger(v) ? 0 : 1);

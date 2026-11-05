@@ -27,6 +27,11 @@ export interface Quest {
   createdAt: number;
   doneAt?: number; // for one-off quests
   archived?: boolean;
+  /** Linkage — what this quest feeds automatically. */
+  goalId?: string; // counts toward a milestone's key results
+  days?: number[]; // daily quests: scheduled weekdays, 0 = Mon … 6 = Sun (empty = every day)
+  focusMin?: number; // auto-completes after this many focused minutes on it today
+  log?: { trackerId: string; amount: number }; // logs to a tracker when completed
 }
 
 export type MilestoneSize = 'small' | 'big' | 'epic';
@@ -38,6 +43,23 @@ export interface Step {
   done: boolean;
 }
 
+/**
+ * Key results make a milestone measurable. Progress is computed from live data,
+ * so nothing here needs manual upkeep except `manual` KRs.
+ */
+export type KrKind = 'quests' | 'focus' | 'tracker' | 'metric' | 'manual';
+export type KrMetric = 'citations' | 'hIndex' | 'papers' | 'earned' | 'level' | 'streak';
+
+export interface KeyResult {
+  id: string;
+  kind: KrKind;
+  target: number;
+  title?: string; // for manual KRs
+  current?: number; // for manual KRs
+  trackerId?: string;
+  metric?: KrMetric;
+}
+
 export interface Milestone {
   id: string;
   title: string;
@@ -47,7 +69,9 @@ export interface Milestone {
   status: MilestoneStatus;
   targetDate?: string;
   doneAt?: string;
+  since?: string; // start of the counting window for KRs
   steps: Step[];
+  krs?: KeyResult[];
 }
 
 export type PaperStatus = 'idea' | 'drafting' | 'submitted' | 'review' | 'accepted' | 'published';
@@ -82,6 +106,8 @@ export interface WorkSession {
   earned: number;
   note?: string;
   attr: Attr;
+  goalId?: string;
+  questId?: string;
 }
 
 export interface ActiveSession {
@@ -91,6 +117,8 @@ export interface ActiveSession {
   attr: Attr;
   pausedMs: number;
   pausedAt?: number;
+  goalId?: string;
+  questId?: string;
 }
 
 export interface Tracker {

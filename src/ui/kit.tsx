@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { isValidElement, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import type { Attr } from '../store/types';
 import { Icon } from './Icon';
@@ -182,12 +182,16 @@ export function Segmented<T extends string>({ value, options, onChange, size = '
 /* ---------------- Form fields ---------------- */
 
 export function Field({ label, children, hint }: { label: ReactNode; children: ReactNode; hint?: ReactNode }) {
+  // Only wrap native form controls in <label>; groups of buttons get role="group"
+  // (a <label> around buttons would forward every click to the first button).
+  const native = isValidElement(children) && typeof children.type === 'string' && ['input', 'select', 'textarea'].includes(children.type);
+  const Tag = native ? 'label' : 'div';
   return (
-    <label className="field">
+    <Tag className="field" {...(native ? {} : { role: 'group', 'aria-label': typeof label === 'string' ? label : undefined })}>
       <span className="field-label">{label}</span>
       {children}
       {hint && <span className="field-hint">{hint}</span>}
-    </label>
+    </Tag>
   );
 }
 

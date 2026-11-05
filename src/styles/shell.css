@@ -1426,6 +1426,7 @@
     bottom: var(--dock-h);
     width: 100%;
     border-radius: 0;
+    background: var(--bg);
   }
   .dock {
     gap: 2px;
@@ -1471,4 +1472,147 @@
   .mb-item:not(.mb-level) {
     padding: 0 5px;
   }
+}
+
+/* goals widget */
+.goal-mini {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.goal-mini li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gm-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.gm-top strong {
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gm-top .btn-sm {
+  height: 26px;
+}
+
+.gm-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gm-bar .num {
+  font-weight: 750;
+  min-width: 34px;
+  text-align: right;
+}
+
+/* weekly review widget */
+.review-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.review-stats > div {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--surface) 70%, transparent);
+}
+
+.review-stats strong {
+  font-size: 18px;
+  font-family: var(--font-display);
+  line-height: 1.2;
+}
+
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.delta.up {
+  color: var(--good);
+}
+
+.delta.down {
+  color: var(--ink-3);
+}
+
+.insights {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+
+.insights li {
+  display: flex;
+  gap: 8px;
+}
+
+.ins-ic {
+  flex: none;
+  margin-top: 1px;
+}
+
+.mini-quests .goal-tag {
+  max-width: 120px;
+}
+
+.pipeline-mini {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.pipeline-mini span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 8px 2px;
+  border-radius: 12px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+  background: color-mix(in oklab, var(--surface) 70%, transparent);
+  white-space: nowrap;
+}
+
+.pipeline-mini b {
+  font-size: 17px;
+  color: var(--c-spirit);
+}
+
+.pipeline-mini .is-zero b {
+  color: var(--ink-3);
+  opacity: 0.6;
 }

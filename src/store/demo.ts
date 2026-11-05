@@ -29,7 +29,7 @@ export function demoState(profile: Partial<State['profile']>): State {
   s.quests = [
     q(T('深度写作 90 分钟', 'Deep writing · 90 min'), 'craft', 'hard'),
     q(T('精读 1 篇论文', 'Read one paper closely'), 'mind', 'normal'),
-    q(T('运动 30 分钟', 'Move for 30 min'), 'body', 'normal'),
+    q(T('跑步 5 公里', 'Run 5 km'), 'body', 'normal'),
     q(T('冥想 10 分钟', 'Meditate · 10 min'), 'spirit', 'easy'),
     q(T('记账 & 复盘', 'Log spending & reflect'), 'wealth', 'easy'),
     q(T('和家人/朋友联系', 'Reach out to someone'), 'bond', 'easy'),
@@ -38,12 +38,17 @@ export function demoState(profile: Partial<State['profile']>): State {
     q(T('整理 Zotero 文献库', 'Clean up Zotero library'), 'mind', 'easy', 'once'),
   ];
   const dailies = s.quests.filter((x) => x.kind === 'daily');
+  dailies[0].focusMin = 90;
+  dailies[2].days = [0, 2, 5]; // Mon, Wed, Sat
+  dailies[5].days = [2, 6]; // Wed, Sun
+  const scheduled = (x: Quest, d: string) => !x.days?.length || x.days.includes((new Date(d + 'T00:00:00').getDay() + 6) % 7);
   const habitRate = [0.72, 0.8, 0.65, 0.55, 0.6, 0.45];
   for (let i = 75; i >= 0; i--) {
     const d = addDays(today, -i);
     if (i > 0 && r() < 0.06) continue; // occasional rest days
     const ids: string[] = [];
     dailies.forEach((x, k) => {
+      if (!scheduled(x, d)) return;
       const p = i === 0 ? 0.42 : habitRate[k] + (i < 30 ? 0.12 : 0);
       if (r() < p) {
         ids.push(x.id);
@@ -51,7 +56,7 @@ export function demoState(profile: Partial<State['profile']>): State {
       }
     });
     if (ids.length) s.completions[d] = ids;
-    if (ids.length === dailies.length) push(`perfect:${d}`, 'perfect', 30, T('全勤日奖励', 'Perfect day bonus'), at(d, 22), 'spirit');
+    if (ids.length >= 3 && ids.length === dailies.filter((x) => scheduled(x, d)).length) push(`perfect:${d}`, 'perfect', 30, T('全勤日奖励', 'Perfect day bonus'), at(d, 22), 'spirit');
   }
   const once = s.quests.find((x) => x.kind === 'once' && x.attr === 'mind' && x.difficulty === 'easy')!;
   once.doneAt = Date.now() - 2 * DAY;
@@ -67,16 +72,19 @@ export function demoState(profile: Partial<State['profile']>): State {
     ms({ title: T('完成第一个半程马拉松', 'Ran a half marathon'), attr: 'body', size: 'big', status: 'done', doneAt: '2024-11-03', steps: [] }),
     ms({ title: T('应急基金存够 6 个月', '6-month emergency fund'), attr: 'wealth', size: 'big', status: 'done', doneAt: '2025-09-15', steps: [] }),
     ms({
-      title: T('博士资格答辩', 'PhD proposal defense'), attr: 'mind', size: 'epic', status: 'active', targetDate: addDays(today, 70),
+      title: T('博士资格答辩', 'PhD proposal defense'), attr: 'mind', size: 'epic', status: 'active', targetDate: addDays(today, 70), since: addDays(today, -60),
+      krs: [{ id: uid(), kind: 'focus', target: 120 }, { id: uid(), kind: 'quests', target: 60 }],
       note: T('委员会已确定，春季前完成。', 'Committee set — wrap before spring.'),
       steps: [step(T('确定委员会', 'Form committee'), true), step(T('写完 proposal 初稿', 'Draft the proposal'), true), step(T('导师审阅', 'Advisor review'), false), step(T('预答辩彩排', 'Mock defense'), false)],
     }),
     ms({
-      title: T('顶会 Oral', 'Oral at a top venue'), attr: 'craft', size: 'big', status: 'active', targetDate: addDays(today, 160),
+      title: T('顶会 Oral', 'Oral at a top venue'), attr: 'craft', size: 'big', status: 'active', targetDate: addDays(today, 160), since: addDays(today, -40),
+      krs: [{ id: uid(), kind: 'metric', metric: 'citations', target: 300 }],
       steps: [step(T('实验完成', 'Experiments done'), true), step(T('投稿', 'Submit'), false), step(T('Rebuttal', 'Rebuttal'), false)],
     }),
-    ms({ title: T('暑期研究实习', 'Summer research internship'), attr: 'wealth', size: 'big', status: 'planned', targetDate: addDays(today, 220), steps: [step(T('更新简历', 'Update CV'), true), step(T('内推 3 家', '3 referrals'), false)] }),
-    ms({ title: T('全程马拉松', 'Full marathon'), attr: 'body', size: 'epic', status: 'planned', targetDate: addDays(today, 340), steps: [] }),
+    ms({ title: T('暑期研究实习', 'Summer research internship'), attr: 'wealth', size: 'big', status: 'planned', targetDate: addDays(today, 220), krs: [{ id: uid(), kind: 'manual', title: T('投递 20 家', 'Apply to 20 labs'), target: 20, current: 7 }], steps: [step(T('更新简历', 'Update CV'), true), step(T('内推 3 家', '3 referrals'), false)] }),
+    ms({ title: T('全程马拉松', 'Full marathon'), attr: 'body', size: 'epic', status: 'active', targetDate: addDays(today, 340), since: addDays(today, -30), krs: [{ id: uid(), kind: 'tracker', target: 400 }, { id: uid(), kind: 'quests', target: 80 }], steps: [] }),
+    ms({ title: T('体重回到 68 kg', 'Back to 68 kg'), attr: 'body', size: 'small', status: 'active', targetDate: addDays(today, 45), since: addDays(today, -40), krs: [{ id: uid(), kind: 'tracker', target: 68 }], steps: [] }),
     ms({ title: T('博士毕业', 'Defend the PhD'), attr: 'mind', size: 'epic', status: 'planned', targetDate: '2028-05-15', steps: [] }),
     ms({ title: T('带父母去一次日本', 'Take my parents to Japan'), attr: 'bond', size: 'big', status: 'planned', targetDate: '2027-04-01', steps: [] }),
   ];
@@ -143,6 +151,26 @@ export function demoState(profile: Partial<State['profile']>): State {
     { id: uid(), name: T('阅读', 'Reading'), unit: T('页', 'pages'), attr: 'mind', mode: 'total', goal: 600, entries: days(30).filter(() => r() < 0.6).map((d) => ({ date: d, value: Math.round(10 + r() * 40) })) },
     { id: uid(), name: T('睡眠', 'Sleep'), unit: 'h', attr: 'spirit', mode: 'latest', goal: 8, entries: days(21).map((d) => ({ date: d, value: +(6.2 + r() * 2).toFixed(1) })) },
   ];
+
+  /* ---- linkage: daily actions → trackers → goals ---- */
+  const [weight, running, reading] = s.trackers;
+  const goal = (en: string) => s.milestones.find((m) => m.title === T(({ 'PhD proposal defense': '博士资格答辩', 'Full marathon': '全程马拉松', 'Back to 68 kg': '体重回到 68 kg' } as Record<string, string>)[en], en))!;
+  goal('Full marathon').krs![0].trackerId = running.id;
+  goal('Back to 68 kg').krs![0].trackerId = weight.id;
+  dailies[0].goalId = goal('PhD proposal defense').id;
+  dailies[1].goalId = goal('PhD proposal defense').id;
+  dailies[1].log = { trackerId: reading.id, amount: 20 };
+  dailies[2].goalId = goal('Full marathon').id;
+  dailies[2].log = { trackerId: running.id, amount: 5 };
+  for (const x of s.sessions) if (x.attr === 'craft' || x.attr === 'mind') x.goalId = goal('PhD proposal defense').id;
+  // running tracker reflects the run quests that were completed
+  for (const [d, ids] of Object.entries(s.completions))
+    if (ids.includes(dailies[2].id)) {
+      const hit = running.entries.find((e) => e.date === d);
+      if (hit) hit.value = +(hit.value + 5).toFixed(1);
+      else running.entries.push({ date: d, value: 5 });
+    }
+  running.entries.sort((a, b) => a.date.localeCompare(b.date));
   for (const t of s.trackers) for (const e of t.entries) push(`trk:${t.id}:${e.date}`, 'tracker', TRACKER_XP, t.name, at(e.date, 21), t.attr);
 
   /* ---- reward shop ---- */

@@ -258,6 +258,7 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
 
   /* ---- state ---- */
   let p = initial;
+  let dirty = true; // when still, only re-render after a change or drag
   function applyTheme() {
     stars.visible = p.dark;
     hemi.intensity = p.dark ? 0.7 : 1.25;
@@ -286,6 +287,7 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
     lastX = e.clientX;
     world.rotation.y += dx * 0.01;
     vel = dx * 0.0008;
+    dirty = true;
   };
   const onUp = () => (drag = false);
   el.addEventListener('pointerdown', onDown);
@@ -295,6 +297,7 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
 
   /* ---- sizing & loop ---- */
   const resize = () => {
+    dirty = true;
     const w = el.clientWidth || 1;
     const h = el.clientHeight || 1;
     renderer.setSize(w, h, false);
@@ -314,6 +317,11 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
   const tick = () => {
     raf = requestAnimationFrame(tick);
     if (!visible || document.hidden) return;
+    if (p.still && !dirty && !drag) {
+      clock.getDelta();
+      return;
+    }
+    dirty = false;
     const dt = Math.min(0.05, clock.getDelta());
     const t = clock.elapsedTime;
     if (!p.still) {
@@ -333,6 +341,7 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
       p = next;
       if (rebuild) buildDeco(p.trees, p.flags);
       applyTheme();
+      dirty = true;
     },
     dispose() {
       cancelAnimationFrame(raf);

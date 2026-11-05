@@ -5,7 +5,7 @@ import {
   Info, Landmark, LayoutGrid, Leaf, Library, ListChecks, Lock, Map as MapIcon, Maximize2, Milestone, Minus,
   Monitor, Moon, Mountain, Music, Orbit, Pause, Pencil, Pizza, Plane, Play, Plus, Power, Quote, RefreshCw, Rocket,
   Route, Scale, Search, Send, Settings, ShoppingBag, Sigma, Sparkles, Square, Star, Store, Sun, Target, Telescope,
-  Timer, Trash2, TrendingUp, Trophy, Tv, Upload, Users, Wallet, X, Zap,
+  Timer, Trash2, TrendingDown, TrendingUp, Trophy, Tv, Upload, Users, Wallet, X, Zap,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -22,7 +22,7 @@ const MAP: Record<string, LucideIcon> = {
   pizza: Pizza, plane: Plane, play: Play, plus: Plus, power: Power, quote: Quote, refresh: RefreshCw,
   rocket: Rocket, route: Route, scale: Scale, search: Search, send: Send, settings: Settings,
   'shopping-bag': ShoppingBag, sigma: Sigma, sparkles: Sparkles, square: Square, star: Star, store: Store,
-  sun: Sun, target: Target, telescope: Telescope, timer: Timer, trash: Trash2, 'trending-up': TrendingUp,
+  sun: Sun, target: Target, telescope: Telescope, timer: Timer, trash: Trash2, 'trending-up': TrendingUp, 'trending-down': TrendingDown,
   trophy: Trophy, tv: Tv, upload: Upload, users: Users, wallet: Wallet, x: X, zap: Zap,
 };
 
