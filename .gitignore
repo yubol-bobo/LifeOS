@@ -7,3 +7,7 @@ dist
 # Google Scholar data is built in CI from the scholar-data branch
 .scholar-data
 public/data
+
+# personal backups exported from LifeOS — never commit these
+lifeos-backup*.json
+*.lifeos.json

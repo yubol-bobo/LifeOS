@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | 1 | GitHub Pages 发布 | 想在线访问就要 | — | 仓库 Settings → Pages |
 | 2 | 允许发布的分支 | 用非 `main` 分支预览时要 | — | 仓库 Settings → Environments → `github-pages` |
-| 3 | **Google Scholar ID** | 可选 | Scholar 主页网址 | `lifeos.config.json` |
+| 3 | **Google Scholar ID** | 可选 | Scholar 主页网址 | 仓库 Variable `SCHOLAR_ID` |
 | 4 | **SerpAPI Key** | 可选（配 #3 一起用） | serpapi.com | 仓库 Secret `SERPAPI_KEY` |
 | 5 | OpenAlex / Semantic Scholar ID | 可选 | openalex.org / semanticscholar.org | LifeOS 网页里填 |
 | 6 | 汇率 | 不需要 Key | 自动内置，可一键在线更新 | LifeOS 网页里 |
@@ -59,12 +59,16 @@ https://scholar.google.com/citations?user=hgN6B6kAAAAJ&hl=en
                                           这就是 Scholar ID
 ```
 
-**放到哪里**：仓库根目录的 `lifeos.config.json`：
+**放到哪里（推荐）**：仓库 **Settings → Secrets and variables → Actions → Variables** 标签 → **New repository variable**，名字 `SCHOLAR_ID`，值填你的 ID。
+
+这样 ID 不写进代码，别人 fork 你的仓库时不会带走你的 ID（不然他们的网站会抓你的主页）。
+
+**其他可调参数**在仓库根目录的 `lifeos.config.json`（`id` 留空即可，Variable 优先）：
 
 ```json
 {
   "scholar": {
-    "id": "你的ScholarID",
+    "id": "",
     "intervalHours": 8,
     "monthlyLimit": 100,
     "timezone": "UTC"
@@ -74,12 +78,14 @@ https://scholar.google.com/citations?user=hgN6B6kAAAAJ&hl=en
 
 | 字段 | 含义 | 默认 |
 |---|---|---|
-| `id` | 你的 Scholar ID | — |
+| `id` | 你的 Scholar ID（推荐留空，用 Variable `SCHOLAR_ID`） | — |
 | `intervalHours` | 两次抓取的最短间隔（小时） | `8` |
 | `monthlyLimit` | 每个自然月最多调用 SerpAPI 的次数 | `100` |
 | `timezone` | 判断「今天」用的时区，如 `America/New_York`、`Asia/Shanghai` | `UTC` |
 
-Scholar ID 本身是公开信息，写进仓库没有问题。（也可以改用仓库 Variable `SCHOLAR_ID`，优先级更高。）
+Scholar ID 本身是公开信息；放进 Variable 只是为了让 fork 的人不会继承它。
+
+**网站上的 Scholar 数据只会进入「绑定」过的 LifeOS**：第一次在你自己的网站打开「学术」时，点「这是我的，绑定」。访客打开你的网站只会看到一个提示，你的论文不会被合并进他们的 LifeOS。
 
 ## 4. SerpAPI Key（Google Scholar 自动同步）
 
@@ -182,6 +188,33 @@ Google Scholar 没有官方 API，LifeOS 通过 [SerpAPI](https://serpapi.com) �
 **测试连接失败？**
 - 「Key 无效」→ 重新复制 Key，注意没有多余空格。
 - 「连接失败」→ 网络问题，或者该服务不允许浏览器直接调用（CORS）。可以在「接口地址」里填你自己的代理（例如一个 Cloudflare Worker 转发）。
+
+---
+
+## 10. 自己用的同时公开给别人 fork（隐私）
+
+**结论：放心公开这个仓库。你的记录从来不在仓库里。**
+
+| 东西 | 存在哪 | 会不会被 fork / 公开看到 |
+|---|---|---|
+| 任务、复盘、心情、资产、专注记录……所有个人记录 | 你浏览器的 localStorage | ❌ 不在仓库里，fork 带不走，访客看不到 |
+| 多设备同步数据 | 你自己的 **secret Gist**，AES-256-GCM 加密 | ❌ 不在仓库里；Gist 内容是密文，没有同步密码解不开 |
+| 同步 token、同步密码、AI Key | 只在你的浏览器里 | ❌ |
+| SerpAPI Key | 仓库 Secrets | ❌ Secrets 不会被 fork，日志里也会被打码 |
+| Scholar ID | 仓库 Variable `SCHOLAR_ID` | ❌ Variables 不会被 fork |
+| Google Scholar 引用历史 | `scholar-data` 分支 | ⚠️ 公开仓库里能看到（本来就是你 Scholar 主页上的公开信息）；fork 默认只复制主分支，不会带走它 |
+| 示例数据（Alex 的一天） | 代码里 | 虚构的，可以随便看 |
+
+**你的网站（yubol-bobo.github.io/LifeOS）也是安全的**：每个访客打开看到的都是**他自己浏览器里**的 LifeOS（空的，或者他自己加载的示例），看不到你的任何记录；你的 Scholar 数据也只会进入你「绑定」过的 LifeOS。
+
+**几条习惯**
+
+1. **不要把导出的备份文件提交到仓库。** `.gitignore` 已经忽略 `lifeos-backup*.json`，但别手动强加进去。
+2. **同步密码要够强**，不要和别的密码重复——Gist 是「secret（不公开列出）」不是「private」，拿到链接的人能看到密文。
+3. **个人配置都放 Secrets / Variables，不写进文件。** 代码里只放大家通用的默认值。
+4. 想让别人一键复制：仓库 **Settings → General → 勾选 Template repository**，别人点 **Use this template** 得到的是干净的新仓库（不带你的提交历史和 `scholar-data` 分支）。
+
+**别人 fork 之后要做的**（和你当初一样）：开启 Pages（第 1 步）→ 可选：加自己的 `SCHOLAR_ID` Variable 和 `SERPAPI_KEY` Secret → 打开网站开始用。fork 出来的仓库里定时任务默认是关的，要在 Actions 页面点一下启用。
 
 ---
 
