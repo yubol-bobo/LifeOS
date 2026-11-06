@@ -93,7 +93,7 @@ export function Timeline() {
 
       {shown.length === 0 ? (
         <Card>
-          <Empty icon="route" title={needle || cat !== 'all' || until ? L('没有符合条件的记录', 'Nothing matches') : L('还没有记录', 'Nothing recorded yet')} body={L('完成任务、专注一会儿、写一句复盘，这里就会开始生长。', 'Finish a quest, focus for a while, write a review line — and this starts to grow.')} />
+          <Empty icon="clock" title={needle || cat !== 'all' || until ? L('没有符合条件的记录', 'Nothing matches') : L('还没有记录', 'Nothing recorded yet')} body={L('完成任务、专注一会儿、写一句复盘，这里就会开始生长。', 'Finish a quest, focus for a while, write a review line — and this starts to grow.')} />
         </Card>
       ) : (
         <div className="tl-days">
