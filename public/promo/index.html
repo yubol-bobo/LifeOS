@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LifeOS · Promo</title>
+<meta name="description" content="LifeOS: an operating system for your life. 80-second tour." />
+<meta property="og:title" content="LifeOS · an operating system for your life" />
+<meta property="og:image" content="poster.jpg" />
+<link rel="icon" href="../favicon.svg" />
+<style>
+  :root { --bg: #fff6ec; --ink: #2a2230; --sub: #6b5a72; --accent: #ff6a3d; --card: #ffffff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1b1720; --ink: #f4eef6; --sub: #b9adc0; --card: #26212c; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: radial-gradient(900px 600px at 10% 10%, rgba(255,160,120,.25), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(170,150,255,.22), transparent 60%), var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; display: grid; place-items: center; padding: 32px 16px; }
+  main { width: min(1100px, 100%); text-align: center; }
+  h1 { margin: 0 0 4px; font-size: clamp(28px, 5vw, 44px); letter-spacing: -0.03em; }
+  h1 b { color: var(--accent); }
+  p { margin: 0 0 22px; color: var(--sub); }
+  video { width: 100%; border-radius: 18px; background: #000; box-shadow: 0 30px 70px -30px rgba(80,40,20,.45); }
+  nav { margin-top: 22px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  a { display: inline-block; padding: 11px 20px; border-radius: 999px; background: var(--card); color: var(--ink); text-decoration: none; font-weight: 650; box-shadow: 0 8px 20px -12px rgba(0,0,0,.35); }
+  a.primary { background: var(--accent); color: #fff; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Life<b>OS</b></h1>
+  <p>An operating system for your life · 一个为你的人生运行的操作系统</p>
+  <video src="lifeos-promo.mp4" poster="poster.jpg" controls playsinline preload="metadata"></video>
+  <nav>
+    <a class="primary" href="../">Open LifeOS · 打开 LifeOS</a>
+    <a href="https://github.com/yubol-bobo/LifeOS">GitHub</a>
+  </nav>
+</main>
+</body>
+</html>
