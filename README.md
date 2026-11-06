@@ -10,7 +10,7 @@ Capture the small moments of every day, and keep them visible, traceable, and yo
 
 **English** · [中文](README.zh-CN.md)
 
-[**▶ Try it live**](https://yubol-bobo.github.io/LifeOS/) · [**Watch the video**](https://yubol-bobo.github.io/LifeOS/promo/) · [Setup guide (zh)](SETUP.md) · [Feature guide (zh)](docs/FEATURES.md) · [Changelog](CHANGELOG.md)
+[**▶ Try it live**](https://yubol-bobo.github.io/LifeOS/) · [**Watch the video**](https://yubol-bobo.github.io/LifeOS/promo/) · [Setup guide](SETUP.md) · [Feature guide](docs/FEATURES.md) · [Changelog](CHANGELOG.md)
 
 <a href="https://yubol-bobo.github.io/LifeOS/promo/"><img src="docs/promo-preview.webp" width="880" alt="LifeOS promo preview. Click to watch the full video with sound" /></a>
 
@@ -45,7 +45,7 @@ LifeOS is built around three ideas:
 | 🌱 **Growth** | 60 levels, 10 eras, 197 achievements; unlock pet accessories, wallpapers and planet upgrades |
 | 📊 **And more** | Mood and what drives it, assets and net worth, papers and citations (auto-sync from Google Scholar), custom trackers, a reward shop |
 
-English and Chinese · light and dark themes · portrait card feed or full-screen landscape dashboard · works on phones.
+English and Chinese · light and dark themes · portrait card feed or full-screen landscape dashboard · works on phones. Every feature in detail: **[Feature guide](docs/FEATURES.md)**.
 
 ## Screenshots
 
@@ -76,18 +76,18 @@ Open **<https://yubol-bobo.github.io/LifeOS/>** and choose "Explore with demo da
 2. In your fork, open **Settings → Pages → Source** and choose **GitHub Actions**.
 3. Wait a minute or two, then open `https://<your-username>.github.io/LifeOS/`.
 
-When the original project updates, click **Sync fork** on your repo page to upgrade.
+When the original project updates, click **Sync fork** on your repo page to upgrade ([details](SETUP.md#11-updating-a-fork-and-extending-lifeos)).
 
 ### 3. Optional extras
 
 | You want | How | Details |
 | --- | --- | --- |
-| Sync between computer and phone | Settings → Sync: a GitHub token with only the `gist` scope, plus a sync password you choose | [SETUP §8](SETUP.md#8-多设备同步电脑--手机) |
-| Your pet writes a day summary | Settings → AI pet: pick a provider and paste your API key | [SETUP §9](SETUP.md#9-ai-宠物今日总结) |
+| Sync between computer and phone | Settings → Sync: a GitHub token with only the `gist` scope, plus a sync password you choose | [SETUP §8](SETUP.md#8-sync-between-devices) |
+| Your pet writes a day summary | Settings → AI: pick a provider and paste your API key | [SETUP §9](SETUP.md#9-ai-pet-day-summary) |
 | Google Scholar citations, auto-synced | Repo secret `SERPAPI_KEY` + repo variable `SCHOLAR_ID` | [SETUP §3–4](SETUP.md#3-google-scholar-id) |
-| Reminders even from other tabs | Settings → Desktop pet → Browser notifications | [SETUP §7](SETUP.md#7-浏览器通知宠物提醒) |
+| Reminders even from other tabs | Settings → Desktop Pet → Browser notifications | [SETUP §7](SETUP.md#7-browser-notifications-pet-reminders) |
 
-Keys and tokens go **only into the web page or GitHub Secrets**, never into code. The full checklist is in [SETUP.md](SETUP.md) (written in Chinese, but the steps are short and the GitHub settings pages are the same in any language).
+Keys and tokens go **only into the web page or GitHub Secrets**, never into code. The full checklist is in **[SETUP.md](SETUP.md)**.
 
 ### 4. A day with LifeOS
 
@@ -100,7 +100,7 @@ Tip: `⌘K` / `Ctrl+K` searches and opens everything; the top-right buttons swit
 
 ### 5. Backups
 
-Your data lives in the browser. Before switching computers or clearing browser data, go to **Settings → Data → Export backup** and import the JSON on the new device. With sync turned on, you don't need to worry about this.
+Your data lives in the browser. Before switching computers or clearing browser data, go to **Settings → General → Export backup** and import the JSON on the new device. With sync turned on, you don't need to worry about this.
 
 ---
 
@@ -109,7 +109,7 @@ Your data lives in the browser. Before switching computers or clearing browser d
 - **No backend, no account.** Data is stored in your browser's `localStorage`.
 - **Sync is end-to-end encrypted.** Data is encrypted on your device before it goes into your own private Gist; GitHub can't read it.
 - **AI is optional.** Your key stays in the current browser. When generating a summary, the browser sends that day's digest directly to the provider you chose, with no server in between.
-- **Safe to fork.** The repo contains only code and fictional demo data. Your records, keys and passwords are never in it.
+- **Safe to fork.** The repo contains only code and fictional demo data. Your records, keys and passwords are never in it ([details](SETUP.md#10-use-it-yourself-while-others-fork-it-privacy)).
 
 ## Development
 
@@ -122,7 +122,7 @@ npm run dev
 
 `npm run build` outputs a fully static site in `dist/` that can be hosted anywhere. Pushing to `main` publishes to GitHub Pages via GitHub Actions.
 
-Want to tweak the game balance? Every number is in [`src/store/rules.ts`](src/store/rules.ts).
+Want to tweak the game balance? Every number is in [`src/store/rules.ts`](src/store/rules.ts). Code layout and tech stack: [Feature guide](docs/FEATURES.md#tech-stack).
 
 Built with Vite, React 19, TypeScript and three.js. No UI framework and no backend.
 

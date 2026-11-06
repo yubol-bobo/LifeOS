@@ -1,113 +1,115 @@
-# LifeOS 完整功能说明
+# LifeOS feature guide
 
-> 这里是每个应用、桌面宠物、联动规则和 XP 数值的详细说明。想快速上手请看 [README](../README.zh-CN.md)；配置 Key 和同步请看 [SETUP.md](../SETUP.md)。
+**English** · [中文](FEATURES.zh-CN.md)
 
-**目录**：[应用一览](#应用一览) · [桌面宠物](#桌面宠物) · [联动](#联动小事如何自动推动大目标) · [布局与系统体验](#布局与系统体验) · [游戏规则](#游戏规则可以自己改) · [技术栈](#技术栈)
+> A detailed tour of every app, the desktop pets, how everything links together, and the XP rules. For a quick start see the [README](../README.md); for keys and sync see [SETUP.md](../SETUP.md).
 
-## 应用一览
+**Contents**: [Apps](#apps) · [Desktop pets](#desktop-pets) · [How small things move big goals](#how-small-things-move-big-goals) · [Layout & system](#layout--system) · [Game rules](#game-rules-tweak-them) · [Tech stack](#tech-stack)
 
-LifeOS 把人生里分散的系统——每日清单、人生里程碑、论文与引用、工作时长与收入、身体与阅读数据——收进一个**像操作系统一样的桌面**里，并用游戏化机制把它们串起来：
+## Apps
 
-- **桌面 Desktop**：问候、可拖动旋转的 3D「人生星球」（树木随等级生长，旗帜是你达成的里程碑，月亮绕行速度随连胜加快）、今日任务、人生进度条（今天 / 本周 / 本月 / 今年 / 一生）、属性雷达、XP 热力图。
-- **计划 Plans**：年 → 月 → 周 → 今天。计划可以设数量目标（如「读 8 本书」），每次进展点「+1 记一笔」写下细节（哪本书、哪部电影、卧推涨了多少），关联任务完成时会自动 +1 并邀请你写一句。每一级都能从上一级「拆」出来，周计划一键「加到今天」变成任务；下级完成会自动推高上级进度，全部完成自动打勾并给 XP（周 30 / 月 80 / 年 200）；落后于时间进度时会标出来。年度计划还可以直接关联目标，目标的关键结果进度计入其中。
-- **倒计时 Countdowns**：截稿、旅行、生日（可每年重复）……目标的截止日期和项目截止日期会自动出现；宠物会在 7 / 3 / 1 天和当天提醒你。
-- **项目 Projects**：学术、工作、生活或你自定义的任何分类（可编辑）。一个项目把它的任务、各级计划、目标、论文、倒计时、专注时长和收入都汇总在一起；同时也是时薪计里「为谁工作」的对象，可以设独立时薪。
-- **任务 Quests**：每日习惯 + 一次性任务，一行快速添加（以 `!` 开头 = 每日习惯）。按难度给 XP，当天安排的全部完成触发「全勤日」奖励，支持回看 / 补打卡前几天。
-- **人生地图 Roadmap**：进行中的目标（关键结果、实时进度、倒计时、可拆解步骤、领取奖励）、已抵达的里程碑，以及「人生周格」——一生约 4,400 周，每一格一周，里程碑标在格子上。
-- **学术 Research**：论文看板（想法 → 写作 → 投稿 → 审稿 → 接收 → 发表，每推进一步都有 XP），总引用 / h-index / i10 自动计算，引用曲线；可一键从 **OpenAlex** 或 **Semantic Scholar** 同步论文和引用数。
-- **专注计时 Focus**：两种模式——**赚钱的工作**（收入以滚轮数字逐秒上涨，每 15 分钟掉一次金币，可以按项目设独立时薪）和**不计薪的努力**（健身、写论文、阅读、学习……一键选常做的事，计入对应属性；这个列表可以自己改名、换图标、改属性、排序、增删，刚输入的新活动也能一键存为常用）。两种都每分钟 +1 XP，可以关联任务 / 目标 / 项目。开始前可以设一个**倒计时**（25 / 45 / 60 / 90 / 120 分钟或自定义），时间一到全屏放烟花庆祝并额外奖励 XP，可以「再来 15 分钟」。「努力都去哪了」是一个可以拖动旋转的 **3D 环形图**：每块的角度是时间占比、高度随占比升高，外圈颜色区分赚钱（绿）和不计薪（紫）；悬停抬起并显示时长 / 占比 / 收入或 XP，点一下固定，和右侧列表联动；可以只看赚钱或只看不计薪、今天或本周。菜单栏胶囊和标签页标题实时显示收入或倒计时。
-- **资产 Assets**：银行、券商、退休账户、加密货币、负债……每个账户可以用不同币种。按每天 / 每周 / 每月提醒你「此刻各账户里有多少」，预填上次数字、只改变化的；自动折算成净资产曲线和资产构成。汇率可手动填写，也可以一键在线更新。
-- **足迹 Timeline**：LifeOS 记下的一切按时间排好——任务、专注、计划进展笔记、复盘、心情、身体、追踪、资产、学术、成就与升级——可搜索、按类别筛选、跳到某一天。桌面热力图、心情日历、专注图表、复盘页、成就日期……**任何一天都能点开**，看那天的全部记录和一个可爱的 3D 方块经验图。
-- **每日复盘 Review**：不强求，一句话也算数。今天的高光、学到 / 发现、卡住的地方、感恩、每天轮换的「今日一问」、明天最重要的一件事（一键加入任务，第二天会提醒你兑现了没有）；旁边自动汇总「这一天的数据」（任务、专注、入账、XP、心情、喝水、倒计时）。紫色的**复盘热力图**点一格就回到那天；还有连续复盘天数、写下的字数、「一周前 / 一个月前 / 一年前的今天」回看，以及宠物写的今日总结。
-- **心情 Mood**：每天点一下心情（宠物晚上也会来问你）。积累几周后自动找出影响心情的因素，例如「跑步的日子心情平均高 0.9 分」「专注 ≥3 小时」「喝水 ≥6 杯」，并附带样本数。同时记录喝水、起身、番茄钟。
-- **追踪 Trackers**：体重、跑量、阅读、睡眠……任意数值，「最新读数」或「累计」两种模式，带目标和趋势图。
-- **奖励商店 Shop**：XP 会同时产出金币（5 XP = 1 币）。给自己想要的犒劳定价，用金币兑换。
-- **成长 Growth**：三个分页——
-  - **升级之路**：等级、各属性等级，以及 Lv.1 → 60 的横向路线图，宠物站在你当前的位置；10 个时代（星尘 · 萌芽 · 旅人 · 探路者 · 匠人 · 学者 · 贤者 · 大师 · 传奇 · 永恒），每个时代一个称号；沿途解锁 6 件宠物配饰、5 张桌面壁纸、6 个星球进化（第二颗卫星、小屋、星环、人造卫星、极光、金色星尘）。升级跨过解锁点时弹出庆祝面板，可以一键戴上 / 换上。
-  - **成就馆**：**197 个成就、16 个类别**（任务、连胜、计划、目标、项目、学术、专注、财富、健康、心情、复盘、追踪、成长、探索、宠物、隐藏），按「系列」分阶升级：青铜 59 · 白银 57 · 黄金 49 · 传说 32；成就点数、「快要达成」、类别筛选；隐藏系列只显示「???」和一句提示（比如深夜打卡、周末也不停）。
-  - **装扮**：称号（时代称号 + 部分系列最高阶奖励的特殊称号）、宠物配饰、桌面壁纸，全部可随时切换。
-- **系统设置 Settings**：几乎一切都可以改——
-  - **同步**：多设备端到端加密同步（见下文）。
-  - **AI 宠物**：接入 OpenAI / Claude / DeepSeek / Kimi / GLM，让宠物写今日总结（见下文）。
-  - **程序坞**：拖动排序、显示 / 隐藏应用（隐藏的仍可在 ⌘K 里打开）；**桌面小组件**逐个开关，桌面自动重排。
-  - **属性**：改名、换图标、换颜色、增加或删除（3–10 个）；删除时可选择把相关任务和已获得的 XP 合并到哪个属性。
-  - **工作与收入**：按时薪 / 日薪 / 月薪 / 年薪填写，自动换算出每秒跳钱的速度；「为谁工作」列表（雇主、客户、项目）可增删，每项可设独立时薪，时薪计按项目统计收入。
-  - **桌面宠物**：开关、三选一、改名、活跃程度、喝水 / 久坐提醒间隔、番茄钟时长、提示音、浏览器通知。
-  - 以及中英双语（切换语言时，示例数据和内置内容也会一起切换；你自己写的内容保持原样）、明亮 / 暗夜 / 跟随系统、动效减弱、JSON 导出 / 导入备份。
+LifeOS gathers the scattered systems of a life (daily to-dos, life milestones, papers and citations, work hours and income, body and reading data) into **one OS-style desktop**, and ties them together with game mechanics:
 
-## 桌面宠物
+- **Desktop**: a greeting; a 3D "life planet" you can drag and spin (trees grow with your level, flags mark milestones you've reached, the moon orbits faster as your streak grows); today's quests; life progress bars (today / week / month / year / lifetime); attribute radar; XP heatmap.
+- **Plans**: year → month → week → today. A plan can have a numeric target (e.g. "read 8 books"); each step forward, click **+1 & note** to record the details (which book, which film, how much your bench press went up). When a linked quest is completed, the plan gets +1 automatically and invites a note. Each level can be broken down from the one above it, and weekly items go to today's quests with one click (**To today**). Finishing lower levels pushes the higher ones forward; when everything is done the plan ticks itself and awards XP (week 30 / month 80 / year 200). Plans that fall behind the calendar are flagged. Year plans can link to goals, whose key-result progress counts toward them.
+- **Countdowns**: deadlines, trips, birthdays (optionally yearly)… goal and project due dates appear automatically, and your pet reminds you 7, 3 and 1 day before, and on the day.
+- **Projects**: research, work, life, or any category you define (editable). A project pulls together its quests, plans at every level, goals, papers, countdowns, focus time and income. Projects are also the "who you work for" list in Focus, each with its own optional rate.
+- **Quests**: daily habits and one-off tasks, added in one line (start with `!` for a daily habit). XP depends on difficulty; finishing everything scheduled for the day triggers a **Perfect day** bonus. You can look back and catch up on earlier days.
+- **Roadmap**: active goals (key results, live progress, countdowns, steps you can break down, rewards to claim), milestones you've reached, and **life in weeks**: about 4,400 squares, one per week of a life, with milestones marked on them.
+- **Research**: a paper board (idea → writing → submitted → under review → accepted → published, with XP at every step); total citations, h-index and i10 computed automatically; a citation chart; one-click sync of papers and citation counts from **OpenAlex** or **Semantic Scholar**.
+- **Focus**: two modes. **Paid work**: earnings roll up by the second, a coin drops every 15 minutes, and each project can have its own rate. **Unpaid effort**: gym, writing, reading, studying… pick a regular activity in one click and it counts toward the matching attribute; the list is yours to rename, re-icon, re-assign, reorder, add to and delete from, and a new activity you just typed can be saved as a regular with one click. Both modes earn 1 XP per minute and can link to a quest, goal or project. Before you start you can set a **countdown** (25 / 45 / 60 / 90 / 120 minutes or custom); when it ends there's a full-screen celebration with bonus XP and a **15 more minutes** button. **Where the effort went** is a 3D donut you can drag and spin: each slice's angle is its share of time and its height grows with that share, and the outer ring colour separates paid (green) from unpaid (purple). Hover to lift a slice and see duration, share and earnings or XP; click to pin it, and it stays in sync with the list beside it. Filter to paid only or unpaid only, today or this week. The menu-bar pill and the browser tab title show live earnings or the countdown.
+- **Assets**: bank, brokerage, retirement, crypto, debts… each account can use its own currency. LifeOS reminds you daily, weekly or monthly to record "what's in each account right now", prefilled with last time's numbers so you only change what moved, and turns them into a net-worth chart and an allocation breakdown. Exchange rates can be entered by hand or fetched online with one click.
+- **Timeline**: everything LifeOS recorded, in order: quests, focus, plan notes, reviews, mood, body, trackers, assets, research, achievements and level-ups. Search it, filter by category, or jump to a date. From the desktop heatmap, the mood calendar, focus charts, the review page, achievement dates and more, **any day can be opened** to see all of that day's records plus a cute 3D XP-blocks view.
+- **Review**: optional, and one line counts. Today's highlight, what you learned, where you got stuck, gratitude, a rotating **Question of the day**, and tomorrow's one most important thing (add it to quests in one click; the next day you'll be asked whether you did it). Alongside, "the day in numbers" is filled in automatically (quests, focus, income, XP, mood, water, countdowns). Click a square on the purple **reflection heatmap** to go back to that day. There's also your review streak, words written, look-backs to a week, a month and a year ago, and your pet's day summary.
+- **Mood**: tap your mood once a day (your pet will also ask in the evening). After a few weeks LifeOS finds what moves your mood, e.g. "on days you run, mood is 0.9 higher on average", "focus ≥ 3 hours", "water ≥ 6 glasses", with sample sizes. It also logs water, stretch breaks and pomodoros.
+- **Trackers**: weight, running distance, reading, sleep… any number, in "latest reading" or "running total" mode, with targets and trend charts.
+- **Reward Shop**: XP also mints coins (5 XP = 1 coin). Price the treats you want and buy them with coins.
+- **Growth**: three tabs.
+  - **The Road**: your level, per-attribute levels, and a horizontal road from Lv.1 to 60 with your pet standing where you are. 10 eras (Stardust · Sprout · Wanderer · Pathfinder · Artisan · Scholar · Sage · Master · Legend · Eternal), each with a title. Along the way you unlock 6 pet accessories, 5 desktop wallpapers and 6 planet upgrades (a second moon, a cottage, rings, a satellite, aurora, golden stardust). Crossing an unlock point pops a celebration where you can put it on right away.
+  - **Trophy Hall**: **197 achievements in 16 categories** (quests, streaks, plans, goals, projects, research, focus, wealth, health, mood, review, trackers, growth, exploration, pet, hidden), grouped into series with tiers: bronze 59 · silver 57 · gold 49 · legendary 32. Achievement points, **Almost there**, category filters; hidden series show only "???" and a hint (late-night check-ins, not stopping on weekends…).
+  - **Style**: titles (era titles plus special titles from the top tier of some series), pet accessories and desktop wallpapers, all switchable any time.
+- **Settings**: almost everything can be changed.
+  - **Sync**: end-to-end encrypted multi-device sync (see [SETUP §8](../SETUP.md#8-sync-between-devices)).
+  - **AI**: connect OpenAI / Claude / DeepSeek / Kimi / GLM so your pet can write day summaries (see [SETUP §9](../SETUP.md#9-ai-pet-day-summary)).
+  - **Dock & Desktop**: drag to reorder, show or hide apps (hidden apps still open from ⌘K); turn **desktop widgets** on or off one by one and the desktop re-flows.
+  - **Attributes**: rename, change icon and colour, add or remove (3–10). When removing one, choose which attribute inherits its quests and earned XP.
+  - **Work & Pay**: enter an hourly, daily, monthly or yearly rate and LifeOS works out the per-second speed. The "who you work for" list (employers, clients, projects) can be edited, each with its own rate, and Focus tallies income per project.
+  - **Desktop Pet**: on/off, pick one of three, rename, activity level, water and stretch reminder intervals, pomodoro length, sounds, browser notifications.
+  - Plus English and Chinese (switching language also switches demo data and built-in content; what you wrote stays as written), light / dark / system theme, reduced motion, and JSON export / import backups.
 
-三只原创的黏土风小伙伴：**团子**（会蹦跳的橘子团子猫）、**小电**（喷气飞行的薄荷小机器人）、**星灵**（带星环的紫色小星球）。
+## Desktop pets
 
-- 在桌面上自己溜达：**坐在面板顶上**、**躲在面板后面探头**（偶尔缩回去再冒出来）、睡觉冒 Zzz、追彩球玩；眼睛会跟着你的鼠标转。
-- 可以**拖起来扔到任意面板上**；点它打开菜单：摸摸、喝水 +1、起身、番茄钟、一起玩、睡觉。
-- 菜单栏的 🐾 按钮（或 ⌘K「找到我的宠物」）**一键定位**：聚光灯 + 涟漪，宠物瞬移到屏幕中央。
-- 会对 LifeOS 里发生的事做出反应：得到 XP 时开心跳一下，升级 / 成就时撒金币和星星。
-- **按健康标准主动提醒**：每天约 2 L 饮水分散在清醒时间里，落后进度就提醒你；每坐 30–60 分钟提醒起身（离开电脑 5 分钟以上自动记一次起身）；可选 20-20-20 护眼；到点提醒睡觉（成年人 7–9 小时）。还有番茄钟、资产盘点到期、晚上的心情打卡，以及周一 / 月初提醒你定计划。数据都会记下来，并用于心情关联分析。
-- **今日总结**：点宠物 →「今日总结」，它会翻看你一天的任务、专注、入账、计划进度、心情、身体数据和即将到来的倒计时，用不到 200 字写一份有趣的小结，再加一个彩蛋（历史上的今天、特别的日子，或者——用 Claude 联网时——一条和你今天做的事有关的最近新闻）。文字是一个字一个字流出来的，写的时候宠物会发光、身边绕着星星；写完可以直接修改，一键存进当天的每日复盘。**午夜 12 点**它会自动把当天的总结弹出来（错过了第二天早上会问你要不要补一份），晚上 9:30 也会轻轻提醒一次复盘（都可以关）。没接入 AI 时会写一份离线版。
-- 打开应用窗口时它会躲到两侧或坐到 Dock 上，不挡内容；手机上就住在 Dock 上。设置里一键关闭。
+Three original clay-style companions: **Mochi** (a bouncy orange mochi cat), **Bolt** (a jet-powered mint robot) and **Nova** (a tiny ringed purple planet).
 
-## 联动：小事如何自动推动大目标
+- They wander the desktop on their own: **sitting on top of panels**, **peeking out from behind them** (ducking back now and then), napping with Zzz, chasing a ball. Their eyes follow your cursor.
+- **Pick one up and drop it on any panel**. Click it for a menu: pet, +1 water, stretch, pomodoro, play, sleep.
+- The 🐾 button in the menu bar (or **Find my pet** in ⌘K) **finds it instantly**: a spotlight and ripple, and the pet pops to the middle of the screen.
+- They react to what happens in LifeOS: a happy hop when you earn XP, coins and stars on level-ups and achievements.
+- **Health-based reminders**: about 2 L of water a day spread over your waking hours, with a nudge when you fall behind; a stretch reminder every 30–60 minutes of sitting (being away from the computer for 5+ minutes counts as a stretch); optional 20-20-20 eye breaks; a bedtime reminder (7–9 hours for adults). Plus pomodoros, asset check-ins when due, an evening mood check-in, and Monday / start-of-month nudges to plan. Everything is logged and used in the mood analysis.
+- **Day summary**: click your pet → **Day summary**. It reads your day (quests, focus, income, plan progress, mood, body data and upcoming countdowns) and writes a short, fun recap in under 200 words, plus a little extra: on this day in history, a special day, or, when using Claude with web search, a recent news item related to what you did today. The text streams in word by word while the pet glows with stars around it; afterwards you can edit it and save it to that day's review with one click. **At midnight** it pops up the day's summary automatically (if you missed it, it offers to write one the next morning), and at 9:30 pm it gently reminds you to review. Both can be turned off. Without AI it writes an offline version.
+- When an app window is open, the pet moves to the side or sits on the Dock so it never covers content; on phones it lives on the Dock. One switch in Settings turns it off.
 
-LifeOS 不是一堆互不相干的清单。最小的一次打卡，会沿着这条链自动向上传导——**不需要手动去改任何进度**：
+## How small things move big goals
+
+LifeOS isn't a pile of unrelated lists. The smallest check-in travels up this chain automatically, **with no progress to update by hand**:
 
 ```
- 每日任务 ✓ ──┬──► 自动记录到追踪（例：「跑步 5 公里」→ 跑量 +5 km）
-              └──► 计入目标的「关联任务次数」
- 专注计时 ⏱ ──┬──► 当天专注够时长，任务自动打勾（例：「深度写作 90′」）
-              └──► 计入目标的「专注小时」
- 追踪数据 ────────► 目标的「追踪」关键结果（累计跑量 400 km / 体重降到 68 kg）
- 论文 · 引用 · 收入 · 净资产 · 等级 · 连胜 ──► 目标的「系统指标」关键结果
-                                        │
-                       全部关键结果达成 ─┴─► 通知「可以领取」→ 领取 XP → 星球上插一面旗
+ Daily quest ✓ ──┬──► logged to a tracker (e.g. "Run 5 km" → distance +5 km)
+                 └──► counts toward a goal's "linked quest count"
+ Focus timer ⏱ ──┬──► enough focus today ticks the quest (e.g. "Deep writing 90′")
+                 └──► counts toward a goal's "focus hours"
+ Tracker data ───────► a goal's tracker key result (run 400 km total / reach 68 kg)
+ Papers · citations · income · net worth · level · streak ──► a goal's "system metric" key result
+                                          │
+                   all key results met ───┴─► "ready to claim" → claim XP → a flag on your planet
 ```
 
-- **目标 = 里程碑 + 关键结果（OKR）**。关键结果有 5 种来源：关联任务次数、专注小时、追踪数据、系统指标（引用 / h-index / 接收论文 / 收入 / 净资产 / 等级 / 连胜）、手动计数。进度全部实时计算。
-- 任务可以**按星期安排**（例如周一三六跑步），没安排的日子不影响全勤与连胜。
-- 任务、专注记录、追踪卡片上都会显示它在推动哪个目标（小旗标签），反过来目标卡片也列出「推动它的任务」。
-- **本周回顾**自动生成：XP 与专注时长对比上周、最稳定和最掉队的习惯、离达成最近的目标、还没关联目标的习惯。
-- 首次启动会自动创建一个「坚持 30 天」目标并关联起步习惯，第一天就能看到这条链在工作。
+- **Goal = milestone + key results (OKR)**. Key results come from 5 sources: linked quest count, focus hours, tracker data, system metrics (citations / h-index / accepted papers / income / net worth / level / streak), or a manual count. All progress is computed live.
+- Quests can be **scheduled by weekday** (e.g. run on Mon, Wed, Sat); unscheduled days don't break perfect days or streaks.
+- Quests, focus sessions and tracker cards show which goal they're pushing (a small flag tag), and goal cards list the quests that drive them.
+- A **weekly recap** is generated for you: XP and focus time vs. last week, your most consistent and most neglected habits, the goal closest to done, and habits not yet linked to any goal.
+- On first launch LifeOS creates a "30-day streak" goal linked to starter habits, so you can see the chain working on day one.
 
-## 布局与系统体验
+## Layout & system
 
-**两种桌面布局**（菜单栏右上角一键切换，或「外观」菜单 / 设置 / ⌘K）：**竖版**是可以上下滚动的卡片流；**横版**是铺满整个宽度的仪表盘，所有小组件按网格自动排进一屏（1920×1080 上无需滚动），内容多的卡片在卡片内部滚动。布局按设备记忆，笔记本和大显示器可以各用各的。最右上角的 **全屏** 按钮让屏幕上只剩 LifeOS（Esc 退出）。
+**Two desktop layouts** (switch with one click at the top right of the menu bar, or from the View menu, Settings or ⌘K): **Portrait** is a scrolling card feed; **Landscape** is a full-width dashboard that fits every widget into one screen (no scrolling at 1920×1080), with long cards scrolling inside themselves. The layout is remembered per device, so your laptop and your big monitor can each have their own. The **full-screen** button at the far top right leaves nothing on screen but LifeOS (Esc to exit).
 
-系统级体验：开机动画、菜单栏（连胜、金币、等级、时钟）、带放大效果的 Dock、窗口（宽度贴合内容、两边露出桌面；点窗口外面或按 Esc 返回桌面；红黄绿按钮、双击标题栏放大；都可在设置里改）、**⌘K / Ctrl+K 聚焦搜索**（打开应用、勾选任务、开始计时、切换主题）、系统通知（成就解锁、升级）、+XP 飘字与彩纸。
+System-level touches: a boot animation; a menu bar (streak, coins, level, clock); a Dock with magnification; windows (sized to their content with the desktop visible on both sides; click outside or press Esc to go back to the desktop; traffic-light buttons and double-click the title bar to enlarge; all adjustable in Settings); **⌘K / Ctrl+K spotlight search** (open apps, tick quests, start a timer, switch theme); system notifications (achievements, level-ups); floating +XP and confetti.
 
-## 游戏规则（可以自己改）
+## Game rules (tweak them)
 
-所有数值都在 [`src/store/rules.ts`](../src/store/rules.ts)：
+Every number lives in [`src/store/rules.ts`](../src/store/rules.ts):
 
-| 行为 | XP |
+| Action | XP |
 | --- | --- |
-| 每日 / 一次性任务 | 轻松 10 · 标准 25 · 硬核 50 |
-| 全勤日（所有每日习惯完成，至少 3 个） | +30 |
-| 里程碑达成 | 小目标 120 · 大目标 400 · 史诗 1000 |
-| 里程碑步骤 | 15 |
-| 论文推进 | 写作 40 · 投稿 150 · 接收 400 · 发表 120 |
-| 专注计时（赚钱 / 不计薪都算） | 每分钟 1；完成自己设的倒计时再 + 分钟数 ÷ 5（至少 5） |
-| 每日复盘 | 15；写满 3 项以上再 +10 |
-| 追踪记录 | 每项每天 5 |
-| 心情打卡 | 5 |
-| 资产盘点 | 20 |
-| 喝水 / 起身 / 番茄钟 | 2 / 4 / 10（每天有上限） |
-| 成就解锁 | 青铜 50 · 白银 120 · 黄金 300 · 传说 800 |
+| Daily / one-off quest | easy 10 · normal 25 · hard 50 |
+| Perfect day (all daily habits done, at least 3) | +30 |
+| Milestone reached | small 120 · big 400 · epic 1000 |
+| Milestone step | 15 |
+| Paper progress | writing 40 · submitted 150 · accepted 400 · published 120 |
+| Focus (paid and unpaid) | 1 per minute; finishing a countdown you set adds minutes ÷ 5 (at least 5) |
+| Daily review | 15; +10 more for 3 or more fields filled |
+| Tracker entry | 5 per tracker per day |
+| Mood check-in | 5 |
+| Asset check-in | 20 |
+| Water / stretch / pomodoro | 2 / 4 / 10 (daily caps apply) |
+| Achievement unlocked | bronze 50 · silver 120 · gold 300 · legendary 800 |
 
-升到第 L 级所需累计 XP 为 `50 × L × (L − 1)`。金币 = XP ÷ 5。所有 XP 都记录在一个以 `ref` 去重的账本里，取消勾选会精确撤回对应的 XP。
+Reaching level L takes `50 × L × (L − 1)` total XP. Coins = XP ÷ 5. All XP is recorded in a ledger de-duplicated by `ref`, so un-ticking something takes back exactly the XP it gave.
 
-## 技术栈
+## Tech stack
 
-Vite · React 19 · TypeScript · three.js（人生星球，按需懒加载）· 纯 CSS 设计系统（无 UI 框架）· lucide 图标 · Bricolage Grotesque + Manrope 字体。
+Vite · React 19 · TypeScript · three.js (lazy-loaded) · a hand-written CSS design system (no UI framework) · lucide icons · Bricolage Grotesque + Manrope fonts.
 
 ```
 src/
-  os/        Shell、菜单栏、Dock、窗口、聚焦搜索、通知、开机与设置助手
-  apps/      Desktop / Quests / Plan / Projects / Roadmap / Research / Earn(专注) / Trackers / Assets / Mood / Review / Timeline / Shop / Trophies(成长) / Settings
-  store/     数据模型、XP 账本与动作、游戏规则、成就（achievements.ts）、升级之路（progression.ts）、联动层（links.ts）、示例数据
-  pet/       桌面宠物：SVG 角色、行为引擎、提醒与番茄钟、音效
-  scene/     three.js：低多边形星球、3D 专注环形图、3D 经验方块
-  ai/        AI 宠物：服务商配置、今日总结生成（Key 只存在浏览器）
-  sync/      端到端加密的 Gist 多设备同步
-  ui/        按钮、卡片、进度、图表（面积 / 柱状 / 热力 / 雷达）、滚轮数字
-  styles/    设计 token（明亮 / 暗夜）、基础组件、系统外壳、各应用样式
+  os/        shell, menu bar, Dock, windows, spotlight search, notifications, boot and setup wizard
+  apps/      Desktop / Quests / Plan / Projects / Roadmap / Research / Earn (Focus) / Trackers / Assets / Mood / Review / Timeline / Shop / Trophies (Growth) / Settings
+  store/     data model, XP ledger and actions, game rules, achievements (achievements.ts), the road (progression.ts), linkage layer (links.ts), demo data
+  pet/       desktop pets: SVG characters, behaviour engine, reminders and pomodoro, sounds
+  scene/     three.js: low-poly planet, 3D focus donut, 3D XP blocks
+  ai/        AI pet: provider config, day-summary generation (keys stay in the browser)
+  sync/      end-to-end encrypted multi-device sync via Gist
+  ui/        buttons, cards, progress, charts (area / bar / heatmap / radar), rolling numbers
+  styles/    design tokens (light / dark), base components, system shell, per-app styles
 ```
