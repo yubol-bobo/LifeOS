@@ -11,7 +11,7 @@
 
 **中文** · [English](README.md)
 
-[**▶ 在线体验**](https://yubol-bobo.github.io/LifeOS/) · [**观看宣传片**](https://yubol-bobo.github.io/LifeOS/promo/) · [上手指南](SETUP.md) · [完整功能](docs/FEATURES.md) · [更新日志](CHANGELOG.md)
+[**▶ 在线体验**](https://yubol-bobo.github.io/LifeOS/) · [**观看宣传片**](https://yubol-bobo.github.io/LifeOS/promo/) · [上手指南](SETUP.zh-CN.md) · [完整功能](docs/FEATURES.zh-CN.md) · [更新日志](CHANGELOG.md)
 
 <a href="https://yubol-bobo.github.io/LifeOS/promo/"><img src="docs/promo-preview.webp" width="880" alt="LifeOS 宣传片预览，点击观看完整有声版本" /></a>
 
@@ -46,7 +46,7 @@ LifeOS 想做三件事：
 | 🌱 **成长** | 60 级、10 个时代、197 个成就；解锁宠物配饰、壁纸和星球进化 |
 | 📊 **更多** | 心情与影响因素分析、资产与净资产曲线、论文与引用（可以自动同步 Google Scholar）、数值追踪、奖励商店 |
 
-中英双语 · 明亮 / 暗夜主题 · 竖版卡片流 / 横版全屏仪表盘 · 手机也能用。每个功能的详细说明见 **[完整功能说明](docs/FEATURES.md)**。
+中英双语 · 明亮 / 暗夜主题 · 竖版卡片流 / 横版全屏仪表盘 · 手机也能用。每个功能的详细说明见 **[完整功能说明](docs/FEATURES.zh-CN.md)**。
 
 ## 截图
 
@@ -77,18 +77,18 @@ LifeOS 想做三件事：
 2. 在你的仓库里打开 **Settings → Pages → Source**，选 **GitHub Actions**。
 3. 等一两分钟，打开 `https://<你的用户名>.github.io/LifeOS/`。
 
-以后原项目更新了，在你的仓库页面点 **Sync fork** 就能升级（[详细说明](SETUP.md#11-fork-之后怎么同步更新--自己继续扩充)）。
+以后原项目更新了，在你的仓库页面点 **Sync fork** 就能升级（[详细说明](SETUP.zh-CN.md#11-fork-之后怎么同步更新--自己继续扩充)）。
 
 ### 3. 按需打开（都是可选的）
 
 | 想要 | 怎么做 | 详细步骤 |
 | --- | --- | --- |
-| 电脑和手机同步 | 系统设置 → 同步：填一个只勾 `gist` 权限的 GitHub token，再设一个同步密码 | [SETUP §8](SETUP.md#8-多设备同步电脑--手机) |
-| 宠物写今日总结 | 系统设置 → AI 宠物：选服务商，填 API Key | [SETUP §9](SETUP.md#9-ai-宠物今日总结) |
-| 自动同步 Google Scholar 引用 | 仓库 Secret `SERPAPI_KEY` + Variable `SCHOLAR_ID` | [SETUP §3–4](SETUP.md#3-google-scholar-id) |
-| 切到别的标签页也能收到提醒 | 系统设置 → 桌面宠物 → 浏览器通知 | [SETUP §7](SETUP.md#7-浏览器通知宠物提醒) |
+| 电脑和手机同步 | 系统设置 → 同步：填一个只勾 `gist` 权限的 GitHub token，再设一个同步密码 | [SETUP §8](SETUP.zh-CN.md#8-多设备同步电脑--手机) |
+| 宠物写今日总结 | 系统设置 → AI 宠物：选服务商，填 API Key | [SETUP §9](SETUP.zh-CN.md#9-ai-宠物今日总结) |
+| 自动同步 Google Scholar 引用 | 仓库 Secret `SERPAPI_KEY` + Variable `SCHOLAR_ID` | [SETUP §3–4](SETUP.zh-CN.md#3-google-scholar-id) |
+| 切到别的标签页也能收到提醒 | 系统设置 → 桌面宠物 → 浏览器通知 | [SETUP §7](SETUP.zh-CN.md#7-浏览器通知宠物提醒) |
 
-Key 和 token **只填在网页里或 GitHub Secrets 里**，永远不要写进代码。完整的配置清单见 **[SETUP.md](SETUP.md)**。
+Key 和 token **只填在网页里或 GitHub Secrets 里**，永远不要写进代码。完整的配置清单见 **[上手指南](SETUP.zh-CN.md)**。
 
 ### 4. 每天怎么用
 
@@ -101,7 +101,7 @@ Key 和 token **只填在网页里或 GitHub Secrets 里**，永远不要写进�
 
 ### 5. 备份
 
-数据在浏览器里。换电脑或清理浏览器之前，到 **系统设置 → 数据 → 导出备份** 下载 JSON，在新设备上导入即可。开了同步就不用担心这一步。
+数据在浏览器里。换电脑或清理浏览器之前，到 **系统设置 → 通用 → 导出备份** 下载 JSON，在新设备上导入即可。开了同步就不用担心这一步。
 
 ---
 
@@ -110,7 +110,7 @@ Key 和 token **只填在网页里或 GitHub Secrets 里**，永远不要写进�
 - **没有后端，没有账号**。数据保存在浏览器的 `localStorage` 里。
 - **同步是端到端加密的**：数据在你的设备上加密后，才存进你自己的私密 Gist，GitHub 也看不到内容。
 - **AI 是可选的**：Key 只存在当前浏览器里。生成总结时，浏览器把当天的摘要直接发给你选的服务商，不经过任何中间服务器。
-- **可以放心公开仓库、让别人 fork**：仓库里只有代码和虚构的示例数据，你的记录、Key、密码都不在里面（[详细说明](SETUP.md#10-自己用的同时公开给别人-fork隐私)）。
+- **可以放心公开仓库、让别人 fork**：仓库里只有代码和虚构的示例数据，你的记录、Key、密码都不在里面（[详细说明](SETUP.zh-CN.md#10-自己用的同时公开给别人-fork隐私)）。
 
 ## 本地开发
 
@@ -123,7 +123,7 @@ npm run dev
 
 `npm run build` 生成的 `dist/` 是纯静态站点，可以放到任何静态托管上。推送到 `main` 会通过 GitHub Actions 自动发布到 Pages。
 
-想改游戏数值？都在 [`src/store/rules.ts`](src/store/rules.ts)。代码结构和技术栈见 [完整功能说明](docs/FEATURES.md#技术栈)。
+想改游戏数值？都在 [`src/store/rules.ts`](src/store/rules.ts)。代码结构和技术栈见 [完整功能说明](docs/FEATURES.zh-CN.md#技术栈)。
 
 ## License
 
