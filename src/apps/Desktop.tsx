@@ -1,5 +1,6 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { LifeSettingsModal } from './LifeSettings';
+import { openDay } from './DayXp';
 import { addDays, dayKey, daysBetween, lastNDays, lifeProgress, parseDay } from '../lib/date';
 import { compact, money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -464,10 +465,13 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
           weeks={20}
           max={maxDay}
           value={(d) => xpByDay[d] ?? 0}
+          onPick={openDay}
           label={(d, v) => (
             <>
               <span className="tip-k">{d}</span>
-              <span className="tip-v num">{v} XP</span>
+              <span className="tip-v num">
+                {v} XP · {L('点开看记录', 'click for details')}
+              </span>
             </>
           )}
         />

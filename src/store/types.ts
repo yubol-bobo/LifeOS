@@ -41,6 +41,16 @@ export interface Project {
 export type PlanScope = 'year' | 'month' | 'week';
 
 /** A plan item at one time scale. Children (the scale below) and linked quests roll progress up. */
+/** One step of progress on a plan, with an optional note ("Finished Three-Body", "Bench +5 kg"). */
+export interface PlanLog {
+  id: string;
+  ts: number;
+  day: string;
+  amount: number; // 0 = a note without a count
+  note?: string;
+  questId?: string; // logged automatically when this linked quest was completed
+}
+
 export interface Plan {
   id: string;
   scope: PlanScope;
@@ -52,6 +62,9 @@ export interface Plan {
   done?: boolean;
   auto?: boolean; // completed automatically by progress roll-up
   note?: string;
+  target?: number; // counted plan: e.g. 8 (books)
+  unit?: string; // e.g. "本" / "books"
+  log?: PlanLog[]; // progress notes, newest last
   createdAt: number;
 }
 

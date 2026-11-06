@@ -1,3 +1,5 @@
+import { openDay } from './DayXp';
+import { dayKey } from '../lib/date';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -342,9 +344,9 @@ function Hall() {
                   </span>
                 </div>
               ) : !secret && top ? (
-                <span className="medal-date small">
+                <button className="medal-date small link-btn" onClick={() => openDay(dayKey(s.achievements[top.id]))} title={L('看那一天', 'Open that day')}>
                   {TIER_LABEL[top.tier][lang === 'zh' ? 0 : 1]} · {new Date(s.achievements[top.id]).toLocaleDateString()}
-                </span>
+                </button>
               ) : null}
             </article>
           );

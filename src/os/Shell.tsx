@@ -10,6 +10,7 @@ import { Trophies } from '../apps/Trophies';
 import { Settings } from '../apps/Settings';
 import { Mood } from '../apps/Mood';
 import { Review } from '../apps/Review';
+import { Timeline } from '../apps/Timeline';
 import { Plan } from '../apps/Plan';
 import { Projects } from '../apps/Projects';
 import { Assets, CheckinSheet } from '../apps/Assets';
@@ -35,6 +36,8 @@ import { LevelUp } from './LevelUp';
 import { SummaryCard } from '../ai/SummaryCard';
 import { closeSummary } from '../ai/summary';
 import { FocusCelebrate } from './FocusCelebrate';
+import { PlanNoteSheet } from '../apps/PlanNote';
+import { DayHost } from '../apps/DayXp';
 import { clock } from '../apps/Earn';
 import { open, useRoute } from './router';
 import { Spotlight } from './Spotlight';
@@ -48,6 +51,7 @@ const APP_VIEWS: Record<Exclude<AppId, 'home'>, () => ReactNode> = {
   trackers: () => <Trackers />,
   mood: () => <Mood />,
   review: () => <Review />,
+  timeline: () => <Timeline />,
   plan: () => <Plan />,
   projects: () => <Projects />,
   assets: () => <Assets />,
@@ -174,6 +178,8 @@ export function Shell() {
       <LevelUp />
       <SummaryCard />
       <FocusCelebrate />
+      <PlanNoteSheet />
+      <DayHost />
       <Notifications />
       <Bursts />
       {spot && <Spotlight dark={dark} onClose={() => setSpot(false)} />}

@@ -36,6 +36,7 @@ export interface DayDigest {
   breaks: number;
   pomos: number;
   weekPlans: { title: string; pct: number; done: boolean }[];
+  planNotes: { title: string; amount: number; unit?: string; note?: string; count?: number; target?: number }[];
   goals: { title: string; pct: number; daysLeft?: number }[];
   trackers: { name: string; value: number; unit: string }[];
   netWorth?: { total: number; delta?: number; label: string };
@@ -85,6 +86,11 @@ export function dayDigest(s: State, day = dayKey(), lang: Lang = s.profile.lang)
   const mood = s.moods?.[day];
   const week = periodOf('week', date);
   const weekPlans = s.plans.filter((p) => p.scope === 'week' && p.period === week).map((p) => ({ title: p.title, pct: Math.round((p.done ? 1 : planProgress(s, p, m).pct) * 100), done: !!p.done }));
+  const planNotes = s.plans.flatMap((p) =>
+    (p.log ?? [])
+      .filter((l) => l.day === day)
+      .map((l) => ({ title: p.title, amount: l.amount, unit: p.unit, note: l.note, count: p.target ? (p.log ?? []).filter((x) => x.day <= day).reduce((a, x) => a + x.amount, 0) : undefined, target: p.target })),
+  );
   const goals = s.milestones
     .filter((g) => g.status === 'active')
     .map((g) => ({ g, pct: goalProgress(s, g, m).pct }))
@@ -138,6 +144,7 @@ export function dayDigest(s: State, day = dayKey(), lang: Lang = s.profile.lang)
     breaks: w?.breaks ?? 0,
     pomos: w?.pomos ?? 0,
     weekPlans,
+    planNotes,
     goals,
     trackers,
     netWorth,
@@ -172,6 +179,12 @@ export function digestForPrompt(d: DayDigest, lang: Lang) {
   if (d.mood) lines.push(`${L('心情', 'Mood')}: ${d.mood.v}/5 (${MOOD_WORD[d.mood.v][zh ? 0 : 1]})${d.mood.note ? ` — “${d.mood.note}”` : ''}`);
   lines.push(`${L('身体', 'Body')}: ${L('喝水', 'water')} ${d.water}/${d.waterGoal}, ${L('起身', 'breaks')} ${d.breaks}, ${L('番茄', 'pomodoros')} ${d.pomos}`);
   if (d.weekPlans.length) lines.push(`${L('本周计划', 'This week’s plan')}: ${d.weekPlans.map((p) => `${p.title} ${p.done ? '✓' : p.pct + '%'}`).join('; ')}`);
+  if (d.planNotes.length)
+    lines.push(
+      `${L('计划进展', 'Plan progress')}: ${d.planNotes
+        .map((n) => `${n.title}${n.amount ? ` +${n.amount}${n.unit ?? ''}` : ''}${n.target ? ` (${n.count}/${n.target})` : ''}${n.note ? ` — “${n.note}”` : ''}`)
+        .join('; ')}`,
+    );
   if (d.goals.length) lines.push(`${L('目标进度', 'Goals')}: ${d.goals.map((g) => `${g.title} ${g.pct}%${g.daysLeft != null ? L(`（剩 ${g.daysLeft} 天）`, ` (${g.daysLeft} days left)`) : ''}`).join('; ')}`);
   if (d.trackers.length) lines.push(`${L('记录', 'Logged')}: ${d.trackers.map((t) => `${t.name} ${t.value} ${t.unit}`).join(', ')}`);
   if (d.netWorth) lines.push(`${L('净资产盘点', 'Net worth check-in')}: ${d.netWorth.label}${d.netWorth.delta != null ? ` (${d.netWorth.delta >= 0 ? '+' : ''}${Math.round(d.netWorth.delta)})` : ''}`);

@@ -1,3 +1,4 @@
+import { openDay } from './DayXp';
 import { useMemo, useState, type CSSProperties } from 'react';
 import { addDays, dayKey, lastNDays, parseDay } from '../lib/date';
 import { useL, useLang } from '../lib/i18n';
@@ -166,7 +167,7 @@ export function Mood() {
             ))}
             {cells.map((d, i) =>
               d ? (
-                <span key={d} className={`cal-d ${d === today ? 'is-today' : ''} ${d > today ? 'is-future' : ''}`} title={s.moods[d]?.note || d} style={s.moods[d] ? ({ '--m': MOOD_COLORS[s.moods[d].v] } as CSSProperties) : undefined}>
+                <span key={d} className={`cal-d ${d === today ? 'is-today' : ''} ${d > today ? 'is-future' : ''}`} title={s.moods[d]?.note || d} onClick={d <= today ? () => openDay(d) : undefined} role={d <= today ? 'button' : undefined} style={s.moods[d] ? ({ '--m': MOOD_COLORS[s.moods[d].v] } as CSSProperties) : undefined}>
                   {s.moods[d] ? <MoodFace v={s.moods[d].v} size={26} /> : <span className="num">{+d.slice(8)}</span>}
                 </span>
               ) : (

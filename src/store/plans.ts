@@ -17,14 +17,24 @@ export const PLAN_XP = { week: 30, month: 80, year: 200 } as const;
 
 export interface PlanProgress {
   pct: number;
+  count?: number; // counted plans: sum of logged amounts
+  target?: number;
   parts: number;
   children: Plan[];
   quests: number;
   questsDone: number;
 }
 
+export const planCount = (p: Plan) => (p.log ?? []).reduce((a, l) => a + (l.amount || 0), 0);
+
 export function planProgress(s: State, p: Plan, mx: Metrics = metrics(s), depth = 0): PlanProgress {
   const children = s.plans.filter((x) => x.parentId === p.id);
+  // A counted plan ("read 8 books") is measured by what was logged — linked quests log into it.
+  if (p.target && p.target > 0) {
+    const count = planCount(p);
+    const qs = s.quests.filter((q) => q.planId === p.id && !q.archived);
+    return { pct: Math.min(1, count / p.target), parts: 1, children, quests: qs.length, questsDone: qs.filter((q) => q.doneAt).length, count, target: p.target };
+  }
   const vals: number[] = [];
   for (const c of children) vals.push(depth > 3 ? (c.done ? 1 : 0) : planProgressValue(s, c, mx, depth + 1));
   const qs = s.quests.filter((q) => q.planId === p.id && !q.archived);

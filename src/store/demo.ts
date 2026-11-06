@@ -243,6 +243,24 @@ export function demoState(profile: Partial<State['profile']>): State {
   const wReply = plan('week', W, T('逐条回复审稿意见', 'Answer every reviewer point'), { parentId: mRebuttal.id, projectId: phd.id });
   const wRun = plan('week', W, T('这周跑 3 次', 'Run 3 times this week'), { parentId: mRun.id, projectId: marathonP.id });
   plan('week', W, T('周日和家人视频', 'Sunday video call with family'));
+  // counted plans with progress notes — the details that make looking back worthwhile
+  const inMonth = (k: number) => {
+    const d = addDays(today, -k);
+    return d < `${M}-01` ? `${M}-01` : d;
+  };
+  const logNote = (p: import('./types').Plan, k: number, amount: number, note: string) => {
+    const day = inMonth(k);
+    const id = uid();
+    (p.log ??= []).push({ id, ts: at(day, 22), day, amount, note });
+    push(`plannote:${id}`, 'plan', 3, T(`进展笔记 · ${p.title}`, `Progress note · ${p.title}`), at(day, 22));
+  };
+  const mBooks = plan('month', M, T('这个月读 4 本书', 'Read 4 books this month'), { target: 4, unit: T('本', 'books') });
+  logNote(mBooks, 9, 1, T('《三体》读完了，黑暗森林那段太震撼', 'Finished The Three-Body Problem — the dark forest part is stunning'));
+  logNote(mBooks, 3, 1, T('《人类简史》，农业革命那章最有意思', 'Sapiens — the agricultural revolution chapter was the best'));
+  const mFilms = plan('month', M, T('看 3 部好电影', 'Watch 3 great films'), { target: 3, unit: T('部', 'films') });
+  logNote(mFilms, 6, 1, T('《奥本海默》IMAX，配乐太震撼', 'Oppenheimer in IMAX — that score'));
+  const wBench = plan('week', W, T('卧推突破 70 kg', 'Bench press 70 kg'));
+  logNote(wBench, 2, 0, T('今天 67.5 kg × 5，比上周 +2.5', '67.5 kg × 5 today, +2.5 on last week'));
   reviewQ.planId = wReply.id;
   dailies[2].planId = wRun.id;
   dailies[0].planId = wCh3.id;
