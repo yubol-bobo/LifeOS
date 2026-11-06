@@ -4,115 +4,114 @@
 
 # LifeOS
 
-**一个为你的人生运行的操作系统**
-*An operating system for your life.*
+**An operating system for your life.**
 
-把每一天的点滴都记下来，让它们看得见、找得回、长成你自己的人生数据。
+Capture the small moments of every day, and keep them visible, traceable, and yours.
 
-**中文** · [English](README.en.md)
+**English** · [中文](README.zh-CN.md)
 
-[**▶ 在线体验**](https://yubol-bobo.github.io/LifeOS/) · [**观看宣传片**](https://yubol-bobo.github.io/LifeOS/promo/) · [上手指南](SETUP.md) · [完整功能](docs/FEATURES.md) · [更新日志](CHANGELOG.md)
+[**▶ Try it live**](https://yubol-bobo.github.io/LifeOS/) · [**Watch the video**](https://yubol-bobo.github.io/LifeOS/promo/) · [Setup guide (zh)](SETUP.md) · [Feature guide (zh)](docs/FEATURES.md) · [Changelog](CHANGELOG.md)
 
-<a href="https://yubol-bobo.github.io/LifeOS/promo/"><img src="docs/promo-preview.webp" width="880" alt="LifeOS 宣传片预览，点击观看完整有声版本" /></a>
+<a href="https://yubol-bobo.github.io/LifeOS/promo/"><img src="docs/promo-preview.webp" width="880" alt="LifeOS promo preview. Click to watch the full video with sound" /></a>
 
-<sub>↑ 点击观看 80 秒完整版（有配音和音效）</sub>
+<sub>↑ Click to watch the full 80-second tour (with voiceover and sound)</sub>
 
 </div>
 
 ---
 
-## 为什么做 LifeOS
+## Why LifeOS
 
-AI 时代，信息在爆炸。模型读过整个互联网，却不知道**你**：你今天读了哪本书，在哪件事上卡住了，哪些日子心情最好，时间究竟花在了哪里。
+In the age of AI, information is exploding. Models have read the whole internet, yet they know nothing about **you**: the book you finished today, the problem you got stuck on, which days you felt your best, where your hours actually went.
 
-公共数据人人都拿得到，**真正属于你自己的数据才最稀缺、最珍贵**。可它们散落在备忘录、日历、记账软件和脑海里，过几个月就找不回来了。
+Public data is everywhere. **Your own data is what's scarce, and it's becoming the most valuable data you have.** Today it's scattered across notes apps, calendars, budgeting tools and your memory, and most of it is gone within a few months.
 
-LifeOS 想做三件事：
+LifeOS is built around three ideas:
 
-- **让记录变轻松，甚至好玩**：打卡、专注、复盘都能拿经验值。等级、成就、会长大的星球和陪着你的桌面宠物，让人愿意每天回来。
-- **让一切看得见、可追溯**：任何一天都能点开，看那天做了什么、花了多少时间、心情如何、写下了什么。
-- **数据永远属于你**：没有服务器，没有账号，数据只存在你的浏览器里。多设备同步是端到端加密的，存进你自己的私密 Gist。
+- **Make recording effortless, even fun.** Quests, focus sessions and reflections earn XP. Levels, achievements, a planet that grows with you and a desktop pet keep you coming back.
+- **Make everything visible and traceable.** Open any day and see what you did, how long you focused, how you felt and what you wrote.
+- **Your data stays yours.** No server, no account. Everything lives in your browser; multi-device sync is end-to-end encrypted into your own private Gist.
 
-## 它能做什么
-
-| | |
-| --- | --- |
-| 🖥️ **桌面** | 像操作系统一样的仪表盘：今日任务、人生进度、属性雷达、XP 热力图，还有一颗随你成长的 3D 星球 |
-| ✅ **任务与计划** | 每日习惯 + 一次性任务；年 → 月 → 周 → 今天层层拆解，完成后自动向上推进；「读 8 本书」这类计划每一步都能写一句笔记 |
-| ⏱️ **专注计时** | 赚钱的工作（收入逐秒上涨）和不计薪的努力（健身、写论文、阅读…）；可以设倒计时，结束时放烟花；3D 环形图告诉你时间去了哪 |
-| 🐾 **桌面宠物** | 三只小伙伴提醒你喝水、起身、睡觉；接入 OpenAI / Claude / DeepSeek / Kimi / GLM 后，每晚帮你写一份今日总结 |
-| 📝 **每日复盘** | 一句话也算数：高光、收获、卡点、感恩、明天最重要的一件事；附带复盘热力图和「一年前的今天」 |
-| 🕰️ **足迹** | LifeOS 记下的一切按时间排好，可以搜索和筛选；任何一天都能点开，配一张可爱的 3D 经验方块图 |
-| 🌱 **成长** | 60 级、10 个时代、197 个成就；解锁宠物配饰、壁纸和星球进化 |
-| 📊 **更多** | 心情与影响因素分析、资产与净资产曲线、论文与引用（可以自动同步 Google Scholar）、数值追踪、奖励商店 |
-
-中英双语 · 明亮 / 暗夜主题 · 竖版卡片流 / 横版全屏仪表盘 · 手机也能用。每个功能的详细说明见 **[完整功能说明](docs/FEATURES.md)**。
-
-## 截图
+## What it does
 
 | | |
 | --- | --- |
-| ![桌面·暗夜](docs/shots/desktop-dark.jpg) | ![计划进展笔记](docs/shots/plan-note.jpg) |
-| **桌面**（暗夜模式） | **计划**：每一步进展都能写一句 |
-| ![专注环形图](docs/shots/focus-donut.jpg) | ![专注完成庆祝](docs/shots/focus-celebration.jpg) |
-| **努力都去哪了**：3D 环形图 | **倒计时结束**：放烟花 |
-| ![宠物今日总结](docs/shots/pet-summary.jpg) | ![每日复盘](docs/shots/review.jpg) |
-| **宠物写的今日总结** | **每日复盘**和复盘热力图 |
-| ![足迹](docs/shots/timeline.jpg) | ![升级之路](docs/shots/growth-road.jpg) |
-| **足迹**：一切可追溯 | **升级之路**：10 个时代 |
+| 🖥️ **Desktop** | An OS-style dashboard: today's quests, life progress, attribute radar, XP heatmap, and a 3D planet that grows as you level up |
+| ✅ **Quests & plans** | Daily habits and one-off tasks; break the year into months, weeks and today, with progress flowing upward; log a note at every step of plans like "read 8 books" |
+| ⏱️ **Focus** | Paid work (watch earnings tick up by the second) and unpaid effort (gym, writing, reading…); set a countdown and get a celebration when it ends; a 3D donut shows where your hours went |
+| 🐾 **Desktop pets** | Three companions remind you to drink water, stretch and sleep; connect OpenAI, Claude, DeepSeek, Kimi or GLM and your pet writes up your day each night |
+| 📝 **Daily review** | One line is enough: highlight, lesson, blocker, gratitude, tomorrow's one thing; a reflection heatmap and "one year ago today" |
+| 🕰️ **Timeline** | Everything LifeOS recorded, in order, searchable and filterable; open any day for a cute 3D XP-blocks view |
+| 🌱 **Growth** | 60 levels, 10 eras, 197 achievements; unlock pet accessories, wallpapers and planet upgrades |
+| 📊 **And more** | Mood and what drives it, assets and net worth, papers and citations (auto-sync from Google Scholar), custom trackers, a reward shop |
+
+English and Chinese · light and dark themes · portrait card feed or full-screen landscape dashboard · works on phones.
+
+## Screenshots
+
+| | |
+| --- | --- |
+| ![Desktop, dark](docs/shots/desktop-dark.jpg) | ![Plan progress notes](docs/shots/plan-note.jpg) |
+| **Desktop** (dark mode) | **Plans**: a note at every step |
+| ![Focus donut](docs/shots/focus-donut.jpg) | ![Focus celebration](docs/shots/focus-celebration.jpg) |
+| **Where the effort went**: 3D donut | **Countdown done**: confetti |
+| ![Pet day summary](docs/shots/pet-summary.jpg) | ![Daily review](docs/shots/review.jpg) |
+| **Your pet's day summary** | **Daily review** and reflection heatmap |
+| ![Timeline](docs/shots/timeline.jpg) | ![Growth road](docs/shots/growth-road.jpg) |
+| **Timeline**: everything traceable | **The road**: 10 eras |
 
 ---
 
-## 使用指南
+## Getting started
 
-### 1. 先试试（1 分钟）
+### 1. Try it (1 minute)
 
-打开 **<https://yubol-bobo.github.io/LifeOS/>**，在设置助手里选「先看看示例数据」随便点点。想正式开始时，到 **系统设置** 点「清空并开始」。
+Open **<https://yubol-bobo.github.io/LifeOS/>** and choose "Explore with demo data" in the setup wizard. When you're ready to start for real, go to **Settings** and click "Clear & start".
 
-> 每个人打开这个网址，看到的都是**自己浏览器里**的 LifeOS，互相看不到对方的数据。
+> Everyone who opens that URL sees the LifeOS **in their own browser**. Nobody can see anyone else's data.
 
-### 2. 拥有你自己的 LifeOS（推荐，3 步）
+### 2. Get your own LifeOS (recommended, 3 steps)
 
-1. 点仓库右上角的 **Fork**，复制一份到你的 GitHub。
-2. 在你的仓库里打开 **Settings → Pages → Source**，选 **GitHub Actions**。
-3. 等一两分钟，打开 `https://<你的用户名>.github.io/LifeOS/`。
+1. Click **Fork** at the top right of this repo.
+2. In your fork, open **Settings → Pages → Source** and choose **GitHub Actions**.
+3. Wait a minute or two, then open `https://<your-username>.github.io/LifeOS/`.
 
-以后原项目更新了，在你的仓库页面点 **Sync fork** 就能升级（[详细说明](SETUP.md#11-fork-之后怎么同步更新--自己继续扩充)）。
+When the original project updates, click **Sync fork** on your repo page to upgrade.
 
-### 3. 按需打开（都是可选的）
+### 3. Optional extras
 
-| 想要 | 怎么做 | 详细步骤 |
+| You want | How | Details |
 | --- | --- | --- |
-| 电脑和手机同步 | 系统设置 → 同步：填一个只勾 `gist` 权限的 GitHub token，再设一个同步密码 | [SETUP §8](SETUP.md#8-多设备同步电脑--手机) |
-| 宠物写今日总结 | 系统设置 → AI 宠物：选服务商，填 API Key | [SETUP §9](SETUP.md#9-ai-宠物今日总结) |
-| 自动同步 Google Scholar 引用 | 仓库 Secret `SERPAPI_KEY` + Variable `SCHOLAR_ID` | [SETUP §3–4](SETUP.md#3-google-scholar-id) |
-| 切到别的标签页也能收到提醒 | 系统设置 → 桌面宠物 → 浏览器通知 | [SETUP §7](SETUP.md#7-浏览器通知宠物提醒) |
+| Sync between computer and phone | Settings → Sync: a GitHub token with only the `gist` scope, plus a sync password you choose | [SETUP §8](SETUP.md#8-多设备同步电脑--手机) |
+| Your pet writes a day summary | Settings → AI pet: pick a provider and paste your API key | [SETUP §9](SETUP.md#9-ai-宠物今日总结) |
+| Google Scholar citations, auto-synced | Repo secret `SERPAPI_KEY` + repo variable `SCHOLAR_ID` | [SETUP §3–4](SETUP.md#3-google-scholar-id) |
+| Reminders even from other tabs | Settings → Desktop pet → Browser notifications | [SETUP §7](SETUP.md#7-浏览器通知宠物提醒) |
 
-Key 和 token **只填在网页里或 GitHub Secrets 里**，永远不要写进代码。完整的配置清单见 **[SETUP.md](SETUP.md)**。
+Keys and tokens go **only into the web page or GitHub Secrets**, never into code. The full checklist is in [SETUP.md](SETUP.md) (written in Chinese, but the steps are short and the GitHub settings pages are the same in any language).
 
-### 4. 每天怎么用
+### 4. A day with LifeOS
 
-- **早上**：看一眼桌面上的今日任务和倒计时；在「计划」里把本周计划「加到今天」。
-- **白天**：做事前在「专注」里开一个计时（可以设倒计时），做完打勾，经验值和进度会自动累积。
-- **晚上**：点一下心情，花一分钟写复盘；或者点宠物 →「今日总结」，改两句存进复盘。
-- **想回头看的时候**：打开「足迹」，或者点任何一张热力图上的任意一天。
+- **Morning**: glance at today's quests and countdowns; in Plans, send this week's items to today.
+- **During the day**: start a Focus session before you work (add a countdown if you like), tick things off, and watch XP and progress add up.
+- **Evening**: tap your mood, spend a minute on the review, or click your pet → "Day summary", tweak it and save it to your review.
+- **Looking back**: open Timeline, or click any day on any heatmap.
 
-小技巧：`⌘K` / `Ctrl+K` 可以搜索并打开一切；右上角可以切换横版仪表盘和全屏。
+Tip: `⌘K` / `Ctrl+K` searches and opens everything; the top-right buttons switch to the landscape dashboard and full screen.
 
-### 5. 备份
+### 5. Backups
 
-数据在浏览器里。换电脑或清理浏览器之前，到 **系统设置 → 数据 → 导出备份** 下载 JSON，在新设备上导入即可。开了同步就不用担心这一步。
+Your data lives in the browser. Before switching computers or clearing browser data, go to **Settings → Data → Export backup** and import the JSON on the new device. With sync turned on, you don't need to worry about this.
 
 ---
 
-## 数据与隐私
+## Data & privacy
 
-- **没有后端，没有账号**。数据保存在浏览器的 `localStorage` 里。
-- **同步是端到端加密的**：数据在你的设备上加密后，才存进你自己的私密 Gist，GitHub 也看不到内容。
-- **AI 是可选的**：Key 只存在当前浏览器里。生成总结时，浏览器把当天的摘要直接发给你选的服务商，不经过任何中间服务器。
-- **可以放心公开仓库、让别人 fork**：仓库里只有代码和虚构的示例数据，你的记录、Key、密码都不在里面（[详细说明](SETUP.md#10-自己用的同时公开给别人-fork隐私)）。
+- **No backend, no account.** Data is stored in your browser's `localStorage`.
+- **Sync is end-to-end encrypted.** Data is encrypted on your device before it goes into your own private Gist; GitHub can't read it.
+- **AI is optional.** Your key stays in the current browser. When generating a summary, the browser sends that day's digest directly to the provider you chose, with no server in between.
+- **Safe to fork.** The repo contains only code and fictional demo data. Your records, keys and passwords are never in it.
 
-## 本地开发
+## Development
 
 ```bash
 git clone https://github.com/yubol-bobo/LifeOS.git
@@ -121,10 +120,12 @@ npm install
 npm run dev
 ```
 
-`npm run build` 生成的 `dist/` 是纯静态站点，可以放到任何静态托管上。推送到 `main` 会通过 GitHub Actions 自动发布到 Pages。
+`npm run build` outputs a fully static site in `dist/` that can be hosted anywhere. Pushing to `main` publishes to GitHub Pages via GitHub Actions.
 
-想改游戏数值？都在 [`src/store/rules.ts`](src/store/rules.ts)。代码结构和技术栈见 [完整功能说明](docs/FEATURES.md#技术栈)。
+Want to tweak the game balance? Every number is in [`src/store/rules.ts`](src/store/rules.ts).
+
+Built with Vite, React 19, TypeScript and three.js. No UI framework and no backend.
 
 ## License
 
-MIT。欢迎 fork 和改造，做成你自己的 LifeOS。
+MIT. Fork it, remix it, and make it your own LifeOS.
