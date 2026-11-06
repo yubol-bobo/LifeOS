@@ -204,16 +204,21 @@ export function Field({ label, children, hint }: { label: ReactNode; children: R
 
 export function Modal({ open, onClose, title, children, footer, width = 520 }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; width?: number }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Callers usually pass an inline onClose, which is a new function on every render. Keep the
+  // latest one in a ref so the effect below runs only when the modal opens: otherwise each
+  // keystroke re-ran it and yanked focus back to the first field.
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
   useEffect(() => {
     if (!open) return;
-    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current();
     window.addEventListener('keydown', k);
     const t = window.setTimeout(() => ref.current?.querySelector<HTMLElement>('input,select,textarea,button.btn-primary')?.focus(), 60);
     return () => {
       window.removeEventListener('keydown', k);
       window.clearTimeout(t);
     };
-  }, [open, onClose]);
+  }, [open]);
   if (!open) return null;
   return createPortal(
     <div className="modal-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
