@@ -6,7 +6,9 @@
 
 **An operating system for your life.**
 
-Leave a trace. Focus on what matters. See every step.
+### Record more. Focus more.
+
+Leave a trace of yourself, keep your attention on what matters, and see every step you take.
 
 **English** · [中文](README.zh-CN.md)
 
