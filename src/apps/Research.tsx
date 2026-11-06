@@ -7,7 +7,7 @@ import { useScholarFeed, type ScholarFeed } from '../lib/scholarFeed';
 import { notify } from '../os/notify';
 import { useMetrics } from '../store/hooks';
 import { PAPER_XP } from '../store/rules';
-import { actions, useStore } from '../store/store';
+import { actions, scholarBound, useStore } from '../store/store';
 import { PAPER_FLOW, type Paper, type PaperStatus } from '../store/types';
 import { AreaChart, Columns, Sparkline } from '../ui/charts';
 import { Icon } from '../ui/Icon';
@@ -42,6 +42,7 @@ export function Research() {
   const log = s.citationLog.map((x) => ({ x: parseDay(x.date).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: '2-digit', month: 'short' }), y: x.total }));
   const pipeline = s.papers.filter((p) => p.status !== 'published').length;
   const feed = useScholarFeed();
+  const bound = useStore((x) => (feed ? scholarBound(x, feed) : false));
   const fmap = new Map((feed?.papers ?? []).map((p) => [p.id, p]));
   const fOf = (p: Paper) => (p.scholarId ? fmap.get(p.scholarId) : undefined);
   const sortedPapers = [...s.papers].sort((a, b) => Number(!!a.removed) - Number(!!b.removed) || b.citations - a.citations);
@@ -70,7 +71,22 @@ export function Research() {
         <Stat label={L('已发表 / 接收', 'Published')} value={m.papersPublished} sub={L(`管线中 ${pipeline} 篇`, `${pipeline} in pipeline`)} />
       </div>
 
-      {feed && <ScholarCard feed={feed} />}
+      {feed && (bound ? (
+        <ScholarCard feed={feed} />
+      ) : (
+        <Card title="Google Scholar" icon="graduation">
+          <div className="gs-claim">
+            <p>
+              {L('这个网站自带一个自动同步的 Google Scholar 数据源', 'This site comes with an auto-synced Google Scholar feed')}
+              {feed.profile.name ? `：${feed.profile.name}` : ''} <span className="muted small">({feed.authorId})</span>
+              {L('。如果这是你的主页，绑定后论文和引用会自动合并进你的 LifeOS；如果你只是来试用或 fork 的，忽略即可。', '. If it’s your profile, bind it and papers and citations merge into your LifeOS automatically; if you’re just trying LifeOS or forked it, ignore this.')}
+            </p>
+            <Button variant="primary" icon="check" onClick={() => actions.bindScholarFeed(feed)}>
+              {L('这是我的，绑定', 'It’s mine — bind it')}
+            </Button>
+          </div>
+        </Card>
+      ))}
 
       <div className="grid-2-1">
         <Card title={L('累计引用', 'Citations over time')} icon="chart">

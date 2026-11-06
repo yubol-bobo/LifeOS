@@ -632,3 +632,15 @@
   color: var(--ink-2);
   background: var(--surface-3);
 }
+
+.gs-claim {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.gs-claim p {
+  flex: 1 1 360px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}

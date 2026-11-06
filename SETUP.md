@@ -11,8 +11,8 @@
 | # | 需要什么 | 必须？ | 从哪里拿 | 放到哪里 |
 |---|---|---|---|---|
 | 1 | GitHub Pages 发布 | 想在线访问就要 | — | 仓库 Settings → Pages |
-| 2 | 允许发布的分支 | 用非 `main` 分支预览时要 | — | 仓库 Settings → Environments → `github-pages` |
-| 3 | **Google Scholar ID** | 可选 | Scholar 主页网址 | `lifeos.config.json` |
+| 2 | 预览开发分支 | 可选 | — | Actions 里手动运行 + Settings → Environments |
+| 3 | **Google Scholar ID** | 可选 | Scholar 主页网址 | 仓库 Variable `SCHOLAR_ID` |
 | 4 | **SerpAPI Key** | 可选（配 #3 一起用） | serpapi.com | 仓库 Secret `SERPAPI_KEY` |
 | 5 | OpenAlex / Semantic Scholar ID | 可选 | openalex.org / semanticscholar.org | LifeOS 网页里填 |
 | 6 | 汇率 | 不需要 Key | 自动内置，可一键在线更新 | LifeOS 网页里 |
@@ -41,11 +41,16 @@ npm install
 npm run dev
 ```
 
-## 2. 允许其他分支发布预览（可选）
+## 2. 预览开发分支（可选）
 
-默认只有 `main` 能发布。想让开发分支（例如 `claude/...`）也能推送即预览：
+**只有合并进 `main` 才会更新你的网站**，开发分支上的改动不会影响你每天用的版本。
 
-**Settings → Environments → `github-pages` → Deployment branches and tags → Add deployment branch or tag rule**，填入分支名，或通配符 `claude/*`。
+想在合并前先看看某个开发分支的效果：
+
+1. 先允许这个分支发布（只需设置一次）：**Settings → Environments → `github-pages` → Deployment branches and tags → Add deployment branch or tag rule**，填分支名，或通配符 `claude/*`。
+2. **Actions → Deploy to GitHub Pages → Run workflow**，在下拉框里选这个分支，点运行。
+
+⚠️ 一个仓库只有一个 Pages 网站，预览会**暂时替换**线上网站，直到下一次 `main` 更新（或者你对 `main` 再手动运行一次）。你的记录不受影响，因为它们在浏览器里，不在网站上。
 
 ---
 
@@ -59,12 +64,16 @@ https://scholar.google.com/citations?user=hgN6B6kAAAAJ&hl=en
                                           这就是 Scholar ID
 ```
 
-**放到哪里**：仓库根目录的 `lifeos.config.json`：
+**放到哪里（推荐）**：仓库 **Settings → Secrets and variables → Actions → Variables** 标签 → **New repository variable**，名字 `SCHOLAR_ID`，值填你的 ID。
+
+这样 ID 不写进代码，别人 fork 你的仓库时不会带走你的 ID（不然他们的网站会抓你的主页）。
+
+**其他可调参数**在仓库根目录的 `lifeos.config.json`（`id` 留空即可，Variable 优先）：
 
 ```json
 {
   "scholar": {
-    "id": "你的ScholarID",
+    "id": "",
     "intervalHours": 8,
     "monthlyLimit": 100,
     "timezone": "UTC"
@@ -74,12 +83,14 @@ https://scholar.google.com/citations?user=hgN6B6kAAAAJ&hl=en
 
 | 字段 | 含义 | 默认 |
 |---|---|---|
-| `id` | 你的 Scholar ID | — |
+| `id` | 你的 Scholar ID（推荐留空，用 Variable `SCHOLAR_ID`） | — |
 | `intervalHours` | 两次抓取的最短间隔（小时） | `8` |
 | `monthlyLimit` | 每个自然月最多调用 SerpAPI 的次数 | `100` |
 | `timezone` | 判断「今天」用的时区，如 `America/New_York`、`Asia/Shanghai` | `UTC` |
 
-Scholar ID 本身是公开信息，写进仓库没有问题。（也可以改用仓库 Variable `SCHOLAR_ID`，优先级更高。）
+Scholar ID 本身是公开信息；放进 Variable 只是为了让 fork 的人不会继承它。
+
+**网站上的 Scholar 数据只会进入「绑定」过的 LifeOS**：第一次在你自己的网站打开「学术」时，点「这是我的，绑定」。访客打开你的网站只会看到一个提示，你的论文不会被合并进他们的 LifeOS。
 
 ## 4. SerpAPI Key（Google Scholar 自动同步）
 
@@ -182,6 +193,59 @@ Google Scholar 没有官方 API，LifeOS 通过 [SerpAPI](https://serpapi.com) �
 **测试连接失败？**
 - 「Key 无效」→ 重新复制 Key，注意没有多余空格。
 - 「连接失败」→ 网络问题，或者该服务不允许浏览器直接调用（CORS）。可以在「接口地址」里填你自己的代理（例如一个 Cloudflare Worker 转发）。
+
+---
+
+## 10. 自己用的同时公开给别人 fork（隐私）
+
+**结论：放心公开这个仓库。你的记录从来不在仓库里。**
+
+| 东西 | 存在哪 | 会不会被 fork / 公开看到 |
+|---|---|---|
+| 任务、复盘、心情、资产、专注记录……所有个人记录 | 你浏览器的 localStorage | ❌ 不在仓库里，fork 带不走，访客看不到 |
+| 多设备同步数据 | 你自己的 **secret Gist**，AES-256-GCM 加密 | ❌ 不在仓库里；Gist 内容是密文，没有同步密码解不开 |
+| 同步 token、同步密码、AI Key | 只在你的浏览器里 | ❌ |
+| SerpAPI Key | 仓库 Secrets | ❌ Secrets 不会被 fork，日志里也会被打码 |
+| Scholar ID | 仓库 Variable `SCHOLAR_ID` | ❌ Variables 不会被 fork |
+| Google Scholar 引用历史 | `scholar-data` 分支 | ⚠️ 公开仓库里能看到（本来就是你 Scholar 主页上的公开信息）；fork 默认只复制主分支，不会带走它 |
+| 示例数据（Alex 的一天） | 代码里 | 虚构的，可以随便看 |
+
+**你的网站（yubol-bobo.github.io/LifeOS）也是安全的**：每个访客打开看到的都是**他自己浏览器里**的 LifeOS（空的，或者他自己加载的示例），看不到你的任何记录；你的 Scholar 数据也只会进入你「绑定」过的 LifeOS。
+
+**几条习惯**
+
+1. **不要把导出的备份文件提交到仓库。** `.gitignore` 已经忽略 `lifeos-backup*.json`，但别手动强加进去。
+2. **同步密码要够强**，不要和别的密码重复——Gist 是「secret（不公开列出）」不是「private」，拿到链接的人能看到密文。
+3. **个人配置都放 Secrets / Variables，不写进文件。** 代码里只放大家通用的默认值。
+4. 别人想用的话，推荐直接 **Fork**：以后你更新了，他们在 GitHub 上点一下 **Sync fork** 就能拿到（见第 11 节）。也可以在 **Settings → General** 勾选 **Template repository**，别人点 **Use this template** 会得到一个干净的新仓库，但之后拿你的更新就要手动合并。
+
+**别人 fork 之后要做的**（和你当初一样）：开启 Pages（第 1 步）→ 可选：加自己的 `SCHOLAR_ID` Variable 和 `SERPAPI_KEY` Secret → 打开网站开始用。fork 出来的仓库里定时任务默认是关的，要在 Actions 页面点一下启用。
+
+---
+
+## 11. fork 之后怎么同步更新 · 自己继续扩充
+
+### fork 的人：拿到原作者的新版本
+
+1. 打开你 fork 的仓库首页，点 **Sync fork → Update branch**。
+2. GitHub 会自动重新部署你的网站（只要 `main` 有更新就会部署）。
+3. 打开网站，在 **系统设置 → 通用** 底部能看到版本号；对照 [CHANGELOG.md](CHANGELOG.md) 看看有没有 ⚠️ 需要手动做的事。
+
+你的记录在你自己的浏览器 / Gist 里，**同步更新不会碰到它们**，新版本会自动把旧数据升级成新格式。
+
+如果用的是 **Use this template**：在本地 `git remote add upstream https://github.com/yubol-bobo/LifeOS.git`，然后 `git pull upstream main` 合并。
+
+> 为了同步不冲突：你的个人设置（Scholar ID、SerpAPI Key）放在 Variables / Secrets 里，**不要改代码文件**。只要没改过同一个文件，Sync fork 就不会出现冲突。
+
+### 原作者 / 想自己扩充功能的人
+
+- **在开发分支上改**，合并进 `main` 才上线（第 2 节）。
+- **老数据要能自动升级**：新增的字段在 `src/store/store.ts` 的 `migrate()` 里给默认值；不要直接改名或删除字段，真要改就在 `migrate()` 里把旧值搬过去。大改之前先「导出备份」。
+- **个人的东西不进仓库**：个人设置放 Secrets / Variables 或浏览器里，代码文件里只放通用默认值。
+- **每次发版**：
+  1. 把 `package.json` 里的 `version` 加一。
+  2. 在 [CHANGELOG.md](CHANGELOG.md) 顶部写上改了什么，需要手动操作的用 ⚠️ 标出来。
+  3. （可选）在 GitHub 上打一个 tag 或发一个 Release，方便 fork 的人知道该同步了。
 
 ---
 

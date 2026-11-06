@@ -11,7 +11,7 @@
 
 </div>
 
-> 🚀 **第一次使用？** 看 [**SETUP.md 上手指南**](SETUP.md)：开启 Pages、Google Scholar ID、SerpAPI Key 等所有需要配置的东西，一步一步写清楚了。
+> 🚀 **第一次使用？** 看 [**SETUP.md 上手指南**](SETUP.md)：开启 Pages、Google Scholar ID、SerpAPI Key、多设备同步（Gist token + 同步密码）、AI 宠物的 Key，以及公开 / fork 时的隐私——所有需要配置的东西，一张总览表 + 一步一步写清楚了。
 
 ![LifeOS desktop — light](docs/desktop-light.jpg)
 
@@ -127,6 +127,7 @@ Fork 之后同样适用，只需对自己的 fork 做第 1 步。
 - **多设备同步（可选）**：在「系统设置 → 同步」里填一个只有 gist 权限的 GitHub token 和同步密码，数据会端到端加密后存进你自己的私密 Gist，电脑和手机自动保持一致，按每条记录合并、离线修改也不会丢。详见 [SETUP.md](SETUP.md#8-多设备同步电脑--手机)。
 - 换设备或清理浏览器之前，请在 **系统设置 → 数据 → 导出备份** 下载 JSON；在新设备上导入即可。
 - **AI 宠物（可选）**：API Key 只保存在当前浏览器里，不会同步、导出或提交到仓库；生成今日总结时，浏览器把当天的数据摘要直接发给你选的服务商。详见 [SETUP.md](SETUP.md#9-ai-宠物今日总结)。
+- **可以放心公开仓库 / 让别人 fork**：仓库里只有代码和虚构的示例数据，你的任何记录、Key、密码都不在里面；你的网站上，每个访客看到的也只是他自己浏览器里的 LifeOS。详见 [SETUP.md 第 10 节](SETUP.md#10-自己用的同时公开给别人-fork隐私)；fork 之后怎么同步更新见 [第 11 节](SETUP.md#11-fork-之后怎么同步更新--自己继续扩充)，每个版本改了什么见 [CHANGELOG.md](CHANGELOG.md)。
 - 只有你主动点击「同步引用」或「在线更新汇率」时，浏览器才会直接请求 OpenAlex / Semantic Scholar / open.er-api.com 的公开 API。Google Scholar 没有公开 API，无法在浏览器里同步。
 
 ### Google Scholar 自动同步（每 8 小时）
@@ -136,7 +137,7 @@ Google Scholar 没有公开 API，所以由仓库里的定时任务通过 [SerpA
 1. 在 SerpAPI 注册，拿到 API key（免费额度够用）。
 2. 仓库 **Settings → Secrets and variables → Actions**：
    - **Secrets** 新建 `SERPAPI_KEY`
-3. 把仓库根目录 `lifeos.config.json` 里的 `scholar.id` 改成你的 Scholar ID（主页网址中 `user=` 后面那串）。也可以在同一个文件里调整 `intervalHours`、`monthlyLimit`、`timezone`；同名的仓库 Variables（`SCHOLAR_ID` 等）优先级更高。
+3. 在仓库 **Settings → Secrets and variables → Actions → Variables** 新建 `SCHOLAR_ID`，值是你的 Scholar ID（主页网址中 `user=` 后面那串）。放在 Variable 里，别人 fork 时就不会带走。`intervalHours`、`monthlyLimit`、`timezone` 可以在仓库根目录的 `lifeos.config.json` 里调。第一次在自己的网站打开「学术」时点「这是我的，绑定」。
 4. 定时任务只在默认分支（`main`）上运行。
 
 保险措施：无论工作流被触发多少次（定时、推送、手动），脚本都保证两次抓取至少间隔 `SCHOLAR_INTERVAL_HOURS`，并且每个自然月的 SerpAPI 调用不超过 `SCHOLAR_MONTHLY_LIMIT`。100 篇论文以内每次只用 1 次调用，每 8 小时一次，约每月 90 次。

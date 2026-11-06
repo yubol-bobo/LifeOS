@@ -197,6 +197,9 @@ export function useStore<T>(sel: (s: State) => T): T {
   });
 }
 
+/** Has this LifeOS claimed the site's Google Scholar feed? */
+export const scholarBound = (s: State, f: { authorId: string }) => s.scholar.provider === 'gscholar' && s.scholar.authorId === f.authorId;
+
 const tr = (zh: string, en: string) => (bi(zh, en), state.profile.lang === 'zh' ? zh : en);
 
 /* ------------------------------------------------------------------ */
@@ -811,11 +814,18 @@ export const actions = {
     });
     return { added, updated };
   },
+  /** "This Scholar profile is mine": bind the site's feed to this LifeOS, then merge it. */
+  bindScholarFeed(f: ScholarFeed) {
+    commit((d) => void Object.assign(d.scholar, { provider: 'gscholar', authorId: f.authorId, gsFetch: undefined }), { silent: true });
+    return actions.applyScholarFeed(f);
+  },
   /**
    * Merge the Google Scholar feed (built by the scheduled workflow). Idempotent per fetch:
    * papers matched by Scholar id, then title; new ones added; vanished ones flagged, never deleted.
    */
   applyScholarFeed(f: ScholarFeed) {
+    // Only for the LifeOS that bound this feed — visitors of someone else's site never get their papers.
+    if (!scholarBound(getState(), f)) return null;
     if (!f.lastFetch || !f.totals || getState().scholar.gsFetch === f.lastFetch) return null;
     const firstImport = getState().scholar.gsTotal == null;
     let added = 0;
