@@ -6,7 +6,7 @@
 
 **An operating system for your life.**
 
-Capture the small moments of every day, and keep them visible, traceable, and yours.
+Leave a trace. Focus on what matters. See every step.
 
 **English** · [中文](README.zh-CN.md)
 
@@ -22,15 +22,17 @@ Capture the small moments of every day, and keep them visible, traceable, and yo
 
 ## Why LifeOS
 
-In the age of AI, information is exploding. Models have read the whole internet, yet they know nothing about **you**: the book you finished today, the problem you got stuck on, which days you felt your best, where your hours actually went.
+More and more of what we read, write and decide now passes through AI. It's convenient, but it raises a quiet question: at the end of a day, how much of it was actually **yours**? As AI and data seep into how we think and choose, it matters more than ever to **leave traces of ourselves**: what we did, what we learned, how we felt, where our time went.
 
-Public data is everywhere. **Your own data is what's scarce, and it's becoming the most valuable data you have.** Today it's scattered across notes apps, calendars, budgeting tools and your memory, and most of it is gone within a few months.
+At the same time, there is more information than anyone can take in, and most of us are juggling more projects than we can keep straight: work, a thesis, the gym, a side project, the books we mean to read. Everything is moving, nothing is quite in order, and it's hard to tell what actually moved forward.
 
-LifeOS is built around three ideas:
+LifeOS is a steady rhythm of managing and recording your life, so you can keep your attention on what truly matters to you, and **see every step you take**.
 
-- **Make recording effortless, even fun.** Quests, focus sessions and reflections earn XP. Levels, achievements, a planet that grows with you and a desktop pet keep you coming back.
-- **Make everything visible and traceable.** Open any day and see what you did, how long you focused, how you felt and what you wrote.
-- **Your data stays yours.** No server, no account. Everything lives in your browser; multi-device sync is end-to-end encrypted into your own private Gist.
+- **Leave a trace.** Quests, plans, focus sessions, notes, mood and reviews, all written by you. One line is enough, and any day can be opened again later.
+- **Focus on what matters.** Projects hold their tasks, plans, goals and focus time in one place. Year → month → week → today plans turn big goals into today's steps, and a focus breakdown shows whether your hours go where you want them to.
+- **See every step.** Small things move big goals automatically: a check-in or a focus session pushes your weekly, monthly and yearly progress forward. The Timeline puts it all in order.
+- **Make it a habit.** XP, levels, achievements, a planet that grows with you and a desktop pet that keeps you company make recording something you want to come back to.
+- **Your traces stay yours.** No server, no account: data lives in your browser, and multi-device sync is end-to-end encrypted into your own private Gist. AI is optional and uses your own key; it can help summarize your day, but what you keep is written by you.
 
 ## What it does
 
