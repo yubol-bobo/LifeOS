@@ -1,3 +1,4 @@
+import { askPlanNote } from './PlanNote';
 import { useMemo, useState, type CSSProperties } from 'react';
 import { dayKey, parseDay } from '../lib/date';
 import { useL, useLang } from '../lib/i18n';
@@ -207,6 +208,9 @@ function PlanRow({ p, pace, onEdit }: { p: PlanT; pace: ReturnType<typeof planPa
           {p.title}
         </button>
         <span className="pi-xp num muted small">+{PLAN_XP[p.scope]}</span>
+        <Button size="sm" variant="soft" icon={p.target ? 'plus' : 'pencil'} onClick={() => askPlanNote(p.id, { manual: true })}>
+          {p.target ? L('+1 记一笔', '+1 & note') : L('记进展', 'Log')}
+        </Button>
         {p.scope === 'week' && !p.done && (
           <Button size="sm" variant="soft" icon="target" onClick={() => actions.pullToToday(p.id)}>
             {L('加到今天', 'To today')}
@@ -227,7 +231,7 @@ function PlanRow({ p, pace, onEdit }: { p: PlanT; pace: ReturnType<typeof planPa
       {pace.parts > 0 && (
         <div className="pi-progress">
           <Bar value={pace.pct} tone="teal" height={6} />
-          <span className="num small">{Math.round(pace.pct * 100)}%</span>
+          <span className="num small">{pace.target ? `${pace.count}/${pace.target} ${p.unit ?? ''}` : `${Math.round(pace.pct * 100)}%`}</span>
           <span className="muted small">
             {pace.children.length > 0 && L(`${pace.children.length} 个${below ? scopeName(below, L) : ''}子项`, `${pace.children.length} ${below ?? ''} items`)}
             {pace.children.length > 0 && pace.quests > 0 && ' · '}
@@ -235,6 +239,7 @@ function PlanRow({ p, pace, onEdit }: { p: PlanT; pace: ReturnType<typeof planPa
           </span>
         </div>
       )}
+      <PlanLogList p={p} />
       {quests.length > 0 && (
         <ul className="pi-quests">
           {quests.map((q) => {
@@ -249,6 +254,55 @@ function PlanRow({ p, pace, onEdit }: { p: PlanT; pace: ReturnType<typeof planPa
         </ul>
       )}
     </li>
+  );
+}
+
+/** The plan's progress notes, newest first; editable, with "show all". */
+export function PlanLogList({ p, limit = 3 }: { p: PlanT; limit?: number }) {
+  const L = useL();
+  const lang = useLang();
+  const [all, setAll] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState('');
+  const log = [...(p.log ?? [])].reverse();
+  if (!log.length) return null;
+  const shown = all ? log : log.slice(0, limit);
+  const date = (d: string) => parseDay(d).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'numeric', day: 'numeric' });
+  return (
+    <ul className="pi-log">
+      {shown.map((l) => (
+        <li key={l.id}>
+          <span className="pl-date num">{date(l.day)}</span>
+          {l.amount > 0 && <span className="pl-amt num">+{l.amount}{p.unit ? ` ${p.unit}` : ''}</span>}
+          {editing === l.id ? (
+            <form
+              className="pl-edit"
+              onSubmit={(e) => {
+                e.preventDefault();
+                actions.editPlanLog(p.id, l.id, { note: draft });
+                setEditing(null);
+              }}
+            >
+              <input className="input" autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={() => (actions.editPlanLog(p.id, l.id, { note: draft }), setEditing(null))} />
+            </form>
+          ) : (
+            <button className={`pl-note ${l.note ? '' : 'is-empty'}`} onClick={() => (setEditing(l.id), setDraft(l.note ?? ''))}>
+              {l.note ?? L('补一句笔记…', 'Add a note…')}
+            </button>
+          )}
+          <button className="icon-btn pl-del" onClick={() => actions.removePlanLog(p.id, l.id)} aria-label={L('删除这条', 'Delete entry')}>
+            <Icon name="trash" size={12} />
+          </button>
+        </li>
+      ))}
+      {log.length > limit && (
+        <li className="pl-more">
+          <button className="link-btn" onClick={() => setAll((v) => !v)}>
+            {all ? L('收起', 'Show less') : L(`查看全部 ${log.length} 条`, `Show all ${log.length}`)}
+          </button>
+        </li>
+      )}
+    </ul>
   );
 }
 
@@ -342,6 +396,12 @@ function PlanEditor({ value, onClose }: { value: Partial<PlanT> | null; onClose:
         </Field>
         <Field label={L('备注', 'Note')}>
           <textarea className="input" rows={2} value={p.note ?? ''} onChange={(e) => setD({ ...p, note: e.target.value })} />
+        </Field>
+        <Field label={L('数量目标（可选）', 'Count target (optional)')} hint={L('例如「读 8 本书」填 8 本。之后每读完一本点「+1 记一笔」，写下书名和感受；关联的任务完成时也会自动 +1。', 'E.g. "read 8 books" → 8 books. Tap "+1 & note" after each one and jot down the title; linked quests add +1 automatically.')}>
+          <div className="row-gap">
+            <input className="input" type="number" min={0} style={{ maxWidth: 120 }} value={p.target ?? ''} placeholder="8" onChange={(e) => setD({ ...p, target: Number(e.target.value) > 0 ? Number(e.target.value) : undefined })} />
+            <input className="input" style={{ maxWidth: 140 }} value={p.unit ?? ''} placeholder={L('本 / 次 / 公里', 'books / times / km')} onChange={(e) => setD({ ...p, unit: e.target.value || undefined })} />
+          </div>
         </Field>
         {parents.length > 0 && (
           <Field label={L('属于哪个上级计划', 'Parent plan')}>

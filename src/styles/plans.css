@@ -615,3 +615,134 @@
 :root[data-theme='dark'] .os[data-wall='sakura'] { --wall-a: #4a2033; --wall-b: #2e1a3a; --wall-c: #3d2226; --wall-base: #140e14; }
 :root[data-theme='dark'] .os[data-wall='aurora'] { --wall-a: #0e4a3c; --wall-b: #2c1f5c; --wall-c: #0b3550; --wall-base: #070d14; }
 :root[data-theme='dark'] .os[data-wall='galaxy'] { --wall-a: #2a1660; --wall-b: #0b1f4d; --wall-c: #4a1747; --wall-base: #06050d; }
+
+/* ---------------- plan progress notes ---------------- */
+
+.pi-log {
+  list-style: none;
+  padding: 0;
+  margin: 6px 0 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pi-log li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 3px 6px;
+  border-radius: 8px;
+}
+.pi-log li:hover {
+  background: color-mix(in oklab, var(--ink) 4%, transparent);
+}
+.pl-date {
+  flex: none;
+  min-width: 34px;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+.pl-amt {
+  flex: none;
+  font-weight: 750;
+  color: var(--p-teal);
+}
+.pl-note {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pl-note.is-empty {
+  color: var(--ink-3);
+  font-style: italic;
+}
+.pl-edit {
+  flex: 1;
+}
+.pl-edit .input {
+  height: 28px;
+  font-size: 12.5px;
+}
+.pl-del {
+  width: 24px;
+  height: 24px;
+  opacity: 0;
+}
+.pi-log li:hover .pl-del {
+  opacity: 1;
+}
+.pl-more {
+  justify-content: flex-start;
+}
+
+/* the "your plan moved forward" card */
+.pn-card {
+  position: fixed;
+  z-index: 96;
+  left: 22px;
+  bottom: calc(var(--dock-h) + 22px);
+  width: min(380px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 22px;
+  background: var(--bg);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--line-2), 0 0 0 4px color-mix(in oklab, var(--p-teal) 18%, transparent);
+  animation: sum-in 0.45s var(--ease-out) both;
+}
+.pn-card header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pn-card header > div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pn-card header .small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pn-ic {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--p-teal);
+  background: color-mix(in oklab, var(--p-teal) 15%, transparent);
+}
+.pn-amount {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pn-amount .input {
+  width: 70px;
+  height: 32px;
+  text-align: center;
+}
+.pn-card textarea {
+  resize: vertical;
+}
+.pn-card footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 760px) {
+  .pn-card {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+}

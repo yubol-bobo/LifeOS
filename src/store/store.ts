@@ -387,6 +387,12 @@ export const actions = {
       }
     });
     if (gained) burst(`+${gained} XP`);
+    const q = state.quests.find((x) => x.id === id);
+    if (q?.planId && isDone(state, q, day) && state.plans.some((p) => p.id === q.planId)) {
+      const plan = state.plans.find((p) => p.id === q.planId)!;
+      const log = plan.log?.find((l) => l.questId === q.id && l.day === day);
+      window.dispatchEvent(new CustomEvent('lifeos:plan-progress', { detail: { planId: plan.id, logId: log?.id, day } }));
+    }
   },
 
   /* ---- milestones ---- */
@@ -655,6 +661,41 @@ export const actions = {
       }
     });
     return id;
+  },
+  /** Log progress on a plan (and/or a note). Returns the log id. */
+  logPlan(planId: string, entry: { amount?: number; note?: string; day?: string }) {
+    const id = uid();
+    commit((d) => {
+      const p = d.plans.find((x) => x.id === planId);
+      if (!p) return;
+      const note = entry.note?.trim() || undefined;
+      (p.log ??= []).push({ id, ts: Date.now(), day: entry.day ?? dayKey(), amount: Math.max(0, entry.amount ?? (p.target ? 1 : 0)), ...(note ? { note } : {}) });
+      if (note) grant(d, `plannote:${id}`, 'plan', 3, tr(`进展笔记 · ${p.title}`, `Progress note · ${p.title}`));
+    });
+    return id;
+  },
+  editPlanLog(planId: string, logId: string, patch: { amount?: number; note?: string }) {
+    commit((d) => {
+      const l = d.plans.find((x) => x.id === planId)?.log?.find((x) => x.id === logId);
+      if (!l) return;
+      if (patch.amount != null) l.amount = Math.max(0, patch.amount);
+      if (patch.note != null) {
+        const note = patch.note.trim();
+        if (note) l.note = note;
+        else delete l.note;
+        const p = d.plans.find((x) => x.id === planId)!;
+        if (note) grant(d, `plannote:${logId}`, 'plan', 3, tr(`进展笔记 · ${p.title}`, `Progress note · ${p.title}`));
+        else revoke(d, `plannote:${logId}`);
+      }
+    });
+  },
+  removePlanLog(planId: string, logId: string) {
+    commit((d) => {
+      const p = d.plans.find((x) => x.id === planId);
+      if (!p?.log) return;
+      p.log = p.log.filter((x) => x.id !== logId);
+      revoke(d, `plannote:${logId}`);
+    });
   },
   togglePlan(id: string) {
     let gained = 0;
@@ -1103,6 +1144,18 @@ function setQuestDone(d: State, q: Quest, day: string, on: boolean): number {
       if (grant(d, `perfect:${day}`, 'perfect', PERFECT_DAY_XP, tr('全勤日奖励', 'Perfect day bonus'), 'spirit')) gained += PERFECT_DAY_XP;
     } else revoke(d, `perfect:${day}`);
     if (!d.completions[day].length) delete d.completions[day];
+  }
+  // Linkage: a quest pulled from a counted plan logs +1 there (unticking removes it).
+  const plan = q.planId ? d.plans.find((p) => p.id === q.planId) : undefined;
+  if (plan?.target) {
+    plan.log ??= [];
+    if (on) {
+      if (!plan.log.some((l) => l.questId === q.id && l.day === day)) plan.log.push({ id: uid(), ts: Date.now(), day, amount: 1, questId: q.id });
+    } else {
+      const gone = plan.log.filter((l) => l.questId === q.id && l.day === day);
+      plan.log = plan.log.filter((l) => !(l.questId === q.id && l.day === day));
+      for (const l of gone) revoke(d, `plannote:${l.id}`);
+    }
   }
   // Linkage: a quest can log a tracker value (e.g. "Run 5 km" → Running +5).
   if (q.log && d.trackers.some((t) => t.id === q.log!.trackerId)) {

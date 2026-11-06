@@ -35,6 +35,7 @@ import { LevelUp } from './LevelUp';
 import { SummaryCard } from '../ai/SummaryCard';
 import { closeSummary } from '../ai/summary';
 import { FocusCelebrate } from './FocusCelebrate';
+import { PlanNoteSheet } from '../apps/PlanNote';
 import { clock } from '../apps/Earn';
 import { open, useRoute } from './router';
 import { Spotlight } from './Spotlight';
@@ -174,6 +175,7 @@ export function Shell() {
       <LevelUp />
       <SummaryCard />
       <FocusCelebrate />
+      <PlanNoteSheet />
       <Notifications />
       <Bursts />
       {spot && <Spotlight dark={dark} onClose={() => setSpot(false)} />}
