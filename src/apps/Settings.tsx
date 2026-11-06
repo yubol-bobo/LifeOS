@@ -213,9 +213,18 @@ function General() {
           <span className="logo-mark logo-lg" />
           <div>
             <h3>
-              LifeOS <span className="muted">1.1</span>
+              LifeOS <span className="muted num">v{__APP_VERSION__}</span>
             </h3>
             <p className="muted small">{L('开源、本地优先的人生操作系统。⌘K / Ctrl+K 打开聚焦搜索。', 'An open-source, local-first OS for your life. ⌘K / Ctrl+K opens Spotlight.')}</p>
+            <p className="small">
+              <a href={`${repoUrl()}/blob/main/CHANGELOG.md`} target="_blank" rel="noreferrer">
+                {L('更新日志 ↗', 'Changelog ↗')}
+              </a>
+              {' · '}
+              <a href={repoUrl()} target="_blank" rel="noreferrer">
+                {L('源代码 ↗', 'Source ↗')}
+              </a>
+            </p>
           </div>
         </Card>
       </div>
@@ -743,4 +752,11 @@ export function ProjectsEditor() {
       </Button>
     </>
   );
+}
+
+/** The repo serving this site (a fork links to itself); falls back to the original project. */
+function repoUrl() {
+  const m = /^([a-z0-9-]+)\.github\.io$/i.exec(location.hostname);
+  const repo = location.pathname.split('/').filter(Boolean)[0];
+  return m && repo ? `https://github.com/${m[1]}/${repo}` : 'https://github.com/yubol-bobo/LifeOS';
 }

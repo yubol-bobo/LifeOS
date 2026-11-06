@@ -1,8 +1,11 @@
 name: Deploy to GitHub Pages
 
 on:
+  # Only main goes live. To preview another branch, run this workflow by hand:
+  # Actions → Deploy to GitHub Pages → Run workflow → pick the branch.
+  # (The preview replaces the live site until the next push to main.)
   push:
-    branches: [main, 'claude/**']
+    branches: [main]
   # Google Scholar sync: every 8 hours (≈ 90 SerpAPI calls / month for ≤ 100 papers).
   # Schedules only run on the default branch.
   schedule:
