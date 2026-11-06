@@ -1,3 +1,4 @@
+import { open } from '../os/router';
 import { useState } from 'react';
 import { useL } from '../lib/i18n';
 import { notify } from '../os/notify';
@@ -80,7 +81,15 @@ export function Shop() {
       )}
 
       {history.length > 0 && (
-        <Card title={L('兑换记录', 'Redemption history')} icon="clock">
+        <Card
+          title={L('兑换记录', 'Redemption history')}
+          icon="clock"
+          action={
+            <button className="link-btn" onClick={() => (sessionStorage.setItem('lifeos:timeline-cat', 'reward'), open('timeline'))}>
+              {L('全部 →', 'All →')}
+            </button>
+          }
+        >
           <ul className="xp-log">
             {history.map((e) => (
               <li key={e.id}>

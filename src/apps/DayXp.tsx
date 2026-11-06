@@ -1,4 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useSyncExternalStore } from 'react';
+import { money } from '../lib/format';
+import { buildTimeline } from '../store/timeline';
+import { MoodFace } from '../ui/MoodFace';
 import { addDays, dayKey, parseDay } from '../lib/date';
 import { useL, useLang } from '../lib/i18n';
 import { open } from '../os/router';
@@ -37,7 +40,26 @@ const cssVar = (name: string, fallback: string) => {
   }
 };
 
-/** One day's XP diary: a cute 3D block chart and the full log, with day-to-day navigation. */
+/* ---- open the day view from anywhere: openDay('2026-11-05') ---- */
+let current: string | null = null;
+const subs = new Set<() => void>();
+export function openDay(day: string | null) {
+  current = day;
+  subs.forEach((f) => f());
+}
+const useCurrentDay = () =>
+  useSyncExternalStore(
+    (f) => (subs.add(f), () => subs.delete(f)),
+    () => current,
+  );
+
+/** Mounted once in the shell. */
+export function DayHost() {
+  const day = useCurrentDay();
+  return <DayXpModal day={day} onClose={() => openDay(null)} onDay={openDay} />;
+}
+
+/** One day, fully traceable: XP as a cute 3D block chart, then every record of that day in order. */
 export function DayXpModal({ day, onClose, onDay }: { day: string | null; onClose: () => void; onDay: (d: string) => void }) {
   const L = useL();
   const lang = useLang();
@@ -51,6 +73,8 @@ export function DayXpModal({ day, onClose, onDay }: { day: string | null; onClos
   const today = dayKey();
 
   const list = useMemo(() => (day ? events.filter((e) => dayKey(e.ts) === day).sort((a, b) => a.ts - b.ts) : []), [events, day]);
+  const state = useStore((x) => x);
+  const feed = useMemo(() => (day ? buildTimeline(state, lang, (v) => money(v, state.profile.currency, 0)).filter((e) => e.day === day).reverse() : []), [state, day, lang]);
   if (!day) return null;
 
   const xp = list.reduce((a, e) => a + Math.max(0, e.xp), 0);
@@ -124,7 +148,7 @@ export function DayXpModal({ day, onClose, onDay }: { day: string | null; onClos
           <span>{L('金币', 'coins')}</span>
         </div>
         <div>
-          <b className="num">{list.length}</b>
+          <b className="num">{feed.length}</b>
           <span>{L('条记录', 'entries')}</span>
         </div>
         {after > before && (
@@ -180,24 +204,29 @@ export function DayXpModal({ day, onClose, onDay }: { day: string | null; onClos
         <p className="dx-empty muted">{day === today ? L('今天还没有经验记录，去完成一个任务吧～', 'No XP yet today — go finish a quest!') : L('这一天没有经验记录，休息也很重要。', 'No XP that day. Rest matters too.')}</p>
       )}
 
-      {list.length > 0 && (
-        <ol className="dx-log">
-          {list.map((e) => {
-            const k = KINDS[e.kind] ?? { zh: e.kind, en: e.kind, icon: 'sparkles', color: 'slate' };
-            const focus = hov && (by === 'kind' ? e.kind === hov : (e.attr ?? 'none') === hov);
-            return (
-              <li key={e.id} className={`${focus ? 'is-focus' : ''} ${hov && !focus ? 'is-dim' : ''}`}>
-                <span className="dx-time num">{time(e.ts)}</span>
-                <span className="dx-ic" style={{ color: `var(--p-${k.color})`, background: `color-mix(in oklab, var(--p-${k.color}) 14%, transparent)` }}>
-                  <Icon name={k.icon} size={14} />
-                </span>
-                <span className="dx-label">{e.label}</span>
-                {e.attr && attrs.list.some((a) => a.id === e.attr) && <span className="dx-attr muted small">{attrs.label(e.attr)}</span>}
-                <span className={`dx-xp num ${e.xp > 0 ? '' : 'is-zero'}`}>{e.xp > 0 ? `+${e.xp} XP` : e.coins < 0 ? `${e.coins} 🪙` : '—'}</span>
-              </li>
-            );
-          })}
-        </ol>
+      {feed.length > 0 && (
+        <>
+          <p className="dx-sub muted small">{L('这一天的全部记录', 'Everything recorded that day')}</p>
+          <ol className="dx-log">
+            {feed.map((e) => {
+              const focus = hov && (by === 'kind' ? e.kind === hov : (e.attr ?? 'none') === hov);
+              return (
+                <li key={e.id} className={`${focus ? 'is-focus' : ''} ${hov && !focus ? 'is-dim' : ''}`}>
+                  <span className="dx-time num">{time(e.ts)}</span>
+                  <span className="dx-ic" style={{ color: `var(--p-${e.color})`, background: `color-mix(in oklab, var(--p-${e.color}) 14%, transparent)` }}>
+                    {e.mood ? <MoodFace v={e.mood as 1 | 2 | 3 | 4 | 5} size={18} /> : <Icon name={e.icon} size={14} />}
+                  </span>
+                  <span className="dx-label">
+                    {e.title}
+                    {e.detail && <small className="muted"> · {e.detail}</small>}
+                  </span>
+                  <span className="dx-attr muted small">{e.value ?? (e.attr && attrs.list.some((x) => x.id === e.attr) ? attrs.label(e.attr) : '')}</span>
+                  <span className={`dx-xp num ${e.xp ? '' : 'is-zero'}`}>{e.xp ? `+${e.xp} XP` : ''}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </>
       )}
     </Modal>
   );

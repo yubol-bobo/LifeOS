@@ -1,7 +1,9 @@
+import { open } from '../os/router';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useAttrs } from '../store/attrs';
 import { Pie3D } from '../scene/Pie3D';
 import { useTheme } from '../os/theme';
+import { openDay } from './DayXp';
 import { dayKey, lastNDays, parseDay, startOfWeek } from '../lib/date';
 import { duration, money } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -378,9 +380,17 @@ export function Earn() {
 
       <div className="grid-2-1">
         <Card title={L('近 14 天收入', 'Last 14 days')} icon="chart">
-          <Columns data={chart} tone="wealth" height={220} format={(v) => money(v, cur, 0)} />
+          <Columns data={chart} tone="wealth" height={220} format={(v) => money(v, cur, 0)} onPick={(i) => openDay(days[i])} />
         </Card>
-        <Card title={L('最近时段', 'Recent sessions')} icon="clock">
+        <Card
+          title={L('最近时段', 'Recent sessions')}
+          icon="clock"
+          action={
+            <button className="link-btn" onClick={() => (sessionStorage.setItem('lifeos:timeline-cat', 'focus'), open('timeline'))}>
+              {L('全部记录 →', 'All sessions →')}
+            </button>
+          }
+        >
           {recent.length === 0 ? (
             <Empty icon="timer" title={L('还没有记录', 'Nothing logged yet')} />
           ) : (
@@ -393,7 +403,10 @@ export function Earn() {
                       {x.note || L('专注时段', 'Focus session')} <GoalTag goalId={x.goalId} /> {x.projectId && <ProjectTag id={x.projectId} />}
                     </strong>
                     <span className="muted num">
-                      {new Date(x.start).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })} · {duration(x.activeMs)}
+                      <button className="link-btn" onClick={() => openDay(dayKey(x.start))}>
+                        {new Date(x.start).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })}
+                      </button>{' '}
+                      · {duration(x.activeMs)}
                     </span>
                   </div>
                   <span className={`num sess-amt ${x.rate ? '' : 'is-free'}`}>{x.rate ? money(x.earned, cur) : `🌱 +${Math.round(x.activeMs / 60_000)} XP`}</span>

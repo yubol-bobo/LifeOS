@@ -1,3 +1,4 @@
+import { openDay } from './DayXp';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { openSummary, useSummary } from '../ai/summary';
 import { addDays, dayKey, lastNDays, parseDay } from '../lib/date';
@@ -242,7 +243,15 @@ export function Review() {
         </div>
 
         <div className="rv-side">
-          <Card title={L('这一天的数据', 'The day in numbers')} icon="chart">
+          <Card
+            title={L('这一天的数据', 'The day in numbers')}
+            icon="chart"
+            action={
+              <button className="link-btn" onClick={() => openDay(day)}>
+                {L('全部记录 →', 'Full record →')}
+              </button>
+            }
+          >
             <ul className="rv-facts">
               <li>
                 <Icon name="list-checks" size={15} />

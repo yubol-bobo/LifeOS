@@ -148,12 +148,14 @@ export function Columns({
   height = 160,
   format = (v: number) => v.toLocaleString(),
   highlightLast = true,
+  onPick,
 }: {
   data: Point[];
   tone?: Attr | 'accent' | 'gold';
   height?: number;
   format?: (v: number) => string;
   highlightLast?: boolean;
+  onPick?: (index: number) => void;
 }) {
   const [ref, w] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
@@ -185,7 +187,7 @@ export function Columns({
             const r = Math.min(4, h);
             const isLast = highlightLast && i === data.length - 1;
             return (
-              <g key={i} onPointerEnter={() => setHover(i)}>
+              <g key={i} onPointerEnter={() => setHover(i)} onClick={onPick ? () => onPick(i) : undefined} style={onPick ? { cursor: 'pointer' } : undefined}>
                 <rect x={pad.l + band * i} y={pad.t} width={band} height={ih} fill="transparent" />
                 {h > 0 && (
                   <path

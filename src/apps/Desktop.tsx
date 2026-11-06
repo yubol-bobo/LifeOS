@@ -1,6 +1,6 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { LifeSettingsModal } from './LifeSettings';
-import { DayXpModal } from './DayXp';
+import { openDay } from './DayXp';
 import { addDays, dayKey, daysBetween, lastNDays, lifeProgress, parseDay } from '../lib/date';
 import { compact, money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -43,7 +43,6 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const attrs = useAttrs();
   const hide = new Set(s.ui.widgets);
   const [lifeOpen, setLifeOpen] = useState(false);
-  const [xpDay, setXpDay] = useState<string | null>(null);
   const thisWeek = periodOf('week');
   const weekPlans = s.plans.filter((p) => p.scope === 'week' && p.period === thisWeek);
   const soon = upcoming(s);
@@ -91,7 +90,6 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   return (
     <div className={`desktop ${hidden ? 'is-hidden' : ''}`} aria-hidden={hidden}>
       <LifeSettingsModal open={lifeOpen} onClose={() => setLifeOpen(false)} />
-      <DayXpModal day={xpDay} onClose={() => setXpDay(null)} onDay={setXpDay} />
       {/* ---------- hero / planet ---------- */}
       {!hide.has('hero') && (
       <section className="widget w-hero">
@@ -467,8 +465,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
           weeks={20}
           max={maxDay}
           value={(d) => xpByDay[d] ?? 0}
-          selected={xpDay ?? undefined}
-          onPick={setXpDay}
+          onPick={openDay}
           label={(d, v) => (
             <>
               <span className="tip-k">{d}</span>
