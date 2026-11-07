@@ -20,6 +20,17 @@ export function isScheduled(q: Quest, day: string) {
   return q.kind === 'daily' && !q.archived && (!q.days?.length || q.days.includes(weekday(day)));
 }
 
+/**
+ * Does this one-off quest belong on today's list? Things you add to Today do. Steps of a project are
+ * long-running work: they stay in their project (with an optional due date) and never fill up Today —
+ * unless you deliberately pulled one in from a week plan.
+ */
+export function onToday(q: Quest, _day = dayKey()) {
+  void _day;
+  if (q.kind !== 'once' || q.archived) return false;
+  return !q.step || !!q.planId;
+}
+
 export function scheduledDailies(s: State, day = dayKey()) {
   return s.quests.filter((q) => isScheduled(q, day));
 }

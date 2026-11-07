@@ -133,6 +133,8 @@ export function migrate(parsed: Partial<State>): State {
     s.ui.dock.splice(after >= 0 ? after + 1 : Math.max(0, s.ui.dock.length - 1), 0, id);
   });
   s.ui.dock = s.ui.dock.filter((id) => DEFAULT_DOCK.includes(id));
+  // Before 0.9.3, tasks added inside a project were plain quests and crowded Today's list; they are project steps.
+  for (const q of s.quests ?? []) if (q.kind === 'once' && q.projectId && !q.planId && q.step === undefined) q.step = true;
   // Papers synced before 0.9 got full stage XP as if written inside LifeOS. Re-base them: the stages
   // they arrived at give a one-time "past work" XP instead; later moves on the board still count.
   if (s.papers?.some((p) => !p.importedAs && p.source && IMPORT_SOURCES.has(p.source)))

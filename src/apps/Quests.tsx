@@ -6,13 +6,13 @@ import { useL, useLang } from '../lib/i18n';
 import { open } from '../os/router';
 import { useMetrics } from '../store/hooks';
 import { useAttrs } from '../store/attrs';
-import { isScheduled } from '../store/links';
+import { isScheduled, onToday } from '../store/links';
 import { QUEST_XP } from '../store/rules';
 import { actions, getState, useStore } from '../store/store';
 import type { Attr, Difficulty, Quest } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, Card, CheckBubble, Chip, Empty, Field, Modal, Segmented, Stat } from '../ui/kit';
-import { GoalTag, PlanTag, ProjectSelect, ProjectTag } from './goals';
+import { GoalTag, PlanTag, ProjectSelect, ProjectTag, DueChip } from './goals';
 
 export const WEEKDAYS: [string, string][] = [
   ['一', 'M'],
@@ -38,8 +38,8 @@ export function Quests() {
   const dailies = allDailies.filter((q) => isScheduled(q, day));
   const resting = allDailies.filter((q) => !isScheduled(q, day));
   const once = s.quests.filter((q) => q.kind === 'once' && !q.archived);
-  const openOnce = once.filter((q) => !q.doneAt);
-  const doneOnce = once.filter((q) => q.doneAt).sort((a, b) => b.doneAt! - a.doneAt!);
+  const openOnce = once.filter((q) => !q.doneAt && onToday(q, day));
+  const doneOnce = once.filter((q) => q.doneAt && (!q.step || q.planId)).sort((a, b) => b.doneAt! - a.doneAt!);
   const dailyDone = dailies.filter((q) => done.has(q.id)).length;
   const week = lastNDays(7);
   const xpToday = dailies.filter((q) => done.has(q.id)).reduce((a, q) => a + QUEST_XP[q.difficulty], 0);
@@ -158,6 +158,7 @@ export function Quests() {
             <GoalTag goalId={q.goalId} />
             <ProjectTag id={q.projectId} />
             <PlanTag id={q.planId} />
+            {!done && <DueChip due={q.due} />}
           </span>
         </div>
         {week && (
@@ -234,6 +235,7 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
       focusMin: d.focusMin || undefined,
       log: d.log?.trackerId ? d.log : undefined,
       projectId: d.projectId || undefined,
+      due: d.kind === 'once' ? d.due || undefined : undefined,
     };
     if (d.id) actions.updateQuest(d.id, patch);
     else actions.addQuest(patch);
@@ -356,9 +358,16 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
               <input className="input" type="number" step="any" disabled={!d.log} value={d.log?.amount ?? ''} onChange={(e) => d.log && set({ log: { ...d.log, amount: +e.target.value } })} />
             </Field>
           </div>
-          <Field label={L('属于哪个项目', 'Project')}>
-            <ProjectSelect value={d.projectId} onChange={(v) => set({ projectId: v })} />
-          </Field>
+          <div className="row2">
+            <Field label={L('属于哪个项目', 'Project')}>
+              <ProjectSelect value={d.projectId} onChange={(v) => set({ projectId: v })} />
+            </Field>
+            {d.kind === 'once' && (
+              <Field label={L('截止日期（可选）', 'Due date (optional)')}>
+                <input className="input" type="date" value={d.due ?? ''} onChange={(e) => set({ due: e.target.value || undefined })} />
+              </Field>
+            )}
+          </div>
           <Field label={L('专注满多少分钟自动完成', 'Auto-complete after focusing (min)')} hint={L('点任务旁的 ▶ 开始专注，当天累计够时长就自动打勾。', 'Hit ▶ on the quest to focus; it ticks itself once today’s focus reaches this.')}>
             <input className="input" type="number" min={0} step={5} value={d.focusMin ?? ''} placeholder={L('不设置', 'Off')} onChange={(e) => set({ focusMin: e.target.value ? +e.target.value : undefined })} />
           </Field>

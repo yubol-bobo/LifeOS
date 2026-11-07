@@ -220,6 +220,8 @@ export interface Quest {
   log?: { trackerId: string; amount: number }; // logs to a tracker when completed
   projectId?: string; // a task of this project
   planId?: string; // pulled in from a week plan item
+  due?: string; // optional due date (YYYY-MM-DD)
+  step?: boolean; // a step of a project (added in the project): lives in the project, never on today's list
 }
 
 export type MilestoneSize = 'small' | 'big' | 'epic';

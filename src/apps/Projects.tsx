@@ -14,6 +14,7 @@ import type { Category, Project } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, Card, CheckBubble, Chip, Empty, Field, Modal, Segmented } from '../ui/kit';
 import { scopeName } from './Plan';
+import { DueChip } from './goals';
 import { focusProject, LiveFocusBar, ProjectBoard, QuickStart } from './ProjectBoard';
 import { EffortCard, PresetEditor } from './Earn';
 import { useLiveSession } from '../os/live';
@@ -244,6 +245,7 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const cats = useCategories();
   const p = s.projects.find((x) => x.id === id);
   const [task, setTask] = useState('');
+  const [taskDue, setTaskDue] = useState('');
   const [confirmDel, setConfirmDel] = useState(false);
   if (!p) return null;
   const st = projectStats(s, p);
@@ -261,16 +263,28 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
 
           <section className="pd-sec">
             <h4>
-              <Icon name="list-checks" size={15} /> {L('任务', 'Tasks')} <span className="muted num">{st.doneTasks.length}/{st.tasks.filter((q) => q.kind === 'once').length}</span>
+              <Icon name="list-checks" size={15} /> {L('步骤', 'Steps')} <span className="muted num">{st.doneTasks.length}/{st.tasks.filter((q) => q.kind === 'once').length}</span>
             </h4>
             <ul className="pd-list">
               {st.tasks
                 .filter((q) => q.kind === 'once')
-                .sort((a, b) => Number(!!a.doneAt) - Number(!!b.doneAt))
+                // open steps first, by due date (undated last); done ones at the bottom
+                .sort((a, b) => Number(!!a.doneAt) - Number(!!b.doneAt) || (a.due ?? '9').localeCompare(b.due ?? '9'))
                 .map((q) => (
-                  <li key={q.id} className={q.doneAt ? 'is-done' : ''}>
+                  <li key={q.id} className={`pd-step ${q.doneAt ? 'is-done' : ''}`}>
                     <CheckBubble checked={!!q.doneAt} onChange={() => actions.toggleQuest(q.id)} tone={p.color as 'blue'} label={q.title} />
-                    <span>{q.title}</span>
+                    <span className="pd-step-title">{q.title}</span>
+                    {!q.doneAt && <DueChip due={q.due} />}
+                    {!q.doneAt && (
+                      <input
+                        className="input pd-due"
+                        type="date"
+                        value={q.due ?? ''}
+                        title={L('截止日期（可选）', 'Due date (optional)')}
+                        aria-label={L(`「${q.title}」的截止日期`, `Due date for “${q.title}”`)}
+                        onChange={(e) => actions.updateQuest(q.id, { due: e.target.value || undefined })}
+                      />
+                    )}
                   </li>
                 ))}
               {st.tasks
@@ -287,12 +301,14 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!task.trim()) return;
-                actions.addQuest({ title: task.trim(), kind: 'once', attr: s.attributes[0]?.id ?? 'mind', difficulty: 'normal', projectId: p.id });
+                actions.addQuest({ title: task.trim(), kind: 'once', attr: s.attributes[0]?.id ?? 'mind', difficulty: 'normal', projectId: p.id, step: true, ...(taskDue ? { due: taskDue } : {}) });
+                setTaskDue('');
                 setTask('');
               }}
             >
               <Icon name="plus" size={16} />
-              <input value={task} onChange={(e) => setTask(e.target.value)} placeholder={L('加一个任务，回车保存（也会出现在「任务」里）', 'Add a task, press Enter (also appears in Quests)')} />
+              <input value={task} onChange={(e) => setTask(e.target.value)} placeholder={L('加一个步骤，回车保存（留在项目里，不会进今日任务）', 'Add a step, press Enter (stays in the project, not on Today)')} />
+              <input className="input pd-due" type="date" value={taskDue} onChange={(e) => setTaskDue(e.target.value)} title={L('截止日期（可选）', 'Due date (optional)')} aria-label={L('新步骤的截止日期（可选）', 'Due date for the new step (optional)')} />
             </form>
           </section>
 

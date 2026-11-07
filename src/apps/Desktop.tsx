@@ -17,8 +17,8 @@ import { Heatmap, Radar, Sparkline } from '../ui/charts';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, CheckBubble, Chip, Ring } from '../ui/kit';
 import { Odometer } from '../ui/Odometer';
-import { isScheduled, weeklyReview } from '../store/links';
-import { GoalTag } from './goals';
+import { isScheduled, onToday, weeklyReview } from '../store/links';
+import { DueChip, GoalTag } from './goals';
 import { useStatusLabel } from './Research';
 import type { PaperStatus } from '../store/types';
 import { QuickAdd } from './Quests';
@@ -61,7 +61,8 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
     hour < 5 ? L('夜深了', 'Burning the midnight oil') : hour < 12 ? L('早上好', 'Good morning') : hour < 18 ? L('下午好', 'Good afternoon') : L('晚上好', 'Good evening');
 
   const doneToday = new Set(s.completions[today] ?? []);
-  const quests = s.quests.filter((q) => !q.archived && (q.kind === 'daily' ? isScheduled(q, today) : !q.doneAt || q.doneAt > Date.now() - 86_400_000));
+  // project steps stay in their project until they're due (or pulled in from a plan)
+  const quests = s.quests.filter((q) => !q.archived && (q.kind === 'daily' ? isScheduled(q, today) : onToday(q, today) && (!q.doneAt || q.doneAt > Date.now() - 86_400_000)));
   const dailies = s.quests.filter((q) => isScheduled(q, today));
   const dailyDone = dailies.filter((q) => doneToday.has(q.id)).length;
 
@@ -167,6 +168,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
               <li key={q.id} className={done ? 'is-done' : ''}>
                 <CheckBubble checked={done} onChange={() => actions.toggleQuest(q.id)} tone={q.attr} label={q.title} />
                 <span className="mq-title">{q.title}</span>
+                {!done && <DueChip due={q.due} />}
                 <GoalTag goalId={q.goalId} />
                 <span className="mq-xp num">+{QUEST_XP[q.difficulty]}</span>
               </li>
@@ -630,6 +632,7 @@ function ProjectProgressWidget({ live }: { live: ReturnType<typeof useLiveSessio
             const pct = st.pct ?? (total ? st.doneTasks.length / total : null);
             const ms = todayMs(p.id);
             const days = p.deadline ? daysBetween(today, p.deadline) : null;
+            const next = [...st.open].sort((a, b) => (a.due ?? '9').localeCompare(b.due ?? '9'))[0];
             return (
               <li key={p.id} style={{ '--tone': `var(--p-${p.color})` } as CSSProperties}>
                 <div className="pp-top">
@@ -648,6 +651,13 @@ function ProjectProgressWidget({ live }: { live: ReturnType<typeof useLiveSessio
                   {L(`今天 ${(ms / 3_600_000).toFixed(1)}h`, `today ${(ms / 3_600_000).toFixed(1)}h`)}
                   {days != null && <> · {days >= 0 ? L(`还剩 ${days} 天`, `${days}d left`) : L('已逾期', 'overdue')}</>}
                 </span>
+                {next && (
+                  <span className="pp-next small">
+                    <span className="muted">{L('下一步：', 'Next: ')}</span>
+                    <span className="pp-next-t">{next.title}</span>
+                    <DueChip due={next.due} />
+                  </span>
+                )}
               </li>
             );
           })}

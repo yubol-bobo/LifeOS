@@ -887,3 +887,76 @@
     box-shadow: 0 0 0 3px transparent;
   }
 }
+
+/* ---- project steps with optional due dates ---- */
+.pd-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pd-step-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.pd-due {
+  width: auto;
+  min-width: 0;
+  padding: 3px 6px;
+  font-size: 12px;
+  color: var(--ink-3);
+  background: transparent;
+  box-shadow: none;
+  border: 1px dashed color-mix(in oklab, var(--ink-3) 35%, transparent);
+}
+
+.pd-due:focus,
+.pd-due:hover {
+  color: var(--ink);
+  border-style: solid;
+}
+
+.due-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  background: color-mix(in oklab, var(--ink-3) 10%, transparent);
+  white-space: nowrap;
+}
+
+.due-chip.is-soon {
+  color: var(--p-amber);
+  background: color-mix(in oklab, var(--p-amber) 14%, transparent);
+}
+
+.due-chip.is-today {
+  color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 14%, transparent);
+}
+
+.due-chip.is-late {
+  color: var(--p-red);
+  background: color-mix(in oklab, var(--p-red) 14%, transparent);
+}
+
+.pp-next {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pp-next-t {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
