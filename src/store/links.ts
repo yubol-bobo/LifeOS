@@ -28,7 +28,9 @@ export function isScheduled(q: Quest, day: string) {
 export function onToday(q: Quest, _day = dayKey()) {
   void _day;
   if (q.kind !== 'once' || q.archived) return false;
-  return !q.step || !!q.planId;
+  if (q.planId) return true; // pulled in from a plan on purpose
+  if (q.projectId) return q.step === false; // a project's step, unless you added it to Today yourself
+  return !q.step;
 }
 
 export function scheduledDailies(s: State, day = dayKey()) {

@@ -39,7 +39,7 @@ export function Quests() {
   const resting = allDailies.filter((q) => !isScheduled(q, day));
   const once = s.quests.filter((q) => q.kind === 'once' && !q.archived);
   const openOnce = once.filter((q) => !q.doneAt && onToday(q, day));
-  const doneOnce = once.filter((q) => q.doneAt && (!q.step || q.planId)).sort((a, b) => b.doneAt! - a.doneAt!);
+  const doneOnce = once.filter((q) => q.doneAt && onToday(q, day)).sort((a, b) => b.doneAt! - a.doneAt!);
   const dailyDone = dailies.filter((q) => done.has(q.id)).length;
   const week = lastNDays(7);
   const xpToday = dailies.filter((q) => done.has(q.id)).reduce((a, q) => a + QUEST_XP[q.difficulty], 0);
@@ -245,6 +245,8 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
       due: d.kind === 'once' ? d.due || undefined : undefined,
       planId: d.planId || undefined,
       planAmount: d.planId && d.planAmount && d.planAmount !== 1 ? d.planAmount : undefined,
+      // added here (not inside a project): a to-do for Today even when tagged with a project
+      ...(d.kind === 'once' && d.projectId && !d.id ? { step: false } : {}),
     };
     if (d.id) actions.updateQuest(d.id, patch);
     else actions.addQuest(patch);

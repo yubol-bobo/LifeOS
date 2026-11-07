@@ -54,7 +54,7 @@ export function Earn() {
   const quests = useStore((s) => s.quests);
   const completions = useStore((s) => s.completions);
   const openQuests = quests.filter((q) => (q.kind === 'daily' ? isScheduled(q, dayKey()) && !(completions[dayKey()] ?? []).includes(q.id) : onToday(q) && !q.doneAt));
-  const openSteps = quests.filter((q) => q.kind === 'once' && q.step && !q.archived && !q.doneAt && !onToday(q));
+  const openSteps = quests.filter((q) => q.kind === 'once' && !q.archived && !q.doneAt && !onToday(q));
   const start = () => {
     const q = link.startsWith('q:') ? quests.find((x) => x.id === link.slice(2)) : undefined;
     const goalId = q ? q.goalId : link.startsWith('g:') ? link.slice(2) : undefined;
