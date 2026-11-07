@@ -25,8 +25,8 @@ LifeOS gathers the scattered systems of a life (daily to-dos, life milestones, p
 - **Trackers**: weight, running distance, reading, sleep… any number, in "latest reading" or "running total" mode, with targets and trend charts.
 - **Reward Shop**: XP also mints coins (5 XP = 1 coin). Price the treats you want and buy them with coins.
 - **Growth**: three tabs.
-  - **The Road**: your level, per-attribute levels, and a horizontal road from Lv.1 to 60 with your pet standing where you are. 10 eras (Stardust · Sprout · Wanderer · Pathfinder · Artisan · Scholar · Sage · Master · Legend · Eternal), each with a title. Along the way you unlock 6 pet accessories, 5 desktop wallpapers and 6 planet upgrades (a second moon, a cottage, rings, a satellite, aurora, golden stardust). Crossing an unlock point pops a celebration where you can put it on right away.
-  - **Trophy Hall**: **197 achievements in 16 categories** (quests, streaks, plans, goals, projects, research, focus, wealth, health, mood, review, trackers, growth, exploration, pet, hidden), grouped into series with tiers: bronze 59 · silver 57 · gold 49 · legendary 32. Achievement points, **Almost there**, category filters; hidden series show only "???" and a hint (late-night check-ins, not stopping on weekends…).
+  - **The Road**: your level, per-attribute levels, and a horizontal road from Lv.1 to 100 with your pet standing where you are. 20 eras (Stardust · Sprout · Wanderer · Pathfinder · Apprentice · Artisan · Scholar · Voyager · Guardian · Sage · Pioneer · Dreamweaver · Master · Luminary · Oracle · Legend · Starlight · Myth · Cosmos · Eternal), each with a title. Along the way you unlock 11 pet accessories, 11 desktop wallpapers and 6 planet upgrades (a second moon, a cottage, rings, a satellite, aurora, golden stardust). The road is long on purpose: at a steady ~400 XP a day, Lv.20 takes about two months, Lv.60 about two years and Lv.100 about six. Crossing an unlock point pops a celebration where you can put it on right away.
+  - **Trophy Hall**: **199 achievements in 16 categories** (quests, streaks, plans, goals, projects, research, focus, wealth, health, mood, review, trackers, growth, exploration, pet, hidden), grouped into series with tiers: bronze 59 · silver 57 · gold 49 · legendary 34. Achievement points, **Almost there**, category filters; hidden series show only "???" and a hint (late-night check-ins, not stopping on weekends…).
   - **Style**: titles (era titles plus special titles from the top tier of some series), pet accessories and desktop wallpapers, all switchable any time.
 - **Settings**: almost everything can be changed.
   - **Sync**: end-to-end encrypted multi-device sync (see [SETUP §8](../SETUP.md#8-sync-between-devices)).
@@ -96,7 +96,7 @@ Every number lives in [`src/store/rules.ts`](../src/store/rules.ts):
 | Water / stretch / pomodoro | 2 / 4 / 10 (daily caps apply) |
 | Achievement unlocked | bronze 50 · silver 120 · gold 300 · legendary 800 |
 
-Reaching level L takes `50 × L × (L − 1)` total XP. Coins = XP ÷ 5. All XP is recorded in a ledger de-duplicated by `ref`, so un-ticking something takes back exactly the XP it gave.
+Reaching level L takes `40 × (L − 1)^2.2` total XP (Lv.100 is the top). Papers synced from Google Scholar / OpenAlex / Semantic Scholar count as past work: 30 XP each, with full stage XP only for stages they reach afterwards in LifeOS. Coins = XP ÷ 5. All XP is recorded in a ledger de-duplicated by `ref`, so un-ticking something takes back exactly the XP it gave.
 
 ## Tech stack
 

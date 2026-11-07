@@ -96,6 +96,48 @@ function Accessory({ kind, acc, id, back = false }: { kind: PetKind; acc: string
         <rect x="-12" y="-3" width="24" height="3" fill="#FFE08A" />
       </g>
     );
+  if (acc === 'flower')
+    return (
+      <g className="acc-flower" transform={`translate(${kind === 'bolt' ? 62 : 64} ${a.top + 4}) rotate(-12)`}>
+        {[0, 72, 144, 216, 288].map((r) => (
+          <ellipse key={r} cx="0" cy="-5.2" rx="3.6" ry="5" fill="#FF9EC0" stroke="#F06A9B" strokeWidth=".8" transform={`rotate(${r})`} />
+        ))}
+        <circle r="3.2" fill="#FFD25E" stroke="#E8A82B" strokeWidth=".8" />
+      </g>
+    );
+  if (acc === 'bow')
+    return (
+      <g className="acc-bow" transform={`translate(${kind === 'bolt' ? 62 : 36} ${a.top + 3}) rotate(-14)`}>
+        <path d="M0 0 L-11 -7 Q-14 0 -11 7 Z" fill="#FF6F96" stroke="#D94A76" strokeWidth="1" strokeLinejoin="round" />
+        <path d="M0 0 L11 -7 Q14 0 11 7 Z" fill="#FF6F96" stroke="#D94A76" strokeWidth="1" strokeLinejoin="round" />
+        <circle r="3" fill="#FF8FB0" stroke="#D94A76" strokeWidth="1" />
+        <path d="M-7 -3 L-5 0 M7 -3 L5 0" stroke="#fff" strokeOpacity=".5" strokeWidth="1.2" strokeLinecap="round" />
+      </g>
+    );
+  if (acc === 'headphones')
+    return (
+      <g className="acc-headphones">
+        <path d={`M${50 - a.w + 3} ${a.top + 22} Q${50 - a.w + 2} ${a.top - 8} 50 ${a.top - 8} Q${50 + a.w - 2} ${a.top - 8} ${50 + a.w - 3} ${a.top + 22}`} fill="none" stroke="#3B3A4E" strokeWidth="3.4" strokeLinecap="round" />
+        <rect x={50 - a.w - 3} y={a.top + 16} width="10" height="16" rx="4" fill="#7A5AE6" stroke="#3B3A4E" strokeWidth="1.4" />
+        <rect x={50 + a.w - 7} y={a.top + 16} width="10" height="16" rx="4" fill="#7A5AE6" stroke="#3B3A4E" strokeWidth="1.4" />
+      </g>
+    );
+  if (acc === 'wizard')
+    return (
+      <g className="acc-wizard" transform={`translate(${a.hatX} ${a.top + 3}) rotate(-8)`}>
+        <path d="M-14 0 Q-4 -10 -2 -28 Q6 -22 14 0 Z" fill="#4B3FB8" stroke="#2E2580" strokeWidth="1.2" strokeLinejoin="round" />
+        <ellipse cx="0" cy="0" rx="17" ry="3.6" fill="#5B4FD0" stroke="#2E2580" strokeWidth="1.2" />
+        <path d="M-4 -12 l1.2 2.6 2.8.3 -2.1 1.9.6 2.8 -2.5 -1.4 -2.5 1.4.6 -2.8 -2.1 -1.9 2.8 -.3 Z" fill="#FFD25E" />
+        <circle cx="5" cy="-6" r="1.3" fill="#FFE9A8" />
+      </g>
+    );
+  if (acc === 'star')
+    return (
+      <g className="acc-star" transform={`translate(${kind === 'bolt' ? 40 : 34} ${a.top + 5}) rotate(10)`}>
+        <path d="M0 -8 L2.4 -2.6 8 -2.4 3.6 1.2 5.2 6.8 0 3.6 -5.2 6.8 -3.6 1.2 -8 -2.4 -2.4 -2.6 Z" fill="#FFD25E" stroke="#E0A11B" strokeWidth="1.1" strokeLinejoin="round" />
+        <circle cx="-1.5" cy="-1.5" r="1.2" fill="#fff" opacity=".7" />
+      </g>
+    );
   return null;
 }
 
