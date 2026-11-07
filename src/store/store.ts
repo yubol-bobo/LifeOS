@@ -98,6 +98,10 @@ export function defaultState(): State {
   };
 }
 
+/** XP for a paper synced from Scholar / OpenAlex / Semantic Scholar: past work, so a small one-time amount. */
+export const IMPORTED_PAPER_XP = 30;
+const IMPORT_SOURCES = new Set(['gscholar', 'openalex', 's2']);
+
 /** Bring an older or partial save up to the current shape. */
 export function migrate(parsed: Partial<State>): State {
   const d = defaultState();
@@ -127,6 +131,14 @@ export function migrate(parsed: Partial<State>): State {
     s.ui.dock.splice(after >= 0 ? after + 1 : Math.max(0, s.ui.dock.length - 1), 0, id);
   });
   s.ui.dock = s.ui.dock.filter((id) => DEFAULT_DOCK.includes(id));
+  // Papers synced before 0.9 got full stage XP as if written inside LifeOS. Re-base them: the stages
+  // they arrived at give a one-time "past work" XP instead; later moves on the board still count.
+  if (s.papers?.some((p) => !p.importedAs && p.source && IMPORT_SOURCES.has(p.source)))
+    for (const p of s.papers)
+      if (!p.importedAs && p.source && IMPORT_SOURCES.has(p.source)) {
+        p.importedAs = p.history?.[0]?.from ?? p.history?.[0]?.status ?? p.status;
+        syncPaper(s, p);
+      }
   return s;
 }
 
@@ -142,6 +154,29 @@ function load(): State {
 
 let state: State = load();
 setWeekStart(state.profile.weekStart);
+// One-time note for existing users when the level road grew to Lv.100 (0.9).
+try {
+  // only for people who were already using LifeOS before this change (new users never saw the old road)
+  if (state.onboarded && state.events.some((e) => e.ts < Date.parse('2026-11-08')) && !localStorage.getItem('lifeos:notice:road100')) {
+    localStorage.setItem('lifeos:notice:road100', '1');
+    const zh = state.profile.lang === 'zh';
+    setTimeout(
+      () =>
+        notify(
+          {
+            title: zh ? '升级之路延长到了 Lv.100' : 'The level road now goes to Lv.100',
+            body: zh ? '经验曲线变陡、多了 10 个时代和新的配饰壁纸；导入的历史论文改为每篇 30 XP，所以等级重新计算了。' : 'A steeper curve, 10 more eras and new accessories and wallpapers; synced past papers now give 30 XP each, so your level was recalculated.',
+            icon: 'trending-up',
+            tone: 'accent',
+          },
+          12000,
+        ),
+      3500,
+    );
+  }
+} catch {
+  /* storage unavailable */
+}
 const subs = new Set<() => void>();
 const commitSubs = new Set<(prev: State, next: State) => void>();
 /** Observe every committed change (used by multi-device sync to stamp what changed). */
@@ -868,7 +903,7 @@ export const actions = {
   removePaper(id: string) {
     commit((d) => {
       d.papers = d.papers.filter((p) => p.id !== id);
-      d.events = d.events.filter((e) => !e.ref.startsWith(`paper:${id}:`));
+      d.events = d.events.filter((e) => !e.ref.startsWith(`paper:${id}:`) && e.ref !== `paperimp:${id}`);
       logCitations(d);
     });
   },
@@ -887,7 +922,7 @@ export const actions = {
           hit.updatedAt = Date.now();
           updated++;
         } else {
-          const p: Paper = { ...r, id: uid(), updatedAt: Date.now() };
+          const p: Paper = { ...r, importedAs: r.status, id: uid(), updatedAt: Date.now() };
           d.papers.push(p);
           syncPaper(d, p);
           added++;
@@ -920,7 +955,7 @@ export const actions = {
         let p = d.papers.find((x) => x.scholarId === fp.id) ?? d.papers.find((x) => !x.scholarId && norm(x.title) === norm(fp.title));
         if (!p) {
           if (fp.removed) continue;
-          p = { id: uid(), title: fp.title, venue: fp.venue, year: fp.year ?? undefined, status: 'published', citations: fp.citations ?? 0, firstAuthor: false, url: fp.link || undefined, source: 'gscholar', updatedAt: Date.now() };
+          p = { id: uid(), title: fp.title, venue: fp.venue, year: fp.year ?? undefined, status: 'published', importedAs: 'published', citations: fp.citations ?? 0, firstAuthor: false, url: fp.link || undefined, source: 'gscholar', updatedAt: Date.now() };
           d.papers.push(p);
           syncPaper(d, p);
           added++;
@@ -1149,10 +1184,21 @@ function syncMilestone(d: State, m: Milestone) {
 function syncPaper(d: State, p: Paper) {
   const order = ['idea', 'drafting', 'submitted', 'review', 'accepted', 'published'];
   const reached = order.indexOf(p.status);
+  // Stages a synced paper had already reached before LifeOS knew about it give no stage XP;
+  // stages it reaches afterwards (moved on the board) count in full.
+  const base = p.importedAs ? order.indexOf(p.importedAs) : -1;
+  const attr = d.attributes.some((a) => a.id === 'mind') ? 'mind' : d.attributes[0]?.id;
   for (const [status, xp] of Object.entries(PAPER_XP)) {
     const ref = `paper:${p.id}:${status}`;
-    if (order.indexOf(status) <= reached) grant(d, ref, 'paper', xp!, `${p.title}`, 'mind');
+    const i = order.indexOf(status);
+    if (i <= reached && i > base) grant(d, ref, 'paper', xp!, `${p.title}`, attr);
     else revoke(d, ref);
+  }
+  if (p.importedAs) {
+    const zh = `过往成果：${p.title}`;
+    const en = `Past work: ${p.title}`;
+    bi(zh, en);
+    grant(d, `paperimp:${p.id}`, 'paper', IMPORTED_PAPER_XP, d.profile.lang === 'zh' ? zh : en, attr);
   }
 }
 

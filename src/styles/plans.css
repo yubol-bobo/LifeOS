@@ -831,3 +831,17 @@
     animation: none;
   }
 }
+
+/* wallpapers added with the Lv.100 road */
+.os[data-wall='mint'] { --wall-a: #bfeedd; --wall-b: #e3f7c9; --wall-c: #c8ecf5; --wall-base: #eef6f0; }
+.os[data-wall='lavender'] { --wall-a: #ddd0ff; --wall-b: #f3d9f2; --wall-c: #d4e2ff; --wall-base: #f1eef8; }
+.os[data-wall='sunset'] { --wall-a: #ffb38a; --wall-b: #ff9fb1; --wall-c: #c8a6ff; --wall-base: #f7e9e6; }
+.os[data-wall='forest'] { --wall-a: #b5dcb0; --wall-b: #e2e8b8; --wall-c: #a9d6c8; --wall-base: #edf2e8; }
+.os[data-wall='nebula'] { --wall-a: #c9b6ff; --wall-b: #ffc4e8; --wall-c: #9fd4ff; --wall-base: #eeeaf6; }
+.os[data-wall='eternal'] { --wall-a: #ffe08a; --wall-b: #ffd1a8; --wall-c: #fff2c2; --wall-base: #f8f1e1; }
+:root[data-theme='dark'] .os[data-wall='mint'] { --wall-a: #123f35; --wall-b: #283a17; --wall-c: #12333d; --wall-base: #0d1412; }
+:root[data-theme='dark'] .os[data-wall='lavender'] { --wall-a: #2f2457; --wall-b: #43213f; --wall-c: #1f2c4f; --wall-base: #110f18; }
+:root[data-theme='dark'] .os[data-wall='sunset'] { --wall-a: #4d2414; --wall-b: #4a1a2a; --wall-c: #2e2052; --wall-base: #140d10; }
+:root[data-theme='dark'] .os[data-wall='forest'] { --wall-a: #183a1c; --wall-b: #2e3315; --wall-c: #12362f; --wall-base: #0c120d; }
+:root[data-theme='dark'] .os[data-wall='nebula'] { --wall-a: #2c1d5c; --wall-b: #4a1b44; --wall-c: #13305a; --wall-base: #0e0c18; }
+:root[data-theme='dark'] .os[data-wall='eternal'] { --wall-a: #4a3810; --wall-b: #47260f; --wall-c: #3c3416; --wall-base: #14110a; }

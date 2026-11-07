@@ -8,7 +8,7 @@ import { ACHIEVEMENTS, CATS, SERIES, TIER_LABEL, TOTAL_POINTS, achContext, type 
 import { useAttrs } from '../store/attrs';
 import { useMetrics } from '../store/hooks';
 import { ACCESSORIES, ERAS, UNLOCKS, WALLPAPERS, availableTitles, eraOf, nextUnlock, titleName } from '../store/progression';
-import { attrLevel, xpForLevel } from '../store/rules';
+import { attrLevel, MAX_LEVEL, xpForLevel } from '../store/rules';
 import { actions, useStore } from '../store/store';
 import { Icon } from '../ui/Icon';
 import { Bar, Card, Ring, Segmented } from '../ui/kit';
@@ -86,7 +86,7 @@ function Road() {
     const el = track.current?.querySelector('.rd-node.is-here') as HTMLElement | null;
     if (el && track.current) track.current.scrollLeft = el.offsetLeft - track.current.clientWidth / 2;
   }, []);
-  const MAX = 60;
+  const MAX = MAX_LEVEL;
   return (
     <>
       <div className="grid-1-2">
@@ -176,7 +176,7 @@ function Road() {
 
       <div className="era-grid">
         {ERAS.map((e, i) => {
-          const end = ERAS[i + 1]?.level ?? 61;
+          const end = ERAS[i + 1]?.level ?? MAX_LEVEL + 1;
           const ups = UNLOCKS.filter((u) => u.level >= e.level && u.level < end);
           const reached = lvl >= e.level;
           return (

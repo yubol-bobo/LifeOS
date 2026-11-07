@@ -46,7 +46,7 @@ LifeOS is a steady rhythm of managing and recording your life, so you can keep y
 | 🐾 **Desktop pets** | Three companions remind you to drink water, stretch and sleep; connect OpenAI, Claude, DeepSeek, Kimi or GLM and your pet writes up your day each night |
 | 📝 **Daily review** | One line is enough: highlight, lesson, blocker, gratitude, tomorrow's one thing; a reflection heatmap and "one year ago today" |
 | 🕰️ **Timeline** | Everything LifeOS recorded, in order, searchable and filterable; open any day for a cute 3D XP-blocks view |
-| 🌱 **Growth** | 60 levels, 10 eras, 197 achievements; unlock pet accessories, wallpapers and planet upgrades |
+| 🌱 **Growth** | 100 levels, 20 eras, 199 achievements; unlock pet accessories, wallpapers and planet upgrades |
 | 📊 **And more** | Mood and what drives it, assets and net worth, papers and citations (auto-sync from Google Scholar), custom trackers, a reward shop |
 
 English and Chinese · light and dark themes · portrait card feed or full-screen landscape dashboard · works on phones. Every feature in detail: **[Feature guide](docs/FEATURES.md)**.
@@ -62,7 +62,7 @@ English and Chinese · light and dark themes · portrait card feed or full-scree
 | ![Pet day summary](docs/shots/pet-summary.jpg) | ![Daily review](docs/shots/review.jpg) |
 | **Your pet's day summary** | **Daily review** and reflection heatmap |
 | ![Timeline](docs/shots/timeline.jpg) | ![Growth road](docs/shots/growth-road.jpg) |
-| **Timeline**: everything traceable | **The road**: 10 eras |
+| **Timeline**: everything traceable | **The road**: 20 eras |
 
 ---
 

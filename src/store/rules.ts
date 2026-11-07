@@ -24,13 +24,21 @@ export const coinsFor = (xp: number) => Math.max(1, Math.round(xp / 5));
 /* Levels                                                             */
 /* ------------------------------------------------------------------ */
 
-/** Cumulative XP required to *reach* level L. L1 = 0, L2 = 100, L3 = 300, L4 = 600 … */
-export const xpForLevel = (L: number) => 50 * L * (L - 1);
+/** The top of the level road. */
+export const MAX_LEVEL = 100;
+
+/**
+ * Cumulative XP required to *reach* level L: 40 · (L − 1)^2.2.
+ * Early levels come quickly (Lv.2 = 40, Lv.10 ≈ 5k); at a steady ~400 XP a day Lv.20 takes about two
+ * months, Lv.60 about two years and Lv.100 about six — a long road, not a weekend.
+ */
+export const xpForLevel = (L: number) => (L <= 1 ? 0 : Math.round(40 * (L - 1) ** 2.2));
 
 export function levelInfo(xp: number) {
   let L = 1;
-  while (xpForLevel(L + 1) <= xp) L++;
+  while (L < MAX_LEVEL && xpForLevel(L + 1) <= xp) L++;
   const base = xpForLevel(L);
+  if (L >= MAX_LEVEL) return { level: L, into: xp - base, span: Math.max(1, xp - base), progress: 1, next: base };
   const next = xpForLevel(L + 1);
   return { level: L, into: xp - base, span: next - base, progress: (xp - base) / (next - base), next };
 }
@@ -38,8 +46,10 @@ export function levelInfo(xp: number) {
 /** Era name for a level (see progression.ts for the full road). */
 export function levelTitle(level: number, lang: 'zh' | 'en') {
   const eras: [number, string, string][] = [
-    [1, '星尘', 'Stardust'], [5, '萌芽', 'Sprout'], [10, '旅人', 'Wanderer'], [15, '探路者', 'Pathfinder'], [20, '匠人', 'Artisan'],
-    [25, '学者', 'Scholar'], [30, '贤者', 'Sage'], [40, '大师', 'Master'], [50, '传奇', 'Legend'], [60, '永恒', 'Eternal'],
+    [1, '星尘', 'Stardust'], [5, '萌芽', 'Sprout'], [10, '旅人', 'Wanderer'], [15, '探路者', 'Pathfinder'], [20, '学徒', 'Apprentice'],
+    [25, '匠人', 'Artisan'], [30, '学者', 'Scholar'], [35, '远行者', 'Voyager'], [40, '守望者', 'Guardian'], [45, '贤者', 'Sage'],
+    [50, '开拓者', 'Pioneer'], [55, '筑梦者', 'Dreamweaver'], [60, '大师', 'Master'], [65, '引路人', 'Luminary'], [70, '智者', 'Oracle'],
+    [75, '传奇', 'Legend'], [80, '星辉', 'Starlight'], [85, '神话', 'Myth'], [90, '星海', 'Cosmos'], [100, '永恒', 'Eternal'],
   ];
   let t = eras[0];
   for (const row of eras) if (level >= row[0]) t = row;

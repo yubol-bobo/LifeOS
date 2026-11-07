@@ -285,6 +285,7 @@ export interface Paper {
   projectId?: string;
   removed?: boolean; // no longer on the Scholar profile (kept, not deleted)
   history?: PaperMove[]; // stage changes, oldest first (papers created before 0.8 have none)
+  importedAs?: PaperStatus; // synced from Scholar / OpenAlex / S2 at this stage: earlier stages give no XP
   updatedAt: number;
 }
 

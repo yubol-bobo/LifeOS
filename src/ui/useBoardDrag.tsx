@@ -17,7 +17,14 @@ export function useBoardDrag<K extends string>(onDrop: (id: string, from: K, to:
 
   useEffect(() => () => st.current?.stop(), []);
 
-  const colAt = (x: number, y: number) => (document.elementFromPoint(x, y)?.closest('[data-col]') as HTMLElement | null)?.dataset.col as K | undefined;
+  // look through everything under the pointer, so a desktop pet or a toast sitting on a column doesn't block the drop
+  const colAt = (x: number, y: number) => {
+    for (const el of document.elementsFromPoint(x, y)) {
+      const col = (el.closest('[data-col]') as HTMLElement | null)?.dataset.col;
+      if (col) return col as K;
+    }
+    return undefined;
+  };
   const place = (x: number, y: number) => {
     const g = ghost.current;
     const s = st.current;
