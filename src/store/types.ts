@@ -260,6 +260,13 @@ export interface Milestone {
 export type PaperStatus = 'idea' | 'drafting' | 'submitted' | 'review' | 'accepted' | 'published';
 export const PAPER_FLOW: PaperStatus[] = ['idea', 'drafting', 'submitted', 'review', 'accepted', 'published'];
 
+/** One stage change on the paper board: when the paper entered `status` (and from where). */
+export interface PaperMove {
+  status: PaperStatus;
+  from?: PaperStatus;
+  at: number;
+}
+
 export interface Paper {
   id: string;
   title: string;
@@ -273,6 +280,7 @@ export interface Paper {
   scholarId?: string; // Google Scholar citation_id
   projectId?: string;
   removed?: boolean; // no longer on the Scholar profile (kept, not deleted)
+  history?: PaperMove[]; // stage changes, oldest first (papers created before 0.8 have none)
   updatedAt: number;
 }
 

@@ -100,24 +100,36 @@ export function demoState(profile: Partial<State['profile']>): State {
   }
 
   /* ---- research ---- */
-  const paper = (title: string, venue: string, year: number | undefined, status: Paper['status'], citations: number, firstAuthor: boolean): Paper => ({
-    id: uid(), title, venue, year, status, citations, firstAuthor, source: 'manual', updatedAt: Date.now(),
-  });
+  const order = ['idea', 'drafting', 'submitted', 'review', 'accepted', 'published'] as const;
+  // Typical days spent in each stage before moving on; the last move happened `daysAgo` days ago.
+  const GAP = [21, 48, 6, 74, 58];
+  const paper = (title: string, venue: string, year: number | undefined, status: Paper['status'], citations: number, firstAuthor: boolean, daysAgo: number): Paper => {
+    const n = order.indexOf(status);
+    const history: Paper['history'] = [];
+    let t = Date.now() - daysAgo * DAY - (2 + n) * 3_600_000;
+    for (let i = n; i >= 0; i--) {
+      history.unshift({ status: order[i], ...(i ? { from: order[i - 1] } : {}), at: t });
+      if (i) t -= GAP[i - 1] * DAY * (0.75 + 0.5 * r());
+    }
+    return { id: uid(), title, venue, year, status, citations, firstAuthor, source: 'manual', history, updatedAt: Date.now() };
+  };
   s.papers = [
-    paper('Calibrated Uncertainty for Long-Horizon Language Agents', 'NeurIPS', 2023, 'published', 64, true),
-    paper('Sparse Memory Routing in Retrieval-Augmented Models', 'ICLR', 2024, 'published', 41, true),
-    paper('A Benchmark for Multi-Step Scientific Reasoning', 'ACL', 2024, 'published', 88, false),
-    paper('Learning When to Ask: Clarification Policies for Assistants', 'EMNLP', 2025, 'published', 19, true),
-    paper('Self-Correcting Planners via Verifier Feedback', 'ICML', 2025, 'published', 12, false),
-    paper('Efficient Long-Context Distillation', 'TMLR', 2025, 'accepted', 3, false),
-    paper('Grounded Evaluation of Research Agents', 'ICLR 2027', undefined, 'review', 0, true),
-    paper('Curriculum Synthesis for Tool Use', 'ACL 2027', undefined, 'drafting', 0, true),
-    paper(T('想法：语言模型的元认知探针', 'Idea: metacognitive probes for LMs'), '', undefined, 'idea', 0, true),
+    paper('Calibrated Uncertainty for Long-Horizon Language Agents', 'NeurIPS', 2023, 'published', 64, true, 700),
+    paper('Sparse Memory Routing in Retrieval-Augmented Models', 'ICLR', 2024, 'published', 41, true, 560),
+    paper('A Benchmark for Multi-Step Scientific Reasoning', 'ACL', 2024, 'published', 88, false, 430),
+    paper('Learning When to Ask: Clarification Policies for Assistants', 'EMNLP', 2025, 'published', 19, true, 300),
+    paper('Self-Correcting Planners via Verifier Feedback', 'ICML', 2025, 'published', 12, false, 140),
+    paper('Efficient Long-Context Distillation', 'TMLR', 2025, 'accepted', 3, false, 9),
+    paper('Grounded Evaluation of Research Agents', 'ICLR 2027', undefined, 'review', 0, true, 23),
+    paper('Curriculum Synthesis for Tool Use', 'ACL 2027', undefined, 'drafting', 0, true, 12),
+    paper(T('想法：语言模型的元认知探针', 'Idea: metacognitive probes for LMs'), '', undefined, 'idea', 0, true, 4),
   ];
-  const order = ['idea', 'drafting', 'submitted', 'review', 'accepted', 'published'];
+  // XP lands on the day each stage was actually reached
   for (const p of s.papers)
-    for (const [st, xp] of Object.entries(PAPER_XP))
-      if (order.indexOf(st) <= order.indexOf(p.status)) push(`paper:${p.id}:${st}`, 'paper', xp!, p.title, Date.now() - 200 * DAY * r(), 'mind');
+    for (const m of p.history ?? []) {
+      const xp = PAPER_XP[m.status];
+      if (xp) push(`paper:${p.id}:${m.status}`, 'paper', xp, p.title, m.at, 'mind');
+    }
   const total = s.papers.reduce((a, p) => a + p.citations, 0);
   for (let m = 24; m >= 0; m--) {
     const d = new Date();
