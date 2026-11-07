@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { daysBetween, dayKey } from '../lib/date';
 import { money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -27,7 +27,28 @@ export function Projects() {
   const cats = useCategories();
   const [filter, setFilter] = useState<string>('all');
   const [status, setStatus] = useState<'active' | 'all'>('active');
-  const [openId, setOpenId] = useState<string | null>(null);
+  // other apps (e.g. the Focus project board) can ask to open a project's page
+  const [openId, setOpenId] = useState<string | null>(() => {
+    try {
+      const v = sessionStorage.getItem('lifeos:project-open');
+      sessionStorage.removeItem('lifeos:project-open');
+      return v;
+    } catch {
+      return null;
+    }
+  });
+  useEffect(() => {
+    const f = (e: Event) => {
+      setOpenId((e as CustomEvent<string>).detail);
+      try {
+        sessionStorage.removeItem('lifeos:project-open');
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener('lifeos:project-open', f);
+    return () => window.removeEventListener('lifeos:project-open', f);
+  }, []);
   const [catsOpen, setCatsOpen] = useState(false);
   const list = s.projects.filter((p) => (filter === 'all' || p.category === filter) && (status === 'all' || p.status !== 'done'));
 
@@ -133,6 +154,7 @@ function ProjectCard({ p, onOpen }: { p: Project; onOpen: () => void }) {
             <Icon name="hourglass" size={12} /> <b className="num">{days}</b> {L('天', 'd')}
           </span>
         )}
+        {p.status === 'planning' && <Chip tone="blue">{L('筹划中', 'Planning')}</Chip>}
         {p.status === 'paused' && <Chip>{L('暂停', 'Paused')}</Chip>}
         {p.status === 'done' && <Chip tone="jade">{L('已完成', 'Done')}</Chip>}
       </div>
@@ -280,8 +302,9 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
             <Segmented
               size="sm"
               value={p.status ?? 'active'}
-              onChange={(v) => set({ status: v })}
+              onChange={(v) => actions.setProjectStatus(p.id, v)}
               options={[
+                { value: 'planning', label: L('筹划中', 'Planning') },
                 { value: 'active', label: L('进行中', 'Active') },
                 { value: 'paused', label: L('暂停', 'Paused') },
                 { value: 'done', label: L('完成', 'Done') },
@@ -324,7 +347,7 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
               ))}
             </div>
           )}
-          <Button variant="primary" icon="play" onClick={() => (actions.startFocus(p.rate ?? s.profile.hourlyRate, s.attributes[0]?.id ?? 'mind', p.name, { projectId: p.id }), onClose(), open('earn'))}>
+          <Button variant="primary" icon="play" onClick={() => (localStorage.setItem('lifeos:focus-mode', p.rate != null ? 'paid' : 'free'), actions.startFocus(p.rate ?? 0, s.attributes[0]?.id ?? 'mind', p.name, { projectId: p.id }), onClose(), open('earn'))}>
             {L('为这个项目开始专注', 'Focus on this project')}
           </Button>
           <Button variant="ghost" icon="trash" onClick={() => setConfirmDel(true)}>

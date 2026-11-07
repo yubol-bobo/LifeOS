@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import { createPortal } from 'react-dom';
+import { useState } from 'react';
+import { useBoardDrag } from '../ui/useBoardDrag';
 import { dayKey, parseDay } from '../lib/date';
 import { num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -189,111 +189,34 @@ function PaperBoard({ papers, onOpen, fOf }: { papers: Paper[]; onOpen: (p: Pape
   const L = useL();
   const lang = useLang();
   const label = useStatusLabel();
-  const [drag, setDrag] = useState<{ id: string; over: PaperStatus | null } | null>(null);
-  const ghost = useRef<HTMLDivElement>(null);
-  const board = useRef<HTMLDivElement>(null);
-  const st = useRef<{ id: string; from: PaperStatus; x: number; y: number; dx: number; dy: number; w: number; started: boolean; timer?: number; stop: () => void } | null>(null);
-  const suppressClick = useRef(false);
   const [now] = useState(() => Date.now());
-
-  useEffect(() => () => st.current?.stop(), []);
-
-  const colAt = (x: number, y: number) => (document.elementFromPoint(x, y)?.closest('[data-stage]') as HTMLElement | null)?.dataset.stage as PaperStatus | undefined;
-  const place = (x: number, y: number) => {
-    const g = ghost.current;
-    const s = st.current;
-    if (g && s) g.style.transform = `translate(${x - s.dx}px, ${y - s.dy}px) rotate(2deg)`;
-  };
-
-  const onPointerDown = (e: ReactPointerEvent<HTMLElement>, p: Paper) => {
-    if (e.button !== 0 || (e.target as HTMLElement).closest('.paper-foot button, a')) return;
-    st.current?.stop();
-    const r = e.currentTarget.getBoundingClientRect();
-    const touch = e.pointerType !== 'mouse';
-    const begin = () => {
-      const s = st.current;
-      if (!s || s.started) return;
-      s.started = true;
-      document.body.classList.add('is-dragging-card');
-      setDrag({ id: s.id, over: null });
-      requestAnimationFrame(() => place(s.x, s.y));
-      navigator.vibrate?.(8);
-    };
-    const move = (ev: PointerEvent) => {
-      const s = st.current;
-      if (!s) return;
-      const dist = Math.hypot(ev.clientX - s.x, ev.clientY - s.y);
-      if (!s.started) {
-        if (touch && dist > 8) return stop(); // it's a scroll, not a drag
-        if (!touch && dist > 5) begin();
-        if (!s.started) return;
-      }
-      s.x = ev.clientX;
-      s.y = ev.clientY;
-      place(ev.clientX, ev.clientY);
-      const over = colAt(ev.clientX, ev.clientY) ?? null;
-      setDrag((d) => (d && d.over !== over ? { ...d, over } : d));
-      // nudge the board sideways when dragging near its edges (narrow screens)
-      const b = board.current?.getBoundingClientRect();
-      if (b && board.current) {
-        if (ev.clientX < b.left + 40) board.current.scrollLeft -= 14;
-        else if (ev.clientX > b.right - 40) board.current.scrollLeft += 14;
-      }
-    };
-    const up = (ev: PointerEvent) => {
-      const s = st.current;
-      if (s?.started) {
-        const to = colAt(ev.clientX, ev.clientY);
-        suppressClick.current = true;
-        setTimeout(() => (suppressClick.current = false), 0);
-        if (to && to !== s.from) {
-          actions.setPaperStatus(s.id, to);
-          const d = new Date().toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' });
-          notify({ title: L(`已移到「${label(to)}」`, `Moved to ${label(to)}`), body: L(`变更时间已记录：${d}`, `Recorded on ${d}`), icon: STATUS_ICON[to], tone: to === 'accepted' || to === 'published' ? 'gold' : 'info' });
-        }
-      }
-      stop();
-    };
-    const noScroll = (ev: TouchEvent) => st.current?.started && ev.preventDefault();
-    const stop = () => {
-      window.clearTimeout(st.current?.timer);
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', stop);
-      window.removeEventListener('touchmove', noScroll);
-      document.body.classList.remove('is-dragging-card');
-      st.current = null;
-      setDrag(null);
-    };
-    st.current = { id: p.id, from: p.status, x: e.clientX, y: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, w: r.width, started: false, stop };
-    if (touch) st.current.timer = window.setTimeout(begin, 280);
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', stop);
-    window.addEventListener('touchmove', noScroll, { passive: false });
-  };
+  const { drag, board, start, ghostEl, justDragged } = useBoardDrag<PaperStatus>((id, _from, to) => {
+    actions.setPaperStatus(id, to);
+    const d = new Date().toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' });
+    notify({ title: L(`已移到「${label(to)}」`, `Moved to ${label(to)}`), body: L(`变更时间已记录：${d}`, `Recorded on ${d}`), icon: STATUS_ICON[to], tone: to === 'accepted' || to === 'published' ? 'gold' : 'info' });
+  });
 
   const dragged = drag ? papers.find((p) => p.id === drag.id) : undefined;
   return (
     <div className={`board ${drag ? 'is-dragging' : ''}`} ref={board}>
       {PAPER_FLOW.map((stage) => {
         const list = papers.filter((p) => p.status === stage);
-        const over = drag?.over === stage && dragged?.status !== stage;
+        const over = drag?.over === stage && drag.from !== stage;
         return (
-          <div className={`board-col ${over ? 'is-over' : ''}`} key={stage} data-stage={stage}>
+          <div className={`board-col ${over ? 'is-over' : ''}`} key={stage} data-col={stage}>
             <div className="board-head">
               <Icon name={STATUS_ICON[stage]} size={14} />
               <span>{label(stage)}</span>
               <span className="num muted">{list.length}</span>
             </div>
-            <div className="board-xp num">{PAPER_XP[stage] ? `+${PAPER_XP[stage]} XP` : ' '}</div>
+            <div className="board-xp num">{PAPER_XP[stage] ? `+${PAPER_XP[stage]} XP` : '\u00a0'}</div>
             {list.map((p) => {
               const i = PAPER_FLOW.indexOf(p.status);
               const since = enteredAt(p);
               const days = since != null ? Math.max(0, Math.floor((now - since) / DAY_MS)) : null;
               return (
-                <article className={`paper-card ${drag?.id === p.id ? 'is-dragging' : ''}`} key={p.id} onPointerDown={(e) => onPointerDown(e, p)}>
-                  <button className="paper-title" onClick={() => !suppressClick.current && onOpen(p)}>
+                <article className={`paper-card ${drag?.id === p.id ? 'is-dragging' : ''}`} key={p.id} onPointerDown={(e) => start(e, p.id, p.status)}>
+                  <button className="paper-title" onClick={() => !justDragged() && onOpen(p)}>
                     {p.title}
                   </button>
                   <div className="paper-meta">
@@ -314,8 +237,10 @@ function PaperBoard({ papers, onOpen, fOf }: { papers: Paper[]; onOpen: (p: Pape
                       </span>
                     )}
                     <span className="spacer" />
-                    <Button size="sm" variant="ghost" icon="chevron-left" title={L('后退', 'Move back')} disabled={i === 0} onClick={() => actions.setPaperStatus(p.id, PAPER_FLOW[i - 1])} />
-                    <Button size="sm" variant="ghost" icon="chevron-right" title={L('推进', 'Advance')} disabled={i === PAPER_FLOW.length - 1} onClick={() => actions.setPaperStatus(p.id, PAPER_FLOW[i + 1])} />
+                    <span data-nodrag className="pf-arrows">
+                      <Button size="sm" variant="ghost" icon="chevron-left" title={L('后退', 'Move back')} disabled={i === 0} onClick={() => actions.setPaperStatus(p.id, PAPER_FLOW[i - 1])} />
+                      <Button size="sm" variant="ghost" icon="chevron-right" title={L('推进', 'Advance')} disabled={i === PAPER_FLOW.length - 1} onClick={() => actions.setPaperStatus(p.id, PAPER_FLOW[i + 1])} />
+                    </span>
                   </div>
                 </article>
               );
@@ -325,12 +250,11 @@ function PaperBoard({ papers, onOpen, fOf }: { papers: Paper[]; onOpen: (p: Pape
         );
       })}
       {dragged &&
-        createPortal(
-          <div className="paper-ghost" ref={ghost} style={{ width: st.current?.w }}>
+        ghostEl(
+          <>
             <b>{dragged.title}</b>
             <span className="muted small">{drag?.over && drag.over !== dragged.status ? `${label(dragged.status)} → ${label(drag.over)}` : label(dragged.status)}</span>
-          </div>,
-          document.body,
+          </>,
         )}
     </div>
   );

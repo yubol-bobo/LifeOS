@@ -30,6 +30,7 @@ import type {
   Plan,
   MoodEntry,
   Project,
+  ProjectStatus,
   EventKind,
   Milestone,
   Paper,
@@ -637,6 +638,16 @@ export const actions = {
       }
     });
     return id;
+  },
+  /** Move a project on the board (planning → active → done …); the time of each change is kept. */
+  setProjectStatus(id: string, status: ProjectStatus) {
+    commit((d) => {
+      const p = d.projects.find((x) => x.id === id);
+      const from = p?.status ?? 'active';
+      if (!p || from === status) return;
+      (p.history ??= []).push({ status, from, at: Date.now() });
+      p.status = status;
+    });
   },
   deleteProject(id: string) {
     commit((d) => {

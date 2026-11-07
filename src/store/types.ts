@@ -26,13 +26,16 @@ export interface Category {
  * A project is the hub everything can hang off: quests (tasks), goals, papers, plans,
  * focus sessions and income (it doubles as the wage timer's "working for" entry), countdowns.
  */
+export type ProjectStatus = 'planning' | 'active' | 'paused' | 'done';
+
 export interface Project {
   id: string;
   name: string;
   color: PaletteKey;
   rate?: number;
   category?: string;
-  status?: 'active' | 'paused' | 'done';
+  status?: ProjectStatus;
+  history?: { status: ProjectStatus; from?: ProjectStatus; at: number }[]; // status changes, oldest first
   deadline?: string;
   note?: string;
   createdAt?: number;

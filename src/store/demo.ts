@@ -221,6 +221,11 @@ export function demoState(profile: Partial<State['profile']>): State {
   }
 
   /* ---- projects ↔ everything, and cascading plans ---- */
+  // a project still being planned, and one already finished (with when it moved)
+  s.projects.push(
+    { id: uid(), name: T('个人网站改版', 'Personal site redesign'), color: 'blue', category: 'life', status: 'planning', note: T('作品集 + 博客', 'Portfolio + blog'), history: [{ status: 'planning', at: Date.now() - 6 * DAY }], createdAt: Date.now() - 6 * DAY },
+    { id: uid(), name: T('学会 Rust 基础', 'Learn the basics of Rust'), color: 'red', category: 'life', status: 'done', history: [{ status: 'planning', at: Date.now() - 80 * DAY }, { status: 'active', from: 'planning', at: Date.now() - 74 * DAY }, { status: 'done', from: 'active', at: Date.now() - 19 * DAY }], createdAt: Date.now() - 80 * DAY },
+  );
   const [phd, , consult, marathonP] = s.projects;
   const g = (en: string) => s.milestones.find((m) => m.title === T(({ 'PhD proposal defense': '博士资格答辩', 'Full marathon': '全程马拉松', 'Oral at a top venue': '顶会 Oral' } as Record<string, string>)[en], en))!;
   g('PhD proposal defense').projectId = phd.id;

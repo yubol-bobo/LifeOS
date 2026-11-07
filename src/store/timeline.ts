@@ -114,7 +114,7 @@ export function buildTimeline(s: State, lang: 'zh' | 'en', money: (v: number) =>
       ts: x.start,
       cat: 'focus',
       title: name,
-      detail: x.rate ? L('赚钱的工作', 'Paid work') : L('不计薪的努力', 'Unpaid effort'),
+      detail: x.rate ? L('赚钱的工作', 'Paid work') : L('项目时间', 'Project time'),
       value: hm(x.activeMs) + (x.rate ? ` · ${money(x.earned)}` : ''),
       xp: Math.round(x.activeMs / 60_000) || undefined,
       kind: 'focus',
