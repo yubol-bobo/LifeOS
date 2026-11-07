@@ -701,7 +701,10 @@
   margin: 0;
 }
 
-.w-effort .goal {
+.effort-goals {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin: 8px 0 12px;
 }
 
@@ -784,7 +787,7 @@
   .effort-mini {
     grid-template-columns: 1fr;
   }
-  .w-effort .goal {
+  .w-effort .fgoal.is-off {
     display: none;
   }
 }

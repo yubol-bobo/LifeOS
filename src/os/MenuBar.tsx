@@ -18,6 +18,7 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
   const m = useMetrics();
   const currency = useStore((s) => s.profile.currency);
   const live = useLiveSession(250);
+  const parked = useStore((s) => s.parked ?? []);
   const def = appById(app);
   const petOn = useStore((s) => s.pet.enabled);
   const pomo = useStore((s) => s.pomo);
@@ -91,6 +92,11 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
           <button className={`mb-live ${live.paused ? 'is-paused' : ''}`} onClick={() => open(live.paid ? 'earn' : 'projects')} title={L('正在计时', 'Focus running')}>
             <i className="pulse" />
             <span className="num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : live.paid ? money(live.earned, currency) : `🌱 ${clock(live.ms)}`}</span>
+          </button>
+        )}
+        {!live && parked.length > 0 && (
+          <button className="mb-live is-paused" onClick={() => open(parked[0].rate > 0 ? 'earn' : 'projects')} title={L('有暂停中的任务', 'Paused sessions')}>
+            <span className="num">⏸ {parked.length === 1 ? parked[0].note || L('暂停中', 'Paused') : L(`${parked.length} 个暂停中`, `${parked.length} paused`)}</span>
           </button>
         )}
         <span className="mb-item" title={L('连续天数', 'Streak')}>

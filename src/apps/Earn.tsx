@@ -18,6 +18,10 @@ import { Odometer } from '../ui/Odometer';
 import { AttrPicker } from './Quests';
 import { PayCard, ProjectsEditor } from './Settings';
 import { Icon } from '../ui/Icon';
+import { CountdownPicker, useNextCountdown } from '../ui/CountdownPicker';
+import { FocusGoal } from '../ui/FocusGoal';
+import { ParkedList } from '../os/ParkedList';
+import { fmtMinutes } from '../lib/nextCountdown';
 import { GoalTag, ProjectTag } from './goals';
 import { isScheduled } from '../store/links';
 
@@ -44,8 +48,7 @@ export function Earn() {
   const [attr, setAttr] = useState<Attr>('craft');
   // This page is paid work only; project time is started from the Projects app.
   const mode = 'paid' as const;
-  const [target, setTarget] = useState(0); // countdown minutes, 0 = none
-  const [customOpen, setCustomOpen] = useState(false);
+  const target = useNextCountdown(); // countdown minutes for the next start, 0 = count up (stackable)
   const [link, setLink] = useState('');
   const goals = useStore((s) => s.milestones).filter((g) => g.status !== 'done');
   const quests = useStore((s) => s.quests);
@@ -54,7 +57,7 @@ export function Earn() {
   const start = () => {
     const q = link.startsWith('q:') ? quests.find((x) => x.id === link.slice(2)) : undefined;
     const goalId = q ? q.goalId : link.startsWith('g:') ? link.slice(2) : undefined;
-    actions.startFocus(rate, q ? q.attr : attr, note || q?.title || '', { goalId, questId: q?.id, projectId: project?.id, ...(target ? { targetMin: target } : {}) });
+    actions.startFocus(rate, q ? q.attr : attr, note || q?.title || '', { goalId, questId: q?.id, projectId: project?.id });
     try {
       localStorage.setItem('lifeos:last-project', projectId);
     } catch {
@@ -86,8 +89,8 @@ export function Earn() {
   const tAll = sum(() => true);
   const liveMs = live?.ms ?? 0;
   const liveEarned = live?.earned ?? 0;
-  const goalMs = profile.focusGoalMin * 60_000;
-  const todayMs = tToday.ms + liveMs;
+  // paid work today (tToday counts every session)
+  const pToday = sessions.filter((x) => !x.rate && dayKey(x.start) === today).reduce((a, x) => a + x.activeMs, 0);
 
   const days = lastNDays(14);
   const chart = days.map((d) => ({
@@ -209,26 +212,9 @@ export function Earn() {
                   <AttrPicker value={attr} onChange={setAttr} />
                 </Field>
               )}
-              <Field label={L('倒计时（可选）', 'Countdown (optional)')} hint={L('时间一到会放烟花庆祝，并额外奖励 XP；不设就一直正计时。', 'When it runs out you get fireworks and bonus XP; leave it off to count up.')}>
-                <div className="countdown-pick">
-                  {[0, 25, 45, 60, 90, 120].map((m) => (
-                    <button key={m} className={`chip ${target === m && !customOpen ? 'is-active' : ''}`} onClick={() => (setTarget(m), setCustomOpen(false))}>
-                      {m ? (m >= 60 && m % 60 === 0 ? L(`${m / 60} 小时`, `${m / 60} h`) : L(`${m} 分钟`, `${m} min`)) : L('不设', 'None')}
-                    </button>
-                  ))}
-                  <button className={`chip ${customOpen ? 'is-active' : ''}`} onClick={() => setCustomOpen(true)}>
-                    {L('自定义', 'Custom')}
-                  </button>
-                  {customOpen && (
-                    <span className="countdown-custom">
-                      <input className="input" type="number" min={1} max={720} value={target || ''} placeholder="50" onChange={(e) => setTarget(Math.max(0, Math.min(720, Math.round(+e.target.value || 0))))} aria-label={L('分钟', 'Minutes')} />
-                      {L('分钟', 'min')}
-                    </span>
-                  )}
-                </div>
-              </Field>
+              <CountdownPicker />
               <Button variant="primary" size="lg" icon="play" onClick={start}>
-                {target ? L(`开始 ${target} 分钟倒计时`, `Start a ${target}-minute countdown`) : L('开始计时', 'Start the clock')}
+                {target ? L(`开始 ${fmtMinutes(target, true)} 倒计时`, `Start a ${fmtMinutes(target, false)} countdown`) : L('开始计时', 'Start the clock')}
               </Button>
             </>
           ) : (
@@ -262,13 +248,16 @@ export function Earn() {
                 <Button size="lg" variant="ghost" icon="trash" title={L('丢弃本次', 'Discard')} onClick={() => actions.stopFocus(false)} />
               </div>
               <div className="row-gap wrap">
-                <span className="muted small">{live.target ? L('倒计时', 'Countdown') : L('加个倒计时', 'Add a countdown')}</span>
-                {[15, 25, 45].map((m) => (
+                <span className="muted small">{live.target ? L(`倒计时 ${fmtMinutes(live.active.targetMin!, true)} · 加`, `Countdown ${fmtMinutes(live.active.targetMin!, false)} · add`) : L('加个倒计时', 'Add a countdown')}</span>
+                {[15, 30, 60].map((m) => (
                   <Button key={m} size="sm" variant="soft" icon="plus" onClick={() => actions.extendFocus(m)}>
-                    {L(`${m} 分钟`, `${m} min`)}
+                    {m === 60 ? L('1 小时', '1 h') : L(`${m} 分钟`, `${m} min`)}
                   </Button>
                 ))}
               </div>
+              <Button variant="ghost" icon="pause" onClick={actions.parkFocus}>
+                {L('先暂停，去做别的（随时恢复）', 'Pause and switch to something else')}
+              </Button>
               {(() => {
                 const q = quests.find((x) => x.id === live.active.questId);
                 if (!q?.focusMin) return null;
@@ -288,19 +277,8 @@ export function Earn() {
               <p className="muted small">{L('提示：浏览器标签页标题会实时显示收入，切到别的窗口也能看到。', 'Tip: the browser tab title shows your live earnings, even from another window.')}</p>
             </>
           )}
-          <div className="goal">
-            <div className="goal-top">
-              <span>{L('今日专注目标', "Today's focus goal")}</span>
-              <span className="goal-edit">
-                <span className="num">
-                  {(todayMs / 3_600_000).toFixed(1)} / {(goalMs / 3_600_000).toFixed(1)} h
-                </span>
-                <Button size="sm" variant="ghost" icon="minus" title={L('目标减少 30 分钟', 'Goal −30 min')} disabled={profile.focusGoalMin <= 30} onClick={() => actions.profile({ focusGoalMin: Math.max(30, profile.focusGoalMin - 30) })} />
-                <Button size="sm" variant="ghost" icon="plus" title={L('目标增加 30 分钟', 'Goal +30 min')} disabled={profile.focusGoalMin >= 16 * 60} onClick={() => actions.profile({ focusGoalMin: Math.min(16 * 60, profile.focusGoalMin + 30) })} />
-              </span>
-            </div>
-            <Bar value={todayMs / goalMs} tone="wealth" height={12} />
-          </div>
+          <ParkedList />
+          <FocusGoal kind="work" doneMs={tToday.ms - pToday + (live?.paid ? liveMs : 0)} />
         </div>
       </section>
 

@@ -845,3 +845,25 @@
 :root[data-theme='dark'] .os[data-wall='forest'] { --wall-a: #183a1c; --wall-b: #2e3315; --wall-c: #12362f; --wall-base: #0c120d; }
 :root[data-theme='dark'] .os[data-wall='nebula'] { --wall-a: #2c1d5c; --wall-b: #4a1b44; --wall-c: #13305a; --wall-base: #0e0c18; }
 :root[data-theme='dark'] .os[data-wall='eternal'] { --wall-a: #4a3810; --wall-b: #47260f; --wall-c: #3c3416; --wall-base: #14110a; }
+
+.pl-switch {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.proj-start {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 760px) {
+  .proj-start {
+    grid-template-columns: 1fr;
+  }
+}

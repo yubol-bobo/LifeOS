@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { fmtMinutes } from '../lib/nextCountdown';
 import confetti from 'canvas-confetti';
 import { duration, money } from '../lib/format';
 import { useL } from '../lib/i18n';
@@ -22,28 +23,42 @@ function fireworks() {
   window.setTimeout(() => void confetti({ particleCount: 160, spread: 160, startVelocity: 36, gravity: 0.8, scalar: 1.1, origin: { x: 0.5, y: 0.1 }, colors, shapes: ['star', 'circle'], disableForReducedMotion: true }), 900);
 }
 
-/** Watches the running focus session; when its countdown runs out, celebrates — wherever you are in LifeOS. */
+/** Watches the running focus session; when its countdown runs out it settles the session automatically
+ *  (logs it; paid work is cashed out) and celebrates — wherever you are in LifeOS. */
 export function FocusCelebrate() {
   const L = useL();
   const live = useLiveSession(500);
   const cur = useStore((s) => s.profile.currency);
-  const [done, setDone] = useState<null | { note: string; min: number; ms: number; earned: number; paid: boolean }>(null);
+  const parked = useStore((s) => s.parked ?? []);
+  const busy = useRef(false);
+  type Done = { note: string; min: number; ms: number; earned: number; paid: boolean; again: { rate: number; attr: string; note: string; projectId?: string; goalId?: string; questId?: string } };
+  const [done, setDone] = useState<Done | null>(null);
 
   useEffect(() => {
-    if (!live || live.paused || live.target == null || live.active.hit || live.ms < live.target) return;
-    actions.updateActive({ hit: true });
-    const note = live.active.note || L('专注', 'Focus');
-    setDone({ note, min: live.active.targetMin!, ms: live.ms, earned: live.earned, paid: live.paid });
+    if (!live || live.paused || live.target == null || live.ms < live.target || busy.current) return;
+    busy.current = true;
+    const a = live.active;
+    const s = actions.stopFocus(true, { capToTarget: true });
+    busy.current = false;
+    const note = a.note || getState().projects.find((p) => p.id === a.projectId)?.name || (a.rate > 0 ? L('赚钱的工作', 'Paid work') : L('专注', 'Focus'));
+    const ms = s?.activeMs ?? a.targetMin! * 60_000;
+    setDone({ note, min: a.targetMin!, ms, earned: s?.earned ?? 0, paid: a.rate > 0, again: { rate: a.rate, attr: a.attr, note: a.note, projectId: a.projectId, goalId: a.goalId, questId: a.questId } });
     fireworks();
     const pet = getState().pet;
     if (pet.sound) chime('done');
-    if (pet.sysNotify) sysNotify(L('专注完成！', 'Focus complete!'), `${note} · ${live.active.targetMin} min`);
-    notify({ title: L('专注完成 🎉', 'Focus complete 🎉'), body: `${note} · ${live.active.targetMin} ${L('分钟', 'min')}`, tone: 'gold', icon: 'trophy' });
+    if (pet.sysNotify) sysNotify(L('专注完成！', 'Focus complete!'), `${note} · ${a.targetMin} min`);
+    notify({ title: a.rate > 0 ? L('倒计时结束，已自动结算 🎉', 'Countdown done — cashed out 🎉') : L('倒计时结束，已自动记录 🎉', 'Countdown done — logged 🎉'), body: `${note} · ${a.targetMin} ${L('分钟', 'min')}`, tone: 'gold', icon: 'trophy' });
   }, [live?.ms]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!done) return null;
   const xp = Math.round(done.ms / 60_000) + Math.max(5, Math.round(done.min / 5));
   const close = () => setDone(null);
+  const again = (min: number) => {
+    const g = done.again;
+    actions.startFocus(g.rate, g.attr, g.note, { projectId: g.projectId, goalId: g.goalId, questId: g.questId, targetMin: min });
+    close();
+  };
+  const p0 = parked[0];
   return (
     <div className="fc-scrim" onClick={close}>
       <div className="fc-card" role="dialog" aria-label={L('专注完成', 'Focus complete')} onClick={(e) => e.stopPropagation()}>
@@ -53,7 +68,7 @@ export function FocusCelebrate() {
           </svg>
           <Icon name="trophy" size={44} />
         </div>
-        <p className="eyebrow">{L('倒计时结束', 'Countdown complete')}</p>
+        <p className="eyebrow">{done.paid ? L('倒计时结束 · 已自动结算', 'Countdown complete · cashed out') : L('倒计时结束 · 已自动记录', 'Countdown complete · logged')}</p>
         <h2>{L('专注完成！', 'You did it!')}</h2>
         <p className="fc-what">
           <b>{done.note}</b> · {duration(done.ms)}
@@ -68,20 +83,25 @@ export function FocusCelebrate() {
             </span>
           ) : (
             <span>
-              <b>🌱</b> {L('不为钱的努力也算数', 'Effort counts, paid or not')}
+              <b>📂</b> {L('项目时间也算数', 'Project time counts too')}
             </span>
           )}
         </div>
         <div className="fc-actions">
-          <Button variant="primary" size="lg" icon="check" onClick={() => (actions.stopFocus(), close())}>
-            {done.paid ? L('结束并结算', 'Stop & cash out') : L('结束并记录', 'Stop & log it')}
+          <Button variant="primary" size="lg" icon="check" onClick={close}>
+            {L('好的', 'Done')}
           </Button>
-          <Button size="lg" icon="plus" onClick={() => (actions.extendFocus(15), close())}>
-            {L('再来 15 分钟', '15 more minutes')}
+          <Button size="lg" icon="refresh" onClick={() => again(done.min)}>
+            {L(`再来一轮 · ${fmtMinutes(done.min, true)}`, `Another round · ${fmtMinutes(done.min, false)}`)}
           </Button>
-          <Button variant="ghost" onClick={close}>
-            {L('继续计时', 'Keep the clock running')}
+          <Button size="lg" icon="plus" onClick={() => again(15)}>
+            {L('再专注 15 分钟', '15 more minutes')}
           </Button>
+          {p0 && (
+            <Button variant="ghost" icon="play" onClick={() => (actions.resumeParked(0), close())}>
+              {L(`恢复暂停的「${p0.note || '专注'}」`, `Resume “${p0.note || 'Focus'}”`)}
+            </Button>
+          )}
         </div>
       </div>
     </div>

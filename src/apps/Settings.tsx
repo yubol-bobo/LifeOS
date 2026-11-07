@@ -503,10 +503,16 @@ function WorkSettings() {
         <p className="muted small">{L('老板、客户、项目、副业……每一项都可以有自己的时薪，不填就用默认时薪。时薪计会按项目统计收入。', 'Employers, clients, projects, side gigs — each can have its own rate (blank = default). The wage timer breaks income down by these.')}</p>
         <ProjectsEditor />
       </Card>
-      <Card title={L('专注目标', 'Focus goal')} icon="target">
-        <Field label={L('每日专注目标（分钟）', 'Daily focus goal (minutes)')}>
-          <input className="input" type="number" min={15} step={15} value={p.focusGoalMin} onChange={(e) => actions.profile({ focusGoalMin: Math.max(15, +e.target.value || 240) })} />
-        </Field>
+      <Card title={L('每日目标（可选）', 'Daily goals (optional)')} icon="target">
+        <p className="muted small">{L('填 0 就是不设目标。也可以直接在桌面的「今日时间分配」、「赚钱」或「项目」里点目标来改。', '0 = no goal. You can also click a goal on the Time split tile, in Earn or in Projects to change it.')}</p>
+        <div className="row2">
+          <Field label={L('赚钱的工作（分钟）', 'Paid work (minutes)')}>
+            <input className="input" type="number" min={0} step={30} value={p.workGoalMin ?? 0} onChange={(e) => actions.profile({ workGoalMin: Math.max(0, Math.round(+e.target.value || 0)) })} />
+          </Field>
+          <Field label={L('项目专注（分钟）', 'Project focus (minutes)')}>
+            <input className="input" type="number" min={0} step={30} value={p.focusGoalMin} onChange={(e) => actions.profile({ focusGoalMin: Math.max(0, Math.round(+e.target.value || 0)) })} />
+          </Field>
+        </div>
       </Card>
     </div>
   );

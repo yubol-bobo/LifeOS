@@ -193,7 +193,8 @@ export interface Profile {
   lifeExpectancy: number; // years
   currency: string;
   hourlyRate: number;
-  focusGoalMin: number; // daily focus goal in minutes
+  focusGoalMin: number; // daily goal for project time, minutes (0 = no goal)
+  workGoalMin?: number; // daily goal for paid work, minutes (0 / unset = no goal)
   lang: Lang;
   theme: ThemePref;
   reduceMotion: boolean;
@@ -373,6 +374,7 @@ export interface State {
   scholar: ScholarConfig;
   sessions: WorkSession[];
   active: ActiveSession | null;
+  parked?: ActiveSession[]; // paused sessions set aside while you switched to another task (newest first)
   trackers: Tracker[];
   rewards: Reward[];
   events: XpEvent[];
