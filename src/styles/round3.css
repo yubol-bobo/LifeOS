@@ -1114,3 +1114,29 @@
   width: 26px;
   height: 26px;
 }
+
+.gs-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--p-amber) 10%, var(--surface));
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--p-amber) 35%, transparent);
+}
+
+.gs-status.is-bound {
+  background: color-mix(in oklab, var(--p-jade) 10%, var(--surface));
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--p-jade) 35%, transparent);
+}
+
+.gs-status b {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gs-status.is-wait {
+  font-size: 13px;
+}
