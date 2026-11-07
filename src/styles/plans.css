@@ -867,3 +867,23 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Roadmap sections reached from a desktop tile flash briefly */
+.rm-sec {
+  border-radius: 24px;
+  scroll-margin-top: 16px;
+}
+
+.rm-sec.is-flash {
+  animation: rm-flash 1.6s ease-out;
+}
+
+@keyframes rm-flash {
+  0%,
+  40% {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 70%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+  }
+}

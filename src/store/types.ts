@@ -101,6 +101,7 @@ export interface UiPrefs {
   dock: AppId[]; // order
   hidden: AppId[]; // hidden from the dock (still reachable via Spotlight)
   widgets: string[]; // hidden desktop widgets
+  desktopProjects?: string[]; // projects shown on the Project progress tile (unset = the ones in progress)
 }
 
 export interface MoodEntry {

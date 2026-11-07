@@ -507,6 +507,16 @@ export const actions = {
       { silent: true },
     );
   },
+  /** Which projects the desktop's Project progress tile shows (undefined = automatic). */
+  setDesktopProjects(ids: string[] | undefined) {
+    commit(
+      (d) => {
+        if (ids) d.ui.desktopProjects = ids;
+        else delete d.ui.desktopProjects;
+      },
+      { silent: true },
+    );
+  },
   toggleWidget(id: string) {
     commit(
       (d) => {

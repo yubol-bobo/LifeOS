@@ -1,6 +1,8 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { LifeSettingsModal } from './LifeSettings';
 import { openDay } from './DayXp';
+import { openRoadmap } from './Roadmap';
+import { focusProject, openProject } from './ProjectBoard';
 import { addDays, dayKey, daysBetween, lastNDays, lifeProgress, parseDay } from '../lib/date';
 import { compact, money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -15,8 +17,7 @@ import { Heatmap, Radar, Sparkline } from '../ui/charts';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, CheckBubble, Chip, Ring } from '../ui/kit';
 import { Odometer } from '../ui/Odometer';
-import { goalProgress, isScheduled, weeklyReview } from '../store/links';
-import { MILESTONE_XP } from '../store/rules';
+import { isScheduled, weeklyReview } from '../store/links';
 import { GoalTag } from './goals';
 import { useStatusLabel } from './Research';
 import type { PaperStatus } from '../store/types';
@@ -26,7 +27,7 @@ import { MoodFace } from '../ui/MoodFace';
 import { checkinDue, filledSeries } from '../store/assets';
 import { titleName, unlockedAt } from '../store/progression';
 import { periodOf } from '../lib/period';
-import { planProgress } from '../store/plans';
+import { planProgress, projectStats } from '../store/plans';
 import { upcoming } from '../store/countdowns';
 import { ReviewHeatmap } from './Review';
 import { clock } from './Earn';
@@ -67,11 +68,6 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const todaysFocus = s.sessions.filter((x) => dayKey(x.start) === today);
   const todayEarned = todaysFocus.reduce((a, x) => a + x.earned, 0) + (live?.earned ?? 0);
 
-  const goals = s.milestones
-    .filter((x) => x.status !== 'done')
-    .map((g) => ({ g, p: goalProgress(s, g, m) }))
-    .sort((a, b) => Number(b.p.ready) - Number(a.p.ready) || Number(b.g.status === 'active') - Number(a.g.status === 'active') || (a.g.targetDate ?? '9').localeCompare(b.g.targetDate ?? '9'))
-    .slice(0, 4);
   const review = useMemo(() => weeklyReview(s), [s]);
 
   const days = useMemo(() => lastNDays(140), [today]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -190,7 +186,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       {/* ---------- life progress ---------- */}
       {!hide.has('life') && (
       <section className="widget w-life">
-        <WidgetHead icon="hourglass" title={L('人生进度', 'Life progress')} onOpen={() => open('roadmap')}>
+        <WidgetHead icon="hourglass" title={L('人生进度', 'Life progress')} onOpen={() => openRoadmap('weeks')}>
           <button className="w-open" onClick={() => setLifeOpen(true)} aria-label={L('设置出生日期和预期寿命', 'Set birth date and life expectancy')} title={L('设置出生日期和预期寿命', 'Set birth date and life expectancy')}>
             <Icon name="pencil" size={14} />
           </button>
@@ -282,6 +278,9 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       {/* ---------- where today's time went ---------- */}
       {!hide.has('effort') && <EffortWidget live={live} />}
 
+      {/* ---------- project progress (next to the time split) ---------- */}
+      {!hide.has('projprog') && <ProjectProgressWidget live={live} />}
+
       {/* ---------- research ---------- */}
       {!hide.has('research') && (
       <section className="widget w-research">
@@ -315,44 +314,6 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
             );
           })}
         </div>
-      </section>
-      )}
-
-      {/* ---------- goals ---------- */}
-      {!hide.has('goals') && (
-      <section className="widget w-next">
-        <WidgetHead icon="flag" title={L('目标进度', 'Goals')} onOpen={() => open('roadmap')} />
-        {goals.length ? (
-          <ul className="goal-mini">
-            {goals.map(({ g, p }) => {
-              const days = g.targetDate ? daysBetween(today, g.targetDate) : null;
-              return (
-                <li key={g.id} className={p.ready ? 'is-ready' : ''}>
-                  <div className="gm-top">
-                    <strong>{g.title}</strong>
-                    {p.ready ? (
-                      <Button size="sm" variant="gold" icon="gift" onClick={() => actions.setMilestoneStatus(g.id, 'done')}>
-                        +{MILESTONE_XP[g.size]}
-                      </Button>
-                    ) : (
-                      <span className="muted small num">{days != null ? (days >= 0 ? L(`${days} 天`, `${days}d`) : L('已逾期', 'late')) : ''}</span>
-                    )}
-                  </div>
-                  {p.pct != null ? (
-                    <div className="gm-bar">
-                      <Bar value={p.pct} tone={g.attr} height={7} />
-                      <span className="num small">{Math.round(p.pct * 100)}%</span>
-                    </div>
-                  ) : (
-                    <span className="muted small">{L('还没有可衡量的关键结果', 'No measurable key results yet')}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p className="muted">{L('设定一个目标，并给它加上关键结果——之后的每个任务、每次专注都会自动推动它。', 'Set a goal and give it key results — every quest and focus session will then move it automatically.')}</p>
-        )}
       </section>
       )}
 
@@ -607,6 +568,90 @@ function EffortWidget({ live }: { live: ReturnType<typeof useLiveSession> }) {
             {L('开始项目专注', 'Focus on a project')}
           </Button>
         </div>
+      )}
+    </section>
+  );
+}
+
+/** How far each project has come: done / total to-dos, overall %, today's focus; you choose which projects show. */
+function ProjectProgressWidget({ live }: { live: ReturnType<typeof useLiveSession> }) {
+  const L = useL();
+  const s = useStore((x) => x);
+  const [edit, setEdit] = useState(false);
+  const today = dayKey();
+  const chosen = s.ui.desktopProjects;
+  const open_ = s.projects.filter((p) => p.status !== 'done');
+  const lastTouch = (id: string) => Math.max(0, ...s.sessions.filter((x) => x.projectId === id).map((x) => x.start));
+  const auto = open_.filter((p) => p.status !== 'planning').sort((a, b) => lastTouch(b.id) - lastTouch(a.id)).slice(0, 5);
+  const shown = chosen ? s.projects.filter((p) => chosen.includes(p.id)) : auto;
+  const todayMs = (id: string) => s.sessions.filter((x) => x.projectId === id && dayKey(x.start) === today).reduce((a, x) => a + x.activeMs, 0) + (live && live.active.projectId === id ? live.ms : 0);
+  const toggle = (id: string) => {
+    const cur = chosen ?? auto.map((p) => p.id);
+    actions.setDesktopProjects(cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
+  };
+  return (
+    <section className="widget w-projprog">
+      <WidgetHead icon="briefcase" title={L('项目进度', 'Project progress')} onOpen={() => open('projects')}>
+        <button type="button" className="link-btn small" onClick={() => setEdit(!edit)}>
+          {edit ? L('完成', 'Done') : L('选择项目', 'Choose')}
+        </button>
+      </WidgetHead>
+      {edit ? (
+        <div className="pp-pick">
+          <p className="muted small">{L('勾选要在桌面上显示的项目：', 'Pick the projects to show here:')}</p>
+          <ul>
+            {open_.map((p) => {
+              const on = (chosen ?? auto.map((x) => x.id)).includes(p.id);
+              return (
+                <li key={p.id}>
+                  <label className={on ? 'is-on' : ''}>
+                    <input type="checkbox" checked={on} onChange={() => toggle(p.id)} />
+                    <i style={{ background: `var(--p-${p.color})` }} />
+                    <span>{p.name}</span>
+                    {p.status === 'planning' && <small className="muted">{L('筹划中', 'planning')}</small>}
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+          {chosen && (
+            <button type="button" className="link-btn small" onClick={() => actions.setDesktopProjects(undefined)}>
+              {L('恢复自动（显示最近在推进的项目）', 'Back to automatic (projects you worked on lately)')}
+            </button>
+          )}
+        </div>
+      ) : shown.length === 0 ? (
+        <p className="muted small">{L('还没有要显示的项目。点「选择项目」挑几个，或者在「项目」里新建一个。', 'No projects to show. Use “Choose”, or create one in Projects.')}</p>
+      ) : (
+        <ul className="pp-list">
+          {shown.map((p) => {
+            const st = projectStats(s, p);
+            const total = st.open.length + st.doneTasks.length;
+            const pct = st.pct ?? (total ? st.doneTasks.length / total : null);
+            const ms = todayMs(p.id);
+            const days = p.deadline ? daysBetween(today, p.deadline) : null;
+            return (
+              <li key={p.id} style={{ '--tone': `var(--p-${p.color})` } as CSSProperties}>
+                <div className="pp-top">
+                  <button type="button" className="pp-name" onClick={() => openProject(p.id)}>
+                    {p.name}
+                  </button>
+                  <span className="num pp-pct">{pct != null ? `${Math.round(pct * 100)}%` : ''}</span>
+                  <Button size="sm" variant="ghost" icon={live?.active.projectId === p.id ? 'timer' : 'play'} title={L(`专注「${p.name}」`, `Focus on ${p.name}`)} onClick={() => (live?.active.projectId === p.id ? open('projects') : focusProject(p, { open: false }))} />
+                </div>
+                <span className="pp-bar">
+                  <i style={{ width: `${Math.round((pct ?? 0) * 100)}%` }} />
+                </span>
+                <span className="pp-meta muted small num">
+                  {total ? L(`待办 ${st.doneTasks.length}/${total}`, `${st.doneTasks.length}/${total} to-dos`) : L('还没拆分待办', 'No to-dos yet')}
+                  {' · '}
+                  {L(`今天 ${(ms / 3_600_000).toFixed(1)}h`, `today ${(ms / 3_600_000).toFixed(1)}h`)}
+                  {days != null && <> · {days >= 0 ? L(`还剩 ${days} 天`, `${days}d left`) : L('已逾期', 'overdue')}</>}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   );
