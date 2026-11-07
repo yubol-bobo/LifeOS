@@ -1,3 +1,4 @@
+import { openWeek } from './DayXp';
 import { LifeSettingsModal } from './LifeSettings';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { dayKey, daysBetween, lifeProgress, parseDay } from '../lib/date';
@@ -208,7 +209,7 @@ function LifeWeeks() {
   const milestones = useStore((s) => s.milestones);
   const ref = useRef<HTMLCanvasElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
-  const [tip, setTip] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [tip, setTip] = useState<{ x: number; y: number; text: string; hot: boolean } | null>(null);
   const [theme, setTheme] = useState(document.documentElement.dataset.theme);
   const years = profile.lifeExpectancy;
   const birth = parseDay(profile.birthDate);
@@ -301,6 +302,7 @@ function LifeWeeks() {
         ref={ref}
         role="img"
         aria-label={L(`人生周格：已度过 ${lp.weeksLived} 周`, `Life in weeks: ${lp.weeksLived} weeks lived`)}
+        style={{ cursor: tip?.hot ? 'pointer' : undefined }}
         onPointerMove={(e) => {
           const r = e.currentTarget.getBoundingClientRect();
           const x = Math.floor((e.clientX - r.left - 28) / cell);
@@ -309,11 +311,22 @@ function LifeWeeks() {
           const idx = y * 52 + x;
           const mark = marks.get(idx);
           const date = new Date(birth.getTime() + idx * 7 * 86_400_000);
+          const hot = idx <= lp.weeksLived || !!mark;
           setTip({
             x: e.clientX - r.left,
             y: e.clientY - r.top,
-            text: `${L(`${y} 岁 · 第 ${x + 1} 周`, `Age ${y} · week ${x + 1}`)} · ${dayKey(date)}${mark ? ` · ${mark.title}` : ''}`,
+            text: `${L(`${y} 岁 · 第 ${x + 1} 周`, `Age ${y} · week ${x + 1}`)} · ${dayKey(date)}${mark ? ` · ${mark.title}` : ''}${hot ? L(' · 点击查看', ' · click to open') : ''}`,
+            hot,
           });
+        }}
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          const x = Math.floor((e.clientX - r.left - 28) / cell);
+          const y = Math.floor((e.clientY - r.top) / cell);
+          if (x < 0 || x >= 52 || y < 0 || y >= years) return;
+          const idx = y * 52 + x;
+          if (idx > lp.weeksLived && !marks.has(idx)) return;
+          openWeek(dayKey(new Date(birth.getTime() + idx * 7 * 86_400_000)), L(`${y} 岁 · 第 ${x + 1} 周`, `Age ${y} · week ${x + 1}`));
         }}
       />
       {tip && (

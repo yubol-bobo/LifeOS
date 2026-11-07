@@ -1,6 +1,6 @@
 import { openDay } from './DayXp';
 import { useMemo, useState, type CSSProperties } from 'react';
-import { addDays, dayKey, lastNDays, parseDay } from '../lib/date';
+import { addDays, dayKey, dayOfWeek, lastNDays, parseDay, weekdayLetters } from '../lib/date';
 import { useL, useLang } from '../lib/i18n';
 import { moodFactors } from '../store/insights';
 import { actions, useStore } from '../store/store';
@@ -48,7 +48,7 @@ export function Mood() {
 
   // calendar
   const first = parseDay(`${month}-01`);
-  const lead = (first.getDay() + 6) % 7;
+  const lead = dayOfWeek(first);
   const daysIn = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
   const cells = [...Array(lead).fill(null), ...Array.from({ length: daysIn }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`)];
   const shift = (n: number) => {
@@ -160,7 +160,7 @@ export function Mood() {
           }
         >
           <div className="cal">
-            {(lang === 'zh' ? ['一', '二', '三', '四', '五', '六', '日'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S']).map((d, i) => (
+            {weekdayLetters(lang).map((d, i) => (
               <span key={i} className="cal-h">
                 {d}
               </span>

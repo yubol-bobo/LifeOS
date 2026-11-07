@@ -23,11 +23,25 @@ export function daysBetween(a: string, b: string): number {
   return Math.round((parseDay(b).getTime() - parseDay(a).getTime()) / DAY);
 }
 
-/** Monday-based start of week. */
+/* ---- the user's first day of the week (Settings → General): 1 = Monday, 0 = Sunday ---- */
+let weekStart: 0 | 1 = 1;
+export const getWeekStart = () => weekStart;
+export function setWeekStart(n: number | undefined) {
+  weekStart = n === 0 ? 0 : 1;
+}
+/** Position of a date in the user's week: 0 = first day (Monday or Sunday), 6 = last. */
+export const dayOfWeek = (d: Date) => (d.getDay() - weekStart + 7) % 7;
+/** Monday-based weekday indices (0 = Mon … 6 = Sun, as stored in quest schedules) in display order. */
+export const weekOrder = (): number[] => (weekStart ? [0, 1, 2, 3, 4, 5, 6] : [6, 0, 1, 2, 3, 4, 5]);
+const WD_ZH = ['一', '二', '三', '四', '五', '六', '日'];
+const WD_EN = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+/** One-letter weekday names in the user's week order. */
+export const weekdayLetters = (lang: 'zh' | 'en') => weekOrder().map((i) => (lang === 'zh' ? WD_ZH : WD_EN)[i]);
+
+/** Start of the week containing `d`, honouring the user's first day of the week. */
 export function startOfWeek(d = new Date()): Date {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const wd = (x.getDay() + 6) % 7;
-  x.setDate(x.getDate() - wd);
+  x.setDate(x.getDate() - dayOfWeek(x));
   return x;
 }
 

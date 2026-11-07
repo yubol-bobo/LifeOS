@@ -1,5 +1,5 @@
 import { useRef, useSyncExternalStore } from 'react';
-import { dayKey } from '../lib/date';
+import { dayKey, setWeekStart } from '../lib/date';
 import { uid } from '../lib/id';
 import { burst, notify } from '../os/notify';
 import { celebrate } from '../ui/celebrate';
@@ -135,6 +135,7 @@ function load(): State {
 }
 
 let state: State = load();
+setWeekStart(state.profile.weekStart);
 const subs = new Set<() => void>();
 const commitSubs = new Set<(prev: State, next: State) => void>();
 /** Observe every committed change (used by multi-device sync to stamp what changed). */
@@ -215,6 +216,7 @@ export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
   const readyBefore = new Set(readyGoals(state));
   const draft: State = structuredClone(state);
   mutate(draft);
+  setWeekStart(draft.profile.weekStart);
 
   // Plans complete themselves when everything attached to them is done (and reopen if that changes).
   const planDone: string[] = [];

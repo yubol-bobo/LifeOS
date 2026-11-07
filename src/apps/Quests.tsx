@@ -1,5 +1,5 @@
 import { useState, type CSSProperties } from 'react';
-import { addDays, dayKey, lastNDays, parseDay } from '../lib/date';
+import { addDays, dayKey, lastNDays, parseDay, weekOrder } from '../lib/date';
 import { periodOf } from '../lib/period';
 import { smart } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -144,7 +144,7 @@ export function Quests() {
           <span className="quest-meta">
             <Chip tone={q.attr}>{attrs.label(q.attr)}</Chip>
             <span className="num muted">+{QUEST_XP[q.difficulty]} XP</span>
-            {q.days?.length ? <span className="muted small">{q.days.map((d) => WEEKDAYS[d][lang === 'zh' ? 0 : 1]).join(lang === 'zh' ? '' : ' ')}</span> : null}
+            {q.days?.length ? <span className="muted small">{weekOrder().filter((d) => q.days!.includes(d)).map((d) => WEEKDAYS[d][lang === 'zh' ? 0 : 1]).join(lang === 'zh' ? '' : ' ')}</span> : null}
             {tracker && (
               <span className="link-hint">
                 <Icon name="activity" size={11} /> {tracker.name} +{smart(q.log!.amount)}
@@ -292,7 +292,8 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
         {d.kind === 'daily' && (
           <Field label={L('安排在哪几天', 'Scheduled on')} hint={L('全选 = 每天。没安排的日子不影响全勤和连胜。', "All = every day. Unscheduled days don't break perfect days.")}>
             <div className="weekday-pick">
-              {WEEKDAYS.map((w, i) => {
+              {weekOrder().map((i) => {
+                const w = WEEKDAYS[i];
                 const on = !d.days?.length || d.days.includes(i);
                 return (
                   <button

@@ -53,10 +53,168 @@ const useCurrentDay = () =>
     () => current,
   );
 
+/* ---- open a whole week from anywhere (e.g. a square in Life in weeks): openWeek('2025-03-03', 'Age 31 · week 12') ---- */
+let curWeek: { start: string; label?: string; base?: string } | null = null;
+const wsubs = new Set<() => void>();
+export function openWeek(start: string | null, label?: string) {
+  // `base` remembers which week the label belongs to, so ‹ › can keep counting
+  curWeek = start ? { start, label, base: start } : null;
+  wsubs.forEach((f) => f());
+}
+const shiftWeek = (n: number) => {
+  if (!curWeek) return;
+  curWeek = { ...curWeek, start: addDays(curWeek.start, 7 * n) };
+  wsubs.forEach((f) => f());
+};
+const useCurrentWeek = () =>
+  useSyncExternalStore(
+    (f) => (wsubs.add(f), () => wsubs.delete(f)),
+    () => curWeek,
+  );
+
 /** Mounted once in the shell. */
 export function DayHost() {
   const day = useCurrentDay();
-  return <DayXpModal day={day} onClose={() => openDay(null)} onDay={openDay} />;
+  const week = useCurrentWeek();
+  return (
+    <>
+      <DayXpModal day={day} onClose={() => openDay(null)} onDay={openDay} />
+      {week && !day && <WeekModal week={week} />}
+    </>
+  );
+}
+
+/** Seven days at once: totals, a strip of days (click one for the full day view) and every record. */
+function WeekModal({ week }: { week: { start: string; label?: string; base?: string } }) {
+  const L = useL();
+  const lang = useLang();
+  const attrs = useAttrs();
+  const state = useStore((x) => x);
+  const today = dayKey();
+  const days = Array.from({ length: 7 }, (_, i) => addDays(week.start, i));
+  const end = days[6];
+  const feed = useMemo(
+    () => buildTimeline(state, lang, (v) => money(v, state.profile.currency, 0)).filter((e) => e.day >= week.start && e.day <= end).sort((a, b) => a.ts - b.ts),
+    [state, lang, week.start, end],
+  );
+  const xpOf = (d: string) => state.events.filter((e) => dayKey(e.ts) === d).reduce((a, e) => a + Math.max(0, e.xp), 0);
+  const perDay = days.map((d) => ({ d, xp: xpOf(d), n: feed.filter((e) => e.day === d).length }));
+  const xp = perDay.reduce((a, x) => a + x.xp, 0);
+  const max = Math.max(1, ...perDay.map((x) => x.xp));
+  const focusMs = state.sessions.filter((x) => dayKey(x.start) >= week.start && dayKey(x.start) <= end).reduce((a, x) => a + x.activeMs, 0);
+  const goals = state.milestones.filter((m) => {
+    const d = m.status === 'done' ? m.doneAt : m.targetDate;
+    return d && d >= week.start && d <= end;
+  });
+  const loc = lang === 'zh' ? 'zh-CN' : 'en-US';
+  const f = (d: string, o: Intl.DateTimeFormatOptions) => parseDay(d).toLocaleDateString(loc, o);
+  const range = `${f(week.start, { year: 'numeric', month: 'short', day: 'numeric' })} – ${f(end, { month: 'short', day: 'numeric' })}`;
+  const shiftN = week.base ? Math.round((parseDay(week.start).getTime() - parseDay(week.base).getTime()) / (7 * 86_400_000)) : 0;
+  const label = week.label && shiftN === 0 ? week.label : undefined;
+  const time = (ts: number) => new Date(ts).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
+  const future = week.start > today;
+  const firstUse = state.events.length ? dayKey(Math.min(...state.events.map((e) => e.ts))) : today;
+
+  return (
+    <Modal
+      open
+      onClose={() => openWeek(null)}
+      width={760}
+      title={
+        <span className="dx-title">
+          <button className="icon-btn" onClick={() => shiftWeek(-1)} aria-label={L('上一周', 'Previous week')}>
+            <Icon name="chevron-left" size={18} />
+          </button>
+          <span>
+            {range}
+            {label && <small className="muted wk-label"> · {label}</small>}
+          </span>
+          <button className="icon-btn" onClick={() => shiftWeek(1)} disabled={end >= today} aria-label={L('下一周', 'Next week')}>
+            <Icon name="chevron-right" size={18} />
+          </button>
+        </span>
+      }
+      footer={
+        <>
+          <span className="muted small">{L('点某一天看那天的完整记录', 'Click a day for its full record')}</span>
+          <span className="spacer" />
+          <Button variant="primary" onClick={() => openWeek(null)}>
+            {L('好的', 'Done')}
+          </Button>
+        </>
+      }
+    >
+      <div className="dx-sum">
+        <div>
+          <b className="num">+{xp}</b>
+          <span>XP</span>
+        </div>
+        <div>
+          <b className="num">{feed.length}</b>
+          <span>{L('条记录', 'entries')}</span>
+        </div>
+        <div>
+          <b className="num">{perDay.filter((x) => x.n > 0).length}/7</b>
+          <span>{L('有记录的天', 'days recorded')}</span>
+        </div>
+        <div>
+          <b className="num">{(focusMs / 3_600_000).toFixed(1)}h</b>
+          <span>{L('专注', 'focus')}</span>
+        </div>
+      </div>
+
+      {goals.length > 0 && (
+        <div className="wk-goals">
+          {goals.map((m) => (
+            <span key={m.id} className="chip" style={{ color: `var(--c-${m.attr})` }}>
+              <Icon name="flag" size={12} /> {m.title}
+              <small className="muted"> · {m.status === 'done' ? L('达成', 'reached') : L('目标日', 'target')}</small>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="wk-days">
+        {perDay.map(({ d, xp: v, n }) => (
+          <button key={d} className={`wk-day ${d === today ? 'is-today' : ''}`} disabled={d > today} onClick={() => (openWeek(null), openDay(d))}>
+            <span className="wk-dow">{f(d, { weekday: 'short' })}</span>
+            <span className="wk-date num">{f(d, { month: 'numeric', day: 'numeric' })}</span>
+            <span className="wk-bar">
+              <i style={{ height: `${Math.round((v / max) * 100)}%` }} />
+            </span>
+            <span className="wk-n num">{n ? L(`${n} 条`, `${n}`) : '—'}</span>
+          </button>
+        ))}
+      </div>
+
+      {feed.length ? (
+        <ol className="dx-log wk-log">
+          {feed.map((e, i) => (
+            <li key={e.id} className={i === 0 || feed[i - 1].day !== e.day ? 'wk-first' : ''}>
+              <span className="dx-time num">{i === 0 || feed[i - 1].day !== e.day ? f(e.day, { weekday: 'short', day: 'numeric' }) : ''} {time(e.ts)}</span>
+              <span className="dx-ic" style={{ color: `var(--p-${e.color})`, background: `color-mix(in oklab, var(--p-${e.color}) 14%, transparent)` }}>
+                {e.mood ? <MoodFace v={e.mood as 1 | 2 | 3 | 4 | 5} size={18} /> : <Icon name={e.icon} size={14} />}
+              </span>
+              <span className="dx-label">
+                {e.title}
+                {e.detail && <small className="muted"> · {e.detail}</small>}
+              </span>
+              <span className="dx-attr muted small">{e.value ?? (e.attr && attrs.list.some((x) => x.id === e.attr) ? attrs.label(e.attr) : '')}</span>
+              <span className={`dx-xp num ${e.xp ? '' : 'is-zero'}`}>{e.xp ? `+${e.xp} XP` : ''}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="dx-empty muted">
+          {future
+            ? L('这一周还没到。', 'This week hasn’t come yet.')
+            : end < firstUse
+              ? L('那时候还没开始用 LifeOS，这一周没有记录。', 'This was before you started LifeOS, so there are no records.')
+              : L('这一周没有记录，休息也很重要。', 'Nothing recorded this week. Rest matters too.')}
+        </p>
+      )}
+    </Modal>
+  );
 }
 
 /** One day, fully traceable: XP as a cute 3D block chart, then every record of that day in order. */

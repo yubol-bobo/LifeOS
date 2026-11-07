@@ -194,6 +194,7 @@ export interface Profile {
   lang: Lang;
   theme: ThemePref;
   reduceMotion: boolean;
+  weekStart?: 0 | 1; // first day of the week: 1 = Monday (default), 0 = Sunday
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
