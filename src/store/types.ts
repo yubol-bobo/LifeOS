@@ -222,7 +222,8 @@ export interface Quest {
   planId?: string; // feeds this plan (week / month / year); pulled in from a plan, or linked in the editor
   planAmount?: number; // how much each completion adds to a counted plan (default 1), e.g. +3 chapters
   due?: string; // optional due date (YYYY-MM-DD)
-  step?: boolean; // a step of a project (added in the project): lives in the project, never on today's list
+  step?: boolean; // a project step (lives in the project, never on today's list). One-off quests with a project
+  // count as steps unless this is explicitly false (a to-do you added to Today and tagged with a project).
 }
 
 export type MilestoneSize = 'small' | 'big' | 'epic';

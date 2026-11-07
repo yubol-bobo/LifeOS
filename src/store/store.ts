@@ -366,7 +366,8 @@ function revoke(d: State, ref: string) {
 export const actions = {
   replace(next: State) {
     // imported / synced data: bring built-in text in line with the current language
-    commit((d) => (Object.assign(d, next), void localizeState(d as unknown as Record<string, unknown>, d.profile.lang)), { silent: true });
+    // (run the same upgrades as at start-up: a copy synced from another device may predate them)
+    commit((d) => (Object.assign(d, migrate(next)), void localizeState(d as unknown as Record<string, unknown>, d.profile.lang)), { silent: true });
   },
   /** Bring built-in text in line with the current language (runs once the dictionary is loaded). */
   localize() {
