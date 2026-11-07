@@ -1,4 +1,5 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
+import { PALETTE } from '../store/attrs';
 import { money, num } from '../lib/format';
 import { useL } from '../lib/i18n';
 import { open } from '../os/router';
@@ -149,8 +150,35 @@ export function PlanTag({ id }: { id?: string }) {
 export function ProjectSelect({ value, onChange }: { value?: string; onChange: (id: string | undefined) => void }) {
   const L = useL();
   const projects = useStore((s) => s.projects);
+  // "+ New project…" turns the picker into a name field, so a project can be created right where it's needed
+  const [adding, setAdding] = useState<string | null>(null);
+  const create = () => {
+    const name = adding?.trim();
+    if (!name) return setAdding(null);
+    const id = actions.upsertProject({ name, color: PALETTE[projects.length % PALETTE.length] });
+    setAdding(null);
+    onChange(id);
+  };
+  if (adding != null)
+    return (
+      <div className="input-group">
+        <input
+          className="input"
+          autoFocus
+          value={adding}
+          placeholder={L('新项目的名字', 'New project name')}
+          onChange={(e) => setAdding(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') (e.preventDefault(), create());
+            if (e.key === 'Escape') (e.stopPropagation(), setAdding(null));
+          }}
+        />
+        <Button variant="primary" icon="check" title={L('创建', 'Create')} onClick={create} />
+        <Button icon="x" title={L('取消', 'Cancel')} onClick={() => setAdding(null)} />
+      </div>
+    );
   return (
-    <select className="input" value={value ?? ''} onChange={(e) => onChange(e.target.value || undefined)}>
+    <select className="input" value={value ?? ''} onChange={(e) => (e.target.value === '__new' ? setAdding('') : onChange(e.target.value || undefined))}>
       <option value="">{L('— 不属于任何项目 —', '— No project —')}</option>
       {projects
         .filter((p) => p.status !== 'done' || p.id === value)
@@ -159,6 +187,7 @@ export function ProjectSelect({ value, onChange }: { value?: string; onChange: (
             {p.name}
           </option>
         ))}
+      <option value="__new">{L('＋ 新建项目…', '＋ New project…')}</option>
     </select>
   );
 }
