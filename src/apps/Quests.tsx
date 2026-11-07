@@ -8,7 +8,7 @@ import { useMetrics } from '../store/hooks';
 import { useAttrs } from '../store/attrs';
 import { isScheduled } from '../store/links';
 import { QUEST_XP } from '../store/rules';
-import { actions, useStore } from '../store/store';
+import { actions, getState, useStore } from '../store/store';
 import type { Attr, Difficulty, Quest } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, Card, CheckBubble, Chip, Empty, Field, Modal, Segmented, Stat } from '../ui/kit';
@@ -175,7 +175,7 @@ export function Quests() {
             title={L('专注做这个', 'Focus on this')}
             onClick={() => {
               if (!running && !s.active) actions.focusOnQuest(q.id);
-              open('earn');
+              open(getState().active && getState().active!.rate > 0 ? 'earn' : 'projects');
             }}
           />
         ) : null}

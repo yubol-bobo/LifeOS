@@ -16,7 +16,8 @@ export function Dock({ app }: { app: AppId }) {
     const done = new Set(s.completions[dayKey()] ?? []);
     return s.quests.filter((q) => (q.kind === 'daily' ? isScheduled(q, dayKey()) && !done.has(q.id) : !q.archived && !q.doneAt)).length;
   });
-  const running = useStore((s) => !!s.active);
+  // which timer app has a session running: 'earn' (paid) or 'projects' (project time)
+  const runningApp = useStore((s) => (s.active ? (s.active.rate > 0 ? 'earn' : 'projects') : null));
   const reduce = useStore((s) => s.profile.reduceMotion);
   const ui = useStore((s) => s.ui);
   const apps = ui.dock.filter((id) => !ui.hidden.includes(id) || id === app).map((id) => APPS.find((a) => a.id === id)!).filter(Boolean);
@@ -43,7 +44,7 @@ export function Dock({ app }: { app: AppId }) {
               >
                 <span className="dock-tip">{lang === 'zh' ? a.zh : a.en}</span>
                 <AppGlyph icon={a.icon} hue={a.hue} size={50} badge={badge} />
-                {(app === a.id || (a.id === 'earn' && running)) && <i className={`dock-dot ${a.id === 'earn' && running ? 'is-live' : ''}`} />}
+                {(app === a.id || a.id === runningApp) && <i className={`dock-dot ${a.id === runningApp ? 'is-live' : ''}`} />}
               </button>
             </div>
           );

@@ -39,7 +39,7 @@ export function Spotlight({ onClose, dark }: { onClose: () => void; dark: boolea
       ...APPS.map((a) => ({ id: `app:${a.id}`, group: G.apps, title: lang === 'zh' ? a.zh : a.en, sub: lang === 'zh' ? a.blurbZh : a.blurbEn, icon: a.icon, hue: a.hue, run: () => open(a.id) })),
       active
         ? { id: 'cmd:stop', group: G.cmd, title: L('结束专注并结算', 'Stop focus & cash out'), icon: 'square', run: () => actions.stopFocus() }
-        : { id: 'cmd:focus', group: G.cmd, title: L('开始专注计时', 'Start focus timer'), icon: 'play', run: () => (actions.startFocus(getState().profile.hourlyRate, 'craft'), open('earn')) },
+        : { id: 'cmd:focus', group: G.cmd, title: L('开始赚钱计时', 'Start the paid-work timer'), icon: 'play', run: () => (actions.startFocus(getState().profile.hourlyRate, 'craft'), open('earn')) },
       { id: 'cmd:theme', group: G.cmd, title: dark ? L('切换到明亮模式', 'Switch to light mode') : L('切换到暗夜模式', 'Switch to dark mode'), icon: dark ? 'sun' : 'moon', run: () => actions.profile({ theme: dark ? 'light' : 'dark' }) },
       { id: 'cmd:layout', group: G.cmd, title: getLayout() === 'landscape' ? L('切换到竖版布局', 'Switch to portrait layout') : L('切换到横版仪表盘', 'Switch to landscape dashboard'), icon: getLayout() === 'landscape' ? 'layout-tall' : 'layout-wide', run: toggleLayout },
       { id: 'cmd:fullscreen', group: G.cmd, title: L('全屏 / 退出全屏', 'Toggle full screen'), icon: 'fullscreen', run: () => void toggleFullscreen() },

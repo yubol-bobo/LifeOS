@@ -120,7 +120,12 @@ export function migrate(parsed: Partial<State>): State {
   // Older "working for" entries become full projects.
   s.projects = s.projects.map((p) => ({ category: 'work', status: 'active', ...p }));
   // New apps appear in the dock automatically.
-  for (const id of DEFAULT_DOCK) if (!s.ui.dock.includes(id)) s.ui.dock.splice(Math.max(0, s.ui.dock.length - 1), 0, id);
+  // New apps appear in the dock automatically, right after the app that precedes them by default.
+  DEFAULT_DOCK.forEach((id, i) => {
+    if (s.ui.dock.includes(id)) return;
+    const after = i > 0 ? s.ui.dock.indexOf(DEFAULT_DOCK[i - 1]) : -1;
+    s.ui.dock.splice(after >= 0 ? after + 1 : Math.max(0, s.ui.dock.length - 1), 0, id);
+  });
   s.ui.dock = s.ui.dock.filter((id) => DEFAULT_DOCK.includes(id));
   return s;
 }
@@ -960,7 +965,9 @@ export const actions = {
   focusOnQuest(questId: string) {
     const q = state.quests.find((x) => x.id === questId);
     if (!q) return;
-    actions.startFocus(state.profile.hourlyRate, q.attr, q.title, { questId, goalId: q.goalId });
+    // a quest is project time, unless its project is paid work with its own rate
+    const rate = state.projects.find((p) => p.id === q.projectId)?.rate ?? 0;
+    actions.startFocus(rate, q.attr, q.title, { questId, goalId: q.goalId, projectId: q.projectId });
   },
   /* ---- unpaid-focus quick picks ---- */
   saveFocusPreset(p: Omit<FocusPreset, 'id'> & { id?: string }) {

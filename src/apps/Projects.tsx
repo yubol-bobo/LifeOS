@@ -14,6 +14,9 @@ import type { Category, Project } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, Card, CheckBubble, Chip, Empty, Field, Modal, Segmented } from '../ui/kit';
 import { scopeName } from './Plan';
+import { focusProject, LiveFocusBar, ProjectBoard, QuickStart } from './ProjectBoard';
+import { EffortCard, PresetEditor } from './Earn';
+import { useLiveSession } from '../os/live';
 
 export function useCategories() {
   const lang = useLang();
@@ -50,6 +53,24 @@ export function Projects() {
     return () => window.removeEventListener('lifeos:project-open', f);
   }, []);
   const [catsOpen, setCatsOpen] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
+  const live = useLiveSession(1000);
+  // Board (planning / in progress / done, papers included) or the card grid
+  const [view, setViewRaw] = useState<'board' | 'cards'>(() => {
+    try {
+      return localStorage.getItem('lifeos:projects-view') === 'cards' ? 'cards' : 'board';
+    } catch {
+      return 'board';
+    }
+  });
+  const setView = (v: 'board' | 'cards') => {
+    setViewRaw(v);
+    try {
+      localStorage.setItem('lifeos:projects-view', v);
+    } catch {
+      /* ignore */
+    }
+  };
   const list = s.projects.filter((p) => (filter === 'all' || p.category === filter) && (status === 'all' || p.status !== 'done'));
 
   return (
@@ -57,7 +78,7 @@ export function Projects() {
       <div className="app-head">
         <div>
           <h1>{L('项目', 'Projects')}</h1>
-          <p className="muted">{L('论文、工作、生活里的事，都可以是一个项目。任务、计划、目标、论文、专注时间和收入都会汇总到这里。', 'Papers, work, life — anything can be a project. Tasks, plans, goals, papers, focus time and income all roll up here.')}</p>
+          <p className="muted">{L('论文、工作、生活里的事，都可以是一个项目。在这里直接开始专注；任务、计划、目标、论文、专注时间和收入都会汇总到这里。', 'Papers, work, life — anything can be a project. Start focusing right here; tasks, plans, goals, papers, focus time and income all roll up here.')}</p>
         </div>
         <Button
           variant="primary"
@@ -71,6 +92,28 @@ export function Projects() {
         </Button>
       </div>
 
+      <LiveFocusBar />
+      <QuickStart onEdit={() => setPresetsOpen(true)} />
+
+      <div className="proj-view">
+        <Segmented
+          size="sm"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'board', label: L('看板', 'Board'), icon: 'route' },
+            { value: 'cards', label: L('卡片', 'Cards'), icon: 'grid' },
+          ]}
+        />
+        {view === 'board' && <span className="muted small">{L('拖动卡片改变状态 · 点「专注」直接开始计时', 'Drag cards to change status · Focus starts the clock')}</span>}
+      </div>
+
+      {view === 'board' ? (
+        <Card>
+          <ProjectBoard onFocus={(id) => { const p = s.projects.find((x) => x.id === id); if (p) focusProject(p, { open: p.rate != null }); }} />
+        </Card>
+      ) : (
+      <>
       <div className="proj-filters">
         <button className={`chip chip-btn ${filter === 'all' ? 'is-active' : ''}`} onClick={() => setFilter('all')}>
           {L('全部', 'All')} <span className="num muted">{s.projects.filter((p) => status === 'all' || p.status !== 'done').length}</span>
@@ -106,6 +149,11 @@ export function Projects() {
           ))}
         </div>
       )}
+      </>
+      )}
+
+      <EffortCard live={live} />
+      <PresetEditor open={presetsOpen} onClose={() => setPresetsOpen(false)} />
       {openId && <ProjectDetail id={openId} onClose={() => setOpenId(null)} />}
       <CategoryEditor open={catsOpen} onClose={() => setCatsOpen(false)} />
     </div>
@@ -119,8 +167,16 @@ function ProjectCard({ p, onOpen }: { p: Project; onOpen: () => void }) {
   const st = useMemo(() => projectStats(s, p), [s, p]);
   const c = cats.find(p.category);
   const days = p.deadline ? daysBetween(dayKey(), p.deadline) : null;
+  const liveHere = s.active?.projectId === p.id;
   return (
-    <button className={`proj-card is-${p.status ?? 'active'}`} style={{ '--tone': `var(--p-${p.color})` } as CSSProperties} onClick={onOpen}>
+    <div
+      role="button"
+      tabIndex={0}
+      className={`proj-card is-${p.status ?? 'active'}`}
+      style={{ '--tone': `var(--p-${p.color})` } as CSSProperties}
+      onClick={onOpen}
+      onKeyDown={(e) => e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())}
+    >
       <span className="pc-band" />
       <div className="pc-top">
         <strong>{p.name}</strong>
@@ -157,8 +213,15 @@ function ProjectCard({ p, onOpen }: { p: Project; onOpen: () => void }) {
         {p.status === 'planning' && <Chip tone="blue">{L('筹划中', 'Planning')}</Chip>}
         {p.status === 'paused' && <Chip>{L('暂停', 'Paused')}</Chip>}
         {p.status === 'done' && <Chip tone="jade">{L('已完成', 'Done')}</Chip>}
+        {p.status !== 'done' && (
+          <span className="pc-focus" onClick={(e) => e.stopPropagation()}>
+            <Button size="sm" variant={liveHere ? 'primary' : 'soft'} icon={liveHere ? 'timer' : 'play'} title={L(`开始专注「${p.name}」`, `Focus on ${p.name}`)} onClick={() => (liveHere ? open((s.active?.rate ?? 0) > 0 ? 'earn' : 'projects') : focusProject(p))}>
+              {liveHere ? L('专注中', 'Focusing') : L('专注', 'Focus')}
+            </Button>
+          </span>
+        )}
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -347,7 +410,7 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
               ))}
             </div>
           )}
-          <Button variant="primary" icon="play" onClick={() => (localStorage.setItem('lifeos:focus-mode', p.rate != null ? 'paid' : 'free'), actions.startFocus(p.rate ?? 0, s.attributes[0]?.id ?? 'mind', p.name, { projectId: p.id }), onClose(), open('earn'))}>
+          <Button variant="primary" icon="play" onClick={() => (focusProject(p, { open: p.rate != null }), onClose())}>
             {L('为这个项目开始专注', 'Focus on this project')}
           </Button>
           <Button variant="ghost" icon="trash" onClick={() => setConfirmDel(true)}>
