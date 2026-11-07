@@ -85,6 +85,26 @@
     grid-row: span 2;
   }
 
+  /* the hero holds the greeting, the attribute radar and the level card: give the text column a
+     little more room and keep the greeting to two lines so the radar stays readable */
+  .os[data-layout='landscape'] .w-hero {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+
+  .os[data-layout='landscape'] .hero-text h1 {
+    font-size: clamp(22px, 2vw, 40px);
+  }
+
+  .os[data-layout='landscape'] .hero-sub {
+    font-size: 13.5px;
+    margin-top: 6px;
+  }
+
+  /* the time-split tile: the donut and the goal; start a session from the Focus app */
+  .os[data-layout='landscape'] .w-effort > .row-gap {
+    display: none;
+  }
+
 
   /* app windows use the full width too */
   .os[data-layout='landscape'] .window:not(.is-fit) {

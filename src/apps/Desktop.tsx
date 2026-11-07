@@ -30,6 +30,10 @@ import { planProgress } from '../store/plans';
 import { upcoming } from '../store/countdowns';
 import { ReviewHeatmap } from './Review';
 import { clock } from './Earn';
+import { cssVar, effortRows, sliceColor } from './effort';
+import { Pie3D } from '../scene/Pie3D';
+import { useTheme } from '../os/theme';
+import { useLayout } from '../os/display';
 import { hasReview, reviewStreak } from '../store/review';
 import { openSummary } from '../ai/summary';
 
@@ -60,11 +64,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const dailyDone = dailies.filter((q) => doneToday.has(q.id)).length;
 
   const todaysFocus = s.sessions.filter((x) => dayKey(x.start) === today);
-  const todayMs = todaysFocus.reduce((a, x) => a + x.activeMs, 0) + (live?.ms ?? 0);
   const todayEarned = todaysFocus.reduce((a, x) => a + x.earned, 0) + (live?.earned ?? 0);
-  const todayFreeMs = todaysFocus.filter((x) => !x.rate).reduce((a, x) => a + x.activeMs, 0) + (live && !live.paid ? live.ms : 0);
-  const weekDays = lastNDays(7);
-  const weekEarn = weekDays.map((d) => s.sessions.filter((x) => dayKey(x.start) === d).reduce((a, x) => a + x.earned, 0) + (d === today ? (live?.earned ?? 0) : 0));
 
   const goals = s.milestones
     .filter((x) => x.status !== 'done')
@@ -118,6 +118,19 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
           />
           <span className="planet-hint">{L('拖动旋转 · 树木随等级生长，旗帜是你的里程碑', 'Drag to spin · trees grow with level, flags are milestones')}</span>
         </div>
+        {!hide.has('attrs') && (
+          <button className="hero-attrs" onClick={() => open('trophies')} title={L('属性分布 · 点开看升级之路', 'Attributes · open the road')} aria-label={L('属性', 'Attributes')}>
+            <Radar
+              size={250}
+              axes={attrs.list.map(({ id: a }) => ({
+                key: a,
+                label: attrs.label(a),
+                value: m.attrXp[a] ?? 0,
+                display: `Lv.${attrLevel(m.attrXp[a] ?? 0)}`,
+              }))}
+            />
+          </button>
+        )}
         <div className="hero-level">
           <Ring value={m.level.progress} size={78} stroke={8}>
             <span className="ring-num num">{m.level.level}</span>
@@ -205,61 +218,68 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       {/* ---------- earn ---------- */}
       {!hide.has('earn') && (
       <section className={`widget w-earn ${live ? 'is-live' : ''}`}>
-        <WidgetHead icon="timer" title={L('专注计时', 'Focus')} onOpen={() => open('earn')}>
-          {live && <span className="muted num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : clock(live.ms)}</span>}
+        <WidgetHead icon="coins" title={L('今日收入', 'Earnings')} onOpen={() => (localStorage.setItem('lifeos:focus-mode', 'paid'), open('earn'))}>
+          {live?.paid && <span className="muted num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : clock(live.ms)}</span>}
         </WidgetHead>
-        <div className="earn-mini">
-          <Odometer value={money(todayEarned, s.profile.currency)} className="odo-lg" />
-          <span className="muted">
-            {L('今日收入', 'earned today')} · {L('专注', 'focus')} {(todayMs / 3_600_000).toFixed(1)}h / {(s.profile.focusGoalMin / 60).toFixed(1)}h
-            {todayFreeMs > 0 && ` · 🌱 ${(todayFreeMs / 3_600_000).toFixed(1)}h`}
-          </span>
-          <Bar value={todayMs / (s.profile.focusGoalMin * 60_000)} tone="wealth" height={8} label="focus goal" />
-        </div>
-        <div className="earn-week">
-          <div>
-            <span className="muted small">{L('近 7 天', 'Last 7 days')}</span>
-            <strong className="num">{money(weekEarn.reduce((a, b) => a + b, 0), s.profile.currency, 0)}</strong>
+        <div className="earn-row">
+          <div className="earn-mini">
+            <Odometer value={money(todayEarned, s.profile.currency)} className="odo-lg" />
+            <span className="muted">{L('今天赚到的', 'earned today')}</span>
           </div>
-          <Sparkline values={weekEarn} tone="wealth" width={110} height={36} />
+          {live?.paid ? (
+            <div className="row-gap">
+              <Button variant="soft" icon={live.paused ? 'play' : 'pause'} title={live.paused ? L('继续', 'Resume') : L('暂停', 'Pause')} onClick={actions.pauseFocus}>
+                <span className="btn-txt">{live.paused ? L('继续', 'Resume') : L('暂停', 'Pause')}</span>
+              </Button>
+              <Button variant="primary" icon="square" title={L('结算', 'Cash out')} onClick={() => actions.stopFocus()}>
+                <span className="btn-txt">{L('结算', 'Cash out')}</span>
+              </Button>
+            </div>
+          ) : (
+            <div className="row-gap">
+              <Button variant="primary" icon="play" disabled={!!live} title={L('开始工作', 'Start work')} onClick={() => actions.startFocus(s.profile.hourlyRate, 'craft')}>
+                <span className="btn-txt">{L(`开始工作 · ${money(s.profile.hourlyRate, s.profile.currency, 0)}/h`, `Start work · ${money(s.profile.hourlyRate, s.profile.currency, 0)}/h`)}</span>
+              </Button>
+            </div>
+          )}
         </div>
-        {live ? (
-          <div className="row-gap">
-            <Button variant="soft" icon={live.paused ? 'play' : 'pause'} onClick={actions.pauseFocus}>
-              {live.paused ? L('继续', 'Resume') : L('暂停', 'Pause')}
+      </section>
+      )}
+
+      {!hide.has('assets') && (
+      <section className="widget w-assets">
+        <WidgetHead icon="landmark" title={L('净资产', 'Net worth')} onOpen={() => open('assets')} />
+        {assetSeries.length ? (
+          <>
+            <div className="research-mini">
+              <div>
+                <div className="big-num num">{compact(assetSeries.at(-1)!.total)}</div>
+                <div className="muted">
+                  {s.assets.base}
+                  {assetDelta != null && (
+                    <span className={`num ${assetDelta >= 0 ? 'pos' : 'neg'}`}> {(assetDelta >= 0 ? '+' : '−') + compact(Math.abs(assetDelta))}</span>
+                  )}
+                </div>
+              </div>
+              <Sparkline values={assetSeries.slice(-14).map((x) => x.total)} tone="wealth" width={120} height={44} />
+            </div>
+            <Button size="sm" variant={checkinDue(s) ? 'primary' : 'soft'} icon="wallet" className={checkinDue(s) ? 'is-due' : 'not-due'} onClick={() => window.dispatchEvent(new Event('lifeos:asset-checkin'))} style={{ marginTop: 14 }}>
+              {checkinDue(s) ? L('该盘点了 · 记录此刻', 'Check-in due · record now') : L('记录此刻', 'Record balances')}
             </Button>
-            <Button variant="primary" icon="square" onClick={() => actions.stopFocus()}>
-              {live.paid ? L('结算', 'Cash out') : L('结束', 'Stop')}
-            </Button>
-          </div>
+          </>
         ) : (
-          <div className="row-gap">
-            <Button variant="primary" icon="play" onClick={() => actions.startFocus(s.profile.hourlyRate, 'craft')}>
-              {L(`开始工作 · ${money(s.profile.hourlyRate, s.profile.currency, 0)}/h`, `Start work · ${money(s.profile.hourlyRate, s.profile.currency, 0)}/h`)}
+          <>
+            <p className="muted small">{L('添加账户，定期记录余额，看见资产的长期变化。', 'Add accounts and check in regularly to see your wealth over time.')}</p>
+            <Button size="sm" icon="plus" onClick={() => open('assets')} style={{ marginTop: 12 }}>
+              {L('添加账户', 'Add accounts')}
             </Button>
-            <Button variant="soft" icon="briefcase" onClick={() => (localStorage.setItem('lifeos:focus-mode', 'free'), open('earn'))}>
-              {L('项目', 'Projects')}
-            </Button>
-          </div>
+          </>
         )}
       </section>
       )}
 
-      {/* ---------- attributes ---------- */}
-      {!hide.has('attrs') && (
-      <section className="widget w-attrs">
-        <WidgetHead icon="sparkles" title={L('属性', 'Attributes')} onOpen={() => open('trophies')} />
-        <Radar
-          size={250}
-          axes={attrs.list.map(({ id: a }) => ({
-            key: a,
-            label: attrs.label(a),
-            value: (m.attrXp[a] ?? 0),
-            display: `Lv.${attrLevel((m.attrXp[a] ?? 0))}`,
-          }))}
-        />
-      </section>
-      )}
+      {/* ---------- where today's time went ---------- */}
+      {!hide.has('effort') && <EffortWidget live={live} />}
 
       {/* ---------- research ---------- */}
       {!hide.has('research') && (
@@ -421,37 +441,6 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       </section>
       )}
 
-      {!hide.has('assets') && (
-      <section className="widget w-assets">
-        <WidgetHead icon="landmark" title={L('净资产', 'Net worth')} onOpen={() => open('assets')} />
-        {assetSeries.length ? (
-          <>
-            <div className="research-mini">
-              <div>
-                <div className="big-num num">{compact(assetSeries.at(-1)!.total)}</div>
-                <div className="muted">
-                  {s.assets.base}
-                  {assetDelta != null && (
-                    <span className={`num ${assetDelta >= 0 ? 'pos' : 'neg'}`}> {(assetDelta >= 0 ? '+' : '−') + compact(Math.abs(assetDelta))}</span>
-                  )}
-                </div>
-              </div>
-              <Sparkline values={assetSeries.slice(-14).map((x) => x.total)} tone="wealth" width={120} height={44} />
-            </div>
-            <Button size="sm" variant={checkinDue(s) ? 'primary' : 'soft'} icon="wallet" onClick={() => window.dispatchEvent(new Event('lifeos:asset-checkin'))} style={{ marginTop: 14 }}>
-              {checkinDue(s) ? L('该盘点了 · 记录此刻', 'Check-in due · record now') : L('记录此刻', 'Record balances')}
-            </Button>
-          </>
-        ) : (
-          <>
-            <p className="muted small">{L('添加账户，定期记录余额，看见资产的长期变化。', 'Add accounts and check in regularly to see your wealth over time.')}</p>
-            <Button size="sm" icon="plus" onClick={() => open('assets')} style={{ marginTop: 12 }}>
-              {L('添加账户', 'Add accounts')}
-            </Button>
-          </>
-        )}
-      </section>
-      )}
 
       {!hide.has('heat') && (
       <section className="widget w-heat">
@@ -531,6 +520,100 @@ function Delta({ now, prev }: { now: number; prev: number }) {
       <Icon name={d >= 0 ? 'trending-up' : 'trending-down'} size={11} /> {d >= 0 ? '+' : ''}
       {Math.round(d * 100)}%
     </span>
+  );
+}
+
+/** Today's focus as a small interactive 3D donut: paid work and project time, slice by activity. */
+function EffortWidget({ live }: { live: ReturnType<typeof useLiveSession> }) {
+  const L = useL();
+  const dark = useTheme();
+  const sessions = useStore((s) => s.sessions);
+  const projects = useStore((s) => s.projects);
+  const goalMin = useStore((s) => s.profile.focusGoalMin);
+  const reduce = useStore((s) => s.profile.reduceMotion);
+  const [sel, setSel] = useState<string | null>(null);
+  const compact = useLayout() === 'landscape';
+  const from = new Date(new Date().setHours(0, 0, 0, 0)).getTime();
+  const all = effortRows(sessions, projects, live, from, L('专注', 'Focus'));
+  const total = all.reduce((a, r) => a + r.ms, 0);
+  const byId = new Map(all.map((r) => [r.id, r]));
+  const h = (ms: number) => (ms / 3_600_000).toFixed(1);
+  const paidRim = cssVar('--c-wealth', '#1ba677');
+  const freeRim = cssVar('--p-violet', '#7a5ae6');
+  const focus = sel ? byId.get(sel) : undefined;
+  const toFocus = (mode: 'paid' | 'free') => (localStorage.setItem('lifeos:focus-mode', mode), open('earn'));
+  return (
+    <section className={`widget w-effort ${live ? 'is-live' : ''}`}>
+      <WidgetHead icon="activity" title={L('今日时间分配', 'Time split')} onOpen={() => toFocus('free')}>
+        {live && !live.paid && <span className="muted num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : clock(live.ms)}</span>}
+      </WidgetHead>
+      {total > 0 ? (
+        <div className="effort-mini">
+          <Pie3D
+            slices={all.map((r) => ({ id: r.id, value: Math.max(1, Math.round(r.ms / 60_000)), color: sliceColor(all, r.id), rim: r.paid ? paidRim : freeRim }))}
+            dark={dark}
+            height={compact ? 118 : 160}
+            still={reduce}
+            selected={sel}
+            onSelect={setSel}
+            tooltip={(id) => {
+              const r = byId.get(id);
+              return r ? (
+                <>
+                  <span className="tip-k">{r.label}</span>
+                  <span className="tip-v num">
+                    {h(r.ms)}h · {Math.round((r.ms / total) * 100)}%
+                  </span>
+                </>
+              ) : null;
+            }}
+            center={
+              <span className="effort-center">
+                <b className="num">{focus ? h(focus.ms) : h(total)}h</b>
+                <small className="muted">{focus ? focus.label : L('今天', 'today')}</small>
+              </span>
+            }
+          />
+          <ul className="effort-legend">
+            {all.slice(0, 4).map((r) => (
+              <li key={r.id} className={sel === r.id ? 'is-on' : ''} onClick={() => setSel(sel === r.id ? null : r.id)}>
+                <i style={{ background: sliceColor(all, r.id) }} />
+                <span className="el-name">{r.label}</span>
+                <span className="num muted">{h(r.ms)}h</span>
+              </li>
+            ))}
+            {all.length > 4 && <li className="muted small">{L(`还有 ${all.length - 4} 项`, `+${all.length - 4} more`)}</li>}
+          </ul>
+        </div>
+      ) : (
+        <p className="muted small effort-empty">{L('今天还没有专注记录。开始一段计时，这里会出现一个 3D 环形图。', 'No focus yet today. Start a session and a 3D donut appears here.')}</p>
+      )}
+      <div className="goal">
+        <div className="goal-top">
+          <span className="muted small">{L('今日专注目标', "Today's focus goal")}</span>
+          <span className="num small">
+            {h(total)} / {(goalMin / 60).toFixed(1)}h
+          </span>
+        </div>
+        <Bar value={total / (goalMin * 60_000)} tone="violet" height={7} label="focus goal" />
+      </div>
+      {live && !live.paid ? (
+        <div className="row-gap">
+          <Button variant="soft" icon={live.paused ? 'play' : 'pause'} onClick={actions.pauseFocus}>
+            {live.paused ? L('继续', 'Resume') : L('暂停', 'Pause')}
+          </Button>
+          <Button variant="primary" icon="square" onClick={() => actions.stopFocus()}>
+            {L('结束', 'Stop')}
+          </Button>
+        </div>
+      ) : (
+        <div className="row-gap">
+          <Button variant="soft" icon="briefcase" disabled={!!live} onClick={() => toFocus('free')}>
+            {L('开始项目专注', 'Focus on a project')}
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 
