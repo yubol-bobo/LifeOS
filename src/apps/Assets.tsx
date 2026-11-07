@@ -1,3 +1,4 @@
+import { PALETTE_NAMES } from '../store/defaults';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { addDays, dayKey, parseDay } from '../lib/date';
 import { compact, money } from '../lib/format';
@@ -109,7 +110,7 @@ export function Assets() {
         <Card title={L('构成', 'Composition')} icon="grid">
           {gross > 0 ? (
             <>
-              <div className="comp-bar" role="img" aria-label="composition">
+              <div className="comp-bar" role="img" aria-label={L('资产构成', 'Asset mix')}>
                 {[...byKind.entries()]
                   .sort((a, b) => b[1] - a[1])
                   .map(([k, v]) => (
@@ -297,7 +298,7 @@ function AccountEditor({ value, onClose }: { value: Partial<Account> | null; onC
           <Field label={L('颜色', 'Color')}>
             <div className="swatches">
               {PALETTE.map((c) => (
-                <button key={c} type="button" aria-label={c} className={a.color === c ? 'is-on' : ''} style={{ '--sw': `var(--p-${c})` } as CSSProperties} onClick={() => setD({ ...a, color: c })} />
+                <button key={c} type="button" aria-label={L(...PALETTE_NAMES[c as keyof typeof PALETTE_NAMES])} className={a.color === c ? 'is-on' : ''} style={{ '--sw': `var(--p-${c})` } as CSSProperties} onClick={() => setD({ ...a, color: c })} />
               ))}
             </div>
           </Field>

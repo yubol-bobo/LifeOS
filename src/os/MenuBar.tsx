@@ -34,7 +34,7 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
   return (
     <header className="menubar">
       <div className="mb-left">
-        <button className="mb-logo" onClick={() => setMenu((v) => !v)} aria-label="LifeOS menu" aria-expanded={menu}>
+        <button className="mb-logo" onClick={() => setMenu((v) => !v)} aria-label={L('LifeOS 菜单', 'LifeOS menu')} aria-expanded={menu}>
           <span className="logo-mark" />
         </button>
         <strong className="mb-app">{lang === 'zh' ? def.zh : def.en}</strong>

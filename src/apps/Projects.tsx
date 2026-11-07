@@ -1,3 +1,4 @@
+import { PALETTE_NAMES } from '../store/defaults';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { daysBetween, dayKey } from '../lib/date';
 import { money, num } from '../lib/format';
@@ -408,7 +409,7 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
           <Field label={L('颜色', 'Color')}>
             <div className="swatches">
               {PALETTE.map((c) => (
-                <button key={c} type="button" aria-label={c} className={p.color === c ? 'is-on' : ''} style={{ '--sw': `var(--p-${c})` } as CSSProperties} onClick={() => set({ color: c })} />
+                <button key={c} type="button" aria-label={L(...PALETTE_NAMES[c as keyof typeof PALETTE_NAMES])} className={p.color === c ? 'is-on' : ''} style={{ '--sw': `var(--p-${c})` } as CSSProperties} onClick={() => set({ color: c })} />
               ))}
             </div>
           </Field>

@@ -152,13 +152,13 @@ export function Shell() {
           >
             <div className="win-bar" onDoubleClick={() => setZoom((z) => !z)}>
               <div className="lights">
-                <button className="light l-close" aria-label="Close" onClick={() => open('home')}>
+                <button className="light l-close" aria-label={lang === 'zh' ? '关闭' : 'Close'} onClick={() => open('home')}>
                   <Icon name="x" size={9} stroke={3.5} />
                 </button>
-                <button className="light l-min" aria-label="Minimize" onClick={() => open('home')}>
+                <button className="light l-min" aria-label={lang === 'zh' ? '最小化' : 'Minimize'} onClick={() => open('home')}>
                   <Icon name="minus" size={9} stroke={3.5} />
                 </button>
-                <button className="light l-zoom" aria-label="Zoom" onClick={() => setZoom((z) => !z)}>
+                <button className="light l-zoom" aria-label={lang === 'zh' ? '缩放' : 'Zoom'} onClick={() => setZoom((z) => !z)}>
                   <Icon name="maximize" size={8} stroke={3.5} />
                 </button>
               </div>

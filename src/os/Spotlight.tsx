@@ -71,7 +71,7 @@ export function Spotlight({ onClose, dark }: { onClose: () => void; dark: boolea
   let lastGroup = '';
   return createPortal(
     <div className="spot-scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="spot" role="dialog" aria-label="Spotlight">
+      <div className="spot" role="dialog" aria-label={L('聚焦搜索', 'Spotlight')}>
         <div className="spot-input">
           <Icon name="search" size={20} />
           <input

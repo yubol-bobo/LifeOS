@@ -2,6 +2,7 @@ import { isValidElement, useEffect, useRef, type CSSProperties, type ReactNode }
 import { createPortal } from 'react-dom';
 import type { Attr } from '../store/types';
 import { Icon } from './Icon';
+import { useStore } from '../store/store';
 
 type Tone = 'accent' | 'gold' | 'mind' | 'body' | 'wealth' | 'craft' | 'bond' | 'spirit' | 'ink';
 
@@ -203,6 +204,7 @@ export function Field({ label, children, hint }: { label: ReactNode; children: R
 /* ---------------- Modal / sheet ---------------- */
 
 export function Modal({ open, onClose, title, children, footer, width = 520 }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; width?: number }) {
+  const lang = useStore((s) => s.profile.lang);
   const ref = useRef<HTMLDivElement>(null);
   // Callers usually pass an inline onClose, which is a new function on every render. Keep the
   // latest one in a ref so the effect below runs only when the modal opens: otherwise each
@@ -225,7 +227,7 @@ export function Modal({ open, onClose, title, children, footer, width = 520 }: {
       <div className="modal" role="dialog" aria-modal="true" style={{ maxWidth: width }} ref={ref}>
         <header className="modal-head">
           <h2>{title}</h2>
-          <Button variant="ghost" size="sm" icon="x" title="Close" onClick={onClose} />
+          <Button variant="ghost" size="sm" icon="x" title={lang === 'zh' ? '关闭' : 'Close'} onClick={onClose} />
         </header>
         <div className="modal-body">{children}</div>
         {footer && <footer className="modal-foot">{footer}</footer>}
