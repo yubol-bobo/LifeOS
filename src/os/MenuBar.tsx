@@ -88,7 +88,7 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
 
       <div className="mb-right">
         {live && (
-          <button className={`mb-live ${live.paused ? 'is-paused' : ''}`} onClick={() => open('earn')} title={L('正在计时', 'Focus running')}>
+          <button className={`mb-live ${live.paused ? 'is-paused' : ''}`} onClick={() => open(live.paid ? 'earn' : 'projects')} title={L('正在计时', 'Focus running')}>
             <i className="pulse" />
             <span className="num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : live.paid ? money(live.earned, currency) : `🌱 ${clock(live.ms)}`}</span>
           </button>

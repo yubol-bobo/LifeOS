@@ -5,11 +5,13 @@ import { open } from '../os/router';
 import { notify } from '../os/notify';
 import { PALETTE } from '../store/attrs';
 import { projectStats } from '../store/plans';
-import { actions, useStore } from '../store/store';
+import { actions, getState, useStore } from '../store/store';
 import type { Paper, PaperStatus, Project, ProjectStatus } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { Button, Chip } from '../ui/kit';
 import { useBoardDrag } from '../ui/useBoardDrag';
+import { useLiveSession } from '../os/live';
+import { clock } from './Earn';
 import { useStatusLabel } from './Research';
 
 /** The three columns of the project board. Research papers are placed by their stage. */
@@ -24,6 +26,20 @@ const paperCol = (p: Paper): Col => (p.status === 'idea' ? 'planning' : p.status
 /** Where a paper lands when dropped on a column: the first stage of that column. */
 const PAPER_FOR: Record<Col, PaperStatus> = { planning: 'idea', active: 'drafting', done: 'accepted' };
 const DONE_SHOWN = 5;
+
+/** Start a focus session on a project right away: paid if the project has its own rate, project time otherwise. */
+export function focusProject(p: Project, opts: { open?: boolean } = {}) {
+  const st = getState();
+  const tr = (zh: string, en: string) => (st.profile.lang === 'zh' ? zh : en);
+  if (st.active) {
+    notify({ title: tr('先结束当前的计时', 'Finish the current session first'), icon: 'info' });
+    open(st.active.rate > 0 ? 'earn' : 'projects');
+    return;
+  }
+  actions.startFocus(p.rate ?? 0, st.attributes[0]?.id ?? 'mind', p.name, { projectId: p.id });
+  notify({ title: tr(`开始专注：${p.name}`, `Focusing on ${p.name}`), icon: 'timer', tone: 'good' });
+  if (opts.open !== false) open(p.rate != null ? 'earn' : 'projects');
+}
 
 /** Open a project's detail page in the Projects app. */
 export function openProject(id: string) {
@@ -178,5 +194,97 @@ function ProjectCard({ p, st, today, dragging, onPointerDown, onOpen, onFocus }:
         </div>
       )}
     </article>
+  );
+}
+
+/**
+ * The running session, shown at the top of Projects: name, clock, pause / stop / discard and a
+ * countdown. A paid session just links to Earn, where its money is.
+ */
+export function LiveFocusBar() {
+  const L = useL();
+  const lang = useLang();
+  const live = useLiveSession(500);
+  const projects = useStore((s) => s.projects);
+  if (!live) return null;
+  const name = live.active.note || projects.find((p) => p.id === live.active.projectId)?.name || L('专注', 'Focus');
+  const since = new Date(live.active.start).toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+  if (live.paid)
+    return (
+      <section className="proj-live is-paid">
+        <i className="pulse" />
+        <span>
+          {L('正在赚钱计时：', 'Paid session running: ')}
+          <b>{name}</b>
+        </span>
+        <span className="spacer" />
+        <Button size="sm" icon="coins" onClick={() => open('earn')}>
+          {L('打开「赚钱」', 'Open Earn')}
+        </Button>
+      </section>
+    );
+  return (
+    <section className={`proj-live ${live.paused ? 'is-paused' : ''}`}>
+      <i className="pulse" />
+      <div className="pl-main">
+        <b>{name}</b>
+        <span className="muted small num">
+          {live.paused ? L('已暂停', 'Paused') : L(`开始于 ${since}`, `since ${since}`)} · +{Math.floor(live.ms / 60_000)} XP
+        </span>
+      </div>
+      <span className="pl-clock num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : clock(live.ms)}</span>
+      <div className="row-gap wrap">
+        {[15, 25, 45].map((m) => (
+          <Button key={m} size="sm" variant="ghost" icon="plus" title={L(`倒计时加 ${m} 分钟`, `Add ${m} min to the countdown`)} onClick={() => actions.extendFocus(m)}>
+            {m}′
+          </Button>
+        ))}
+        <Button size="sm" icon={live.paused ? 'play' : 'pause'} onClick={actions.pauseFocus}>
+          {live.paused ? L('继续', 'Resume') : L('暂停', 'Pause')}
+        </Button>
+        <Button
+          size="sm"
+          variant="primary"
+          icon="square"
+          onClick={() => {
+            const s = actions.stopFocus();
+            if (s) notify({ title: L('已记录这段专注', 'Focus logged'), body: `${s.note || L('专注', 'Focus')} · ${Math.round(s.activeMs / 60_000)} min · +${Math.round(s.activeMs / 60_000)} XP`, icon: 'timer', tone: 'good' });
+            else notify({ title: L('不足 1 分钟，未记录', 'Under a minute — not logged'), icon: 'info' });
+          }}
+        >
+          {L('结束并记录', 'Stop & log')}
+        </Button>
+        <Button size="sm" variant="ghost" icon="trash" title={L('丢弃本次', 'Discard')} onClick={() => actions.stopFocus(false)} />
+      </div>
+    </section>
+  );
+}
+
+/** One-tap starts for regular activities (the gym, reading…), editable. */
+export function QuickStart({ onEdit }: { onEdit: () => void }) {
+  const L = useL();
+  const presets = useStore((s) => s.focusPresets);
+  const attrIds = useStore((s) => s.attributes).map((a) => a.id);
+  const busy = useStore((s) => !!s.active);
+  return (
+    <div className="free-presets proj-quick" role="group" aria-label={L('快捷开始', 'Quick start')}>
+      <span className="muted small fp-label">{L('快捷开始专注（不属于任何项目的常做的事）', 'Quick start (regular activities outside any project)')}</span>
+      {presets.map((p) => (
+        <button
+          key={p.id}
+          className="chip"
+          disabled={busy}
+          onClick={() => {
+            actions.startFocus(0, attrIds.includes(p.attr) ? p.attr : attrIds[0], p.name);
+            notify({ title: L(`开始专注：${p.name}`, `Focusing on ${p.name}`), icon: p.icon, tone: 'good' });
+          }}
+        >
+          <Icon name={p.icon} size={13} /> {p.name}
+        </button>
+      ))}
+      <button className="chip chip-edit" onClick={onEdit}>
+        <Icon name="pencil" size={13} /> {L('编辑', 'Edit')}
+      </button>
+    </div>
   );
 }

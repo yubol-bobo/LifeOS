@@ -11,7 +11,6 @@ import { useLiveSession } from '../os/live';
 import { burst, notify } from '../os/notify';
 import { actions, useStore } from '../store/store';
 import type { Attr, WorkSession } from '../store/types';
-import { ProjectBoard } from './ProjectBoard';
 import { cssVar, effortRows, sliceColor } from './effort';
 import { Columns } from '../ui/charts';
 import { Bar, Button, Card, Empty, Field, Modal, Ring, Segmented, Stat } from '../ui/kit';
@@ -43,27 +42,10 @@ export function Earn() {
   const rate = project?.rate ?? profile.hourlyRate;
   const [note, setNote] = useState('');
   const [attr, setAttr] = useState<Attr>('craft');
-  // Earn (paid work, shows income) or Projects (everything else: papers, the gym, study…). Both earn XP.
-  const [mode, setModeRaw] = useState<'paid' | 'free'>(() => {
-    try {
-      return (localStorage.getItem('lifeos:focus-mode') as 'paid' | 'free') || 'paid';
-    } catch {
-      return 'paid';
-    }
-  });
-  const setMode = (m: 'paid' | 'free') => {
-    setModeRaw(m);
-    try {
-      localStorage.setItem('lifeos:focus-mode', m);
-    } catch {
-      /* ignore */
-    }
-  };
+  // This page is paid work only; project time is started from the Projects app.
+  const mode = 'paid' as const;
   const [target, setTarget] = useState(0); // countdown minutes, 0 = none
   const [customOpen, setCustomOpen] = useState(false);
-  const presets = useStore((s) => s.focusPresets);
-  const attrIds = useStore((s) => s.attributes).map((a) => a.id);
-  const [presetsOpen, setPresetsOpen] = useState(false);
   const [link, setLink] = useState('');
   const goals = useStore((s) => s.milestones).filter((g) => g.status !== 'done');
   const quests = useStore((s) => s.quests);
@@ -72,7 +54,7 @@ export function Earn() {
   const start = () => {
     const q = link.startsWith('q:') ? quests.find((x) => x.id === link.slice(2)) : undefined;
     const goalId = q ? q.goalId : link.startsWith('g:') ? link.slice(2) : undefined;
-    actions.startFocus(mode === 'free' ? 0 : rate, q ? q.attr : attr, note || q?.title || '', { goalId, questId: q?.id, projectId: project?.id, ...(target ? { targetMin: target } : {}) });
+    actions.startFocus(rate, q ? q.attr : attr, note || q?.title || '', { goalId, questId: q?.id, projectId: project?.id, ...(target ? { targetMin: target } : {}) });
     try {
       localStorage.setItem('lifeos:last-project', projectId);
     } catch {
@@ -114,26 +96,15 @@ export function Earn() {
   }));
 
   const recent = [...sessions].sort((a, b) => b.start - a.start).slice(0, 40);
-  // What the lower half shows: income (Earn) or the project board (Projects)
-  const view: 'paid' | 'free' = live ? (live.paid ? 'paid' : 'free') : mode;
-  const pSum = (f: (t: number) => boolean) => sessions.filter((x) => !x.rate && f(x.start)).reduce((a, x) => a + x.activeMs, 0);
-  const pToday = pSum((t) => dayKey(t) === today);
-  const pWeek = pSum((t) => t >= sow);
-  const focusOn = (id: string) => {
-    if (live) return notify({ title: L('先结束当前的计时', 'Finish the current session first'), icon: 'info' });
-    setMode('free');
-    setProjectId(id);
-    setNote('');
-    document.querySelector('.earn-hero')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+
   const perSec = (live?.active.rate ?? rate) / 3600;
 
   return (
     <div className="app">
       <div className="app-head">
         <div>
-          <h1>{L('专注计时', 'Focus')}</h1>
-          <p className="muted">{L('赚钱的工作、健身、写论文、学习……每一段专注都会被记下来：时长、经验和贡献。每专注 1 分钟 +1 XP；可以设个倒计时，时间一到就庆祝。', 'Paid work, the gym, paper writing, study — every stretch of focus is logged: time, XP and what it went to. +1 XP per minute; set a countdown and celebrate when it’s done.')}</p>
+          <h1>{L('赚钱', 'Earn')}</h1>
+          <p className="muted">{L('赚钱的工作：开始计时，看着收入一秒一秒涨上来。每专注 1 分钟 +1 XP；可以设个倒计时，时间一到就庆祝。项目、健身、写论文这类不赚钱的专注，在「项目」里开始。', 'Paid work: start the clock and watch earnings tick up by the second. +1 XP a minute; set a countdown and celebrate when it’s done. Project time (papers, the gym, study…) starts from Projects.')}</p>
         </div>
         <Button icon="plus" onClick={() => setManual(true)}>
           {L('补录时段', 'Log past session')}
@@ -178,15 +149,7 @@ export function Earn() {
         <div className="earn-controls">
           {!live ? (
             <>
-              <Segmented
-                value={mode}
-                onChange={setMode}
-                options={[
-                  { value: 'paid', label: L('赚钱', 'Earn'), icon: 'coins' },
-                  { value: 'free', label: L('项目', 'Projects'), icon: 'briefcase' },
-                ]}
-              />
-              {mode === 'paid' && (
+              {(
               <button className="pay-chip" onClick={() => setPayOpen(true)}>
                 <Icon name="wallet" size={15} />
                 <span>
@@ -198,30 +161,12 @@ export function Earn() {
                 <Icon name="pencil" size={13} />
               </button>
               )}
-              {mode === 'free' && (
-                <div className="free-presets" role="group" aria-label={L('快捷开始', 'Quick start')}>
-                  <span className="muted small fp-label">{L('快捷开始', 'Quick start')}</span>
-                  {presets.map((p) => (
-                    <button key={p.id} className={`chip ${note === p.name ? 'is-active' : ''}`} onClick={() => (setNote(p.name), setAttr(attrIds.includes(p.attr) ? p.attr : attrIds[0]))}>
-                      <Icon name={p.icon} size={13} /> {p.name}
-                    </button>
-                  ))}
-                  {note.trim() && !presets.some((p) => p.name === note.trim()) && (
-                    <button className="chip chip-add" onClick={() => actions.saveFocusPreset({ name: note.trim(), icon: 'star', attr })} title={L('把现在填的内容存为常用', 'Save what you typed as a quick pick')}>
-                      <Icon name="plus" size={13} /> {L(`存为常用「${note.trim()}」`, `Save “${note.trim()}”`)}
-                    </button>
-                  )}
-                  <button className="chip chip-edit" onClick={() => setPresetsOpen(true)}>
-                    <Icon name="pencil" size={13} /> {L('编辑', 'Edit')}
-                  </button>
-                </div>
-              )}
               <div className="row2">
-                <Field label={mode === 'paid' ? L('为谁工作', 'Working for') : L('哪个项目', 'Which project')}>
+                <Field label={L('为谁工作', 'Working for')}>
                   <div className="input-group">
                     <select className="input" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
                       <option value="">{L('— 默认 —', '— Default —')}</option>
-                      {(mode === 'free' ? projects.filter((p) => p.status !== 'done' || p.id === projectId) : projects).map((p) => (
+                      {projects.map((p) => (
                         <option key={p.id} value={p.id}>
                           {p.name}
                           {p.rate != null ? ` · ${money(p.rate, cur, 0)}/h` : ''}
@@ -232,7 +177,7 @@ export function Earn() {
                   </div>
                 </Field>
                 <Field label={L('在做什么', 'Working on')}>
-                  <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={mode === 'paid' ? L('例如：客户需求文档', 'e.g. Client spec') : L('例如：写第三章、健身', 'e.g. Chapter 3, the gym')} />
+                  <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={L('例如：客户需求文档', 'e.g. Client spec')} />
                 </Field>
               </div>
               <Field label={L('推进哪个任务 / 目标', 'Moves which quest / goal')} hint={L('关联后，专注时长会自动计入目标的「专注小时」，或让任务在达标后自动完成。', 'Linked time counts toward a goal’s focus hours, or auto-completes a quest once its target is reached.')}>
@@ -359,22 +304,6 @@ export function Earn() {
         </div>
       </section>
 
-      {view === 'free' ? (
-        <>
-          <div className="stats-row">
-            <Stat label={L('今天', 'Today')} value={`${((pToday + (live && !live.paid ? liveMs : 0)) / 3_600_000).toFixed(1)} h`} sub={L('项目时间', 'project time')} tone="violet" />
-            <Stat label={L('本周', 'This week')} value={`${((pWeek + (live && !live.paid ? liveMs : 0)) / 3_600_000).toFixed(1)} h`} />
-            <Stat label={L('进行中', 'In progress')} value={projects.filter((p) => p.status !== 'done' && p.status !== 'planning').length} sub={L(`筹划中 ${projects.filter((p) => p.status === 'planning').length}`, `${projects.filter((p) => p.status === 'planning').length} planning`)} />
-            <Stat label={L('已完成', 'Done')} value={projects.filter((p) => p.status === 'done').length} sub={L('个项目', 'projects')} />
-          </div>
-          <Card title={L('项目管理', 'Project board')} icon="route" action={<span className="muted small">{L('拖动卡片改变状态 · ▶ 开始专注', 'Drag cards to change status · ▶ to focus')}</span>}>
-            <ProjectBoard onFocus={focusOn} />
-          </Card>
-          <EffortCard live={live} initial="free" />
-          <RecentSessions list={recent.filter((x) => !x.rate).slice(0, 12)} />
-        </>
-      ) : (
-        <>
       <div className="stats-row">
         <Stat label={L('今天', 'Today')} value={money(tToday.earned + liveEarned, cur, 0)} sub={`${((tToday.ms + liveMs) / 3_600_000).toFixed(1)} h`} tone="wealth" />
         <Stat label={L('本周', 'This week')} value={money(tWeek.earned + liveEarned, cur, 0)} sub={`${((tWeek.ms + liveMs) / 3_600_000).toFixed(1)} h`} />
@@ -382,7 +311,6 @@ export function Earn() {
         <Stat label={L('累计', 'All time')} value={money(tAll.earned, cur, 0)} sub={`${(tAll.ms / 3_600_000).toFixed(0)} h`} />
       </div>
 
-      <EffortCard live={live} />
 
       {projects.length > 0 && (
         <Card title={L('本月按「为谁工作」', 'This month by client / project')} icon="briefcase">
@@ -413,13 +341,10 @@ export function Earn() {
         <Card title={L('近 14 天收入', 'Last 14 days')} icon="chart">
           <Columns data={chart} tone="wealth" height={220} format={(v) => money(v, cur, 0)} onPick={(i) => openDay(days[i])} />
         </Card>
-        <RecentSessions list={recent.slice(0, 12)} />
+        <RecentSessions list={recent.filter((x) => x.rate > 0).slice(0, 12)} />
       </div>
-        </>
-      )}
 
       <ManualSession open={manual} onClose={() => setManual(false)} />
-      <PresetEditor open={presetsOpen} onClose={() => setPresetsOpen(false)} />
       <Modal open={payOpen} onClose={() => setPayOpen(false)} title={L('收入方式', 'How you’re paid')}>
         <PayCard pay={pay} currency={cur} compact />
       </Modal>
@@ -462,7 +387,7 @@ function RecentSessions({ list }: { list: WorkSession[] }) {
                   · {duration(x.activeMs)}
                 </span>
               </div>
-              <span className={`num sess-amt ${x.rate ? '' : 'is-free'}`}>{x.rate ? money(x.earned, cur) : `🌱 +${Math.round(x.activeMs / 60_000)} XP`}</span>
+              <span className={`num sess-amt ${x.rate ? '' : 'is-free'}`}>{x.rate ? money(x.earned, cur) : `📂 +${Math.round(x.activeMs / 60_000)} XP`}</span>
               <Button size="sm" variant="ghost" icon="trash" title={L('删除', 'Delete')} onClick={() => actions.removeSession(x.id)} />
             </li>
           ))}
@@ -545,7 +470,7 @@ export function clock(ms: number) {
 
 /** Today (and this week): where the focused time went — paid work and project time, as an interactive 3D donut. */
 
-function EffortCard({ live, initial = 'all' }: { live: ReturnType<typeof useLiveSession>; initial?: 'all' | 'paid' | 'free' }) {
+export function EffortCard({ live, initial = 'all' }: { live: ReturnType<typeof useLiveSession>; initial?: 'all' | 'paid' | 'free' }) {
   const L = useL();
   const dark = useTheme();
   const sessions = useStore((s) => s.sessions);
@@ -643,7 +568,7 @@ function EffortCard({ live, initial = 'all' }: { live: ReturnType<typeof useLive
                   return (
                     <>
                       <span className="tip-k">
-                        {r.label} {r.paid ? '' : '🌱'}
+                        {r.label} {r.paid ? '' : '📂'}
                       </span>
                       <span className="tip-v num">
                         {h(r.ms)}h · {Math.round((r.ms / shown) * 100)}% · {r.paid ? money(r.earned, cur, 0) : `+${Math.round(r.ms / 60_000)} XP`}
@@ -663,7 +588,7 @@ function EffortCard({ live, initial = 'all' }: { live: ReturnType<typeof useLive
                   >
                     <i style={{ background: colorOf(r.id) }} />
                     <span className="pb-name">
-                      {r.label} {!r.paid && <small className="muted">🌱</small>}
+                      {r.label} {!r.paid && <small className="muted">📂</small>}
                     </span>
                     <span className="num muted small">
                       {h(r.ms)}h · {Math.round((r.ms / shown) * 100)}%
@@ -683,7 +608,7 @@ function EffortCard({ live, initial = 'all' }: { live: ReturnType<typeof useLive
 const PRESET_ICONS = ['dumbbell', 'footprints', 'bike', 'pencil', 'book-open', 'graduation', 'brain', 'code', 'palette', 'music', 'camera', 'languages', 'leaf', 'heart', 'users', 'utensils', 'house', 'sprout', 'mountain', 'star', 'rocket', 'coffee', 'gamepad', 'notebook'];
 
 /** Add, rename, re-icon, re-attribute, reorder and delete the unpaid-focus quick picks. */
-function PresetEditor({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function PresetEditor({ open, onClose }: { open: boolean; onClose: () => void }) {
   const L = useL();
   const presets = useStore((s) => s.focusPresets);
   const attrs = useAttrs();

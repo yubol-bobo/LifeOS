@@ -218,7 +218,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       {/* ---------- earn ---------- */}
       {!hide.has('earn') && (
       <section className={`widget w-earn ${live ? 'is-live' : ''}`}>
-        <WidgetHead icon="coins" title={L('今日收入', 'Earnings')} onOpen={() => (localStorage.setItem('lifeos:focus-mode', 'paid'), open('earn'))}>
+        <WidgetHead icon="coins" title={L('今日收入', 'Earnings')} onOpen={() => open('earn')}>
           {live?.paid && <span className="muted num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : clock(live.ms)}</span>}
         </WidgetHead>
         <div className="earn-row">
@@ -541,10 +541,10 @@ function EffortWidget({ live }: { live: ReturnType<typeof useLiveSession> }) {
   const paidRim = cssVar('--c-wealth', '#1ba677');
   const freeRim = cssVar('--p-violet', '#7a5ae6');
   const focus = sel ? byId.get(sel) : undefined;
-  const toFocus = (mode: 'paid' | 'free') => (localStorage.setItem('lifeos:focus-mode', mode), open('earn'));
+  const toFocus = () => open('projects');
   return (
     <section className={`widget w-effort ${live ? 'is-live' : ''}`}>
-      <WidgetHead icon="activity" title={L('今日时间分配', 'Time split')} onOpen={() => toFocus('free')}>
+      <WidgetHead icon="activity" title={L('今日时间分配', 'Time split')} onOpen={() => toFocus()}>
         {live && !live.paid && <span className="muted num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : clock(live.ms)}</span>}
       </WidgetHead>
       {total > 0 ? (
@@ -608,7 +608,7 @@ function EffortWidget({ live }: { live: ReturnType<typeof useLiveSession> }) {
         </div>
       ) : (
         <div className="row-gap">
-          <Button variant="soft" icon="briefcase" disabled={!!live} onClick={() => toFocus('free')}>
+          <Button variant="soft" icon="briefcase" disabled={!!live} onClick={() => toFocus()}>
             {L('开始项目专注', 'Focus on a project')}
           </Button>
         </div>

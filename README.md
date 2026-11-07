@@ -42,7 +42,7 @@ LifeOS is a steady rhythm of managing and recording your life, so you can keep y
 | --- | --- |
 | 🖥️ **Desktop** | An OS-style dashboard: today's quests, life progress, attribute radar, XP heatmap, and a 3D planet that grows as you level up |
 | ✅ **Quests & plans** | Daily habits and one-off tasks; break the year into months, weeks and today, with progress flowing upward; log a note at every step of plans like "read 8 books" |
-| ⏱️ **Focus** | Paid work (watch earnings tick up by the second) and unpaid effort (gym, writing, reading…); set a countdown and get a celebration when it ends; a 3D donut shows where your hours went |
+| ⏱️ **Earn & focus** | **Earn**: time paid work and watch earnings tick up by the second. **Projects**: start focusing on any project (or the gym, reading…) in one tap, and see where your hours went on a 3D donut; set a countdown and get a celebration when it ends |
 | 🐾 **Desktop pets** | Three companions remind you to drink water, stretch and sleep; connect OpenAI, Claude, DeepSeek, Kimi or GLM and your pet writes up your day each night |
 | 📝 **Daily review** | One line is enough: highlight, lesson, blocker, gratitude, tomorrow's one thing; a reflection heatmap and "one year ago today" |
 | 🕰️ **Timeline** | Everything LifeOS recorded, in order, searchable and filterable; open any day for a cute 3D XP-blocks view |
