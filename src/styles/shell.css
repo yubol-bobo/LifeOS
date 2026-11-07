@@ -343,7 +343,8 @@
 .w-life {
   grid-column: span 4;
 }
-.w-earn {
+.w-earn,
+.w-effort {
   grid-column: span 4;
 }
 .w-attrs {
@@ -410,7 +411,7 @@
 .w-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 8px 18px;
   padding: 26px;
   overflow: hidden;
@@ -445,7 +446,7 @@
 
 .hero-planet {
   grid-column: 2;
-  grid-row: 1 / span 2;
+  grid-row: 1 / span 3;
   position: relative;
   min-height: 300px;
   margin: -26px -26px -26px 0;
@@ -480,8 +481,35 @@
   padding: 0 12px;
 }
 
+/* the attribute radar lives in the hero, between the greeting and the level card, and
+   shrinks to whatever height is left */
+.hero-attrs {
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 1;
+  border-radius: 18px;
+  cursor: pointer;
+}
+
+.hero-attrs:hover {
+  background: color-mix(in oklab, var(--surface) 45%, transparent);
+}
+
+.hero-attrs .radar {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  max-height: 260px;
+}
+
 .hero-level {
   grid-column: 1;
+  grid-row: 3;
   align-self: end;
   display: flex;
   align-items: center;
@@ -650,6 +678,115 @@
   box-shadow:
     var(--shadow-lg),
     inset 0 0 0 2px color-mix(in oklab, var(--p-jade) 55%, transparent);
+}
+
+.earn-row {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* time-split widget (3D donut of today's focus) */
+.w-effort {
+  display: flex;
+  flex-direction: column;
+}
+
+.w-effort .row-gap {
+  margin-top: auto;
+}
+
+.w-effort .row-gap .btn {
+  flex: 1;
+  margin: 0;
+}
+
+.w-effort .goal {
+  margin: 8px 0 12px;
+}
+
+.w-effort.is-live {
+  box-shadow:
+    var(--shadow-lg),
+    inset 0 0 0 2px color-mix(in oklab, var(--p-violet) 55%, transparent);
+}
+
+.effort-mini {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.effort-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.effort-center b {
+  font-size: 18px;
+}
+
+.effort-center small {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+}
+
+.effort-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.effort-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.effort-legend li.is-on {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.effort-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.effort-legend .el-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 650;
+}
+
+.effort-empty {
+  margin: 4px 0 6px;
+}
+
+@container (max-width: 200px) {
+  .effort-mini {
+    grid-template-columns: 1fr;
+  }
+  .w-effort .goal {
+    display: none;
+  }
 }
 
 /* research widget */
@@ -1379,6 +1516,7 @@
   .w-quests,
   .w-life,
   .w-earn,
+  .w-effort,
   .w-attrs,
   .w-research,
   .w-next,
@@ -1415,6 +1553,14 @@
   }
   .hero-level {
     grid-column: 1;
+    grid-row: auto;
+  }
+  .hero-attrs {
+    grid-row: auto;
+  }
+  .hero-attrs .radar {
+    height: auto;
+    width: min(100%, 220px);
   }
   .mb-menus,
   .mb-date,

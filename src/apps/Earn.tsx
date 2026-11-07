@@ -12,6 +12,7 @@ import { burst, notify } from '../os/notify';
 import { actions, useStore } from '../store/store';
 import type { Attr, WorkSession } from '../store/types';
 import { ProjectBoard } from './ProjectBoard';
+import { cssVar, effortRows, sliceColor } from './effort';
 import { Columns } from '../ui/charts';
 import { Bar, Button, Card, Empty, Field, Modal, Ring, Segmented, Stat } from '../ui/kit';
 import { Odometer } from '../ui/Odometer';
@@ -543,14 +544,6 @@ export function clock(ms: number) {
 }
 
 /** Today (and this week): where the focused time went — paid work and project time, as an interactive 3D donut. */
-const SLICE_COLORS = ['orange', 'blue', 'jade', 'violet', 'amber', 'pink', 'teal', 'indigo', 'red', 'lime', 'brown', 'slate'];
-const cssVar = (name: string, fallback: string) => {
-  try {
-    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
-  } catch {
-    return fallback;
-  }
-};
 
 function EffortCard({ live, initial = 'all' }: { live: ReturnType<typeof useLiveSession>; initial?: 'all' | 'paid' | 'free' }) {
   const L = useL();
@@ -564,29 +557,13 @@ function EffortCard({ live, initial = 'all' }: { live: ReturnType<typeof useLive
   const [sel, setSel] = useState<string | null>(null);
   const [hov, setHov] = useState<string | null>(null);
   const from = range === 'today' ? new Date(new Date().setHours(0, 0, 0, 0)).getTime() : startOfWeek().getTime();
-  const rows = new Map<string, { id: string; label: string; ms: number; paid: boolean; earned: number; n: number }>();
-  const add = (label: string, ms: number, paid: boolean, earned: number) => {
-    const id = `${paid ? 'p' : 'f'}:${label}`;
-    const r = rows.get(id) ?? { id, label, ms: 0, paid, earned: 0, n: 0 };
-    r.ms += ms;
-    r.earned += earned;
-    r.n += 1;
-    rows.set(id, r);
-  };
-  const nameOf = (x: { note?: string; projectId?: string }) => x.note || projects.find((p) => p.id === x.projectId)?.name || L('专注', 'Focus');
-  for (const x of sessions) if (x.start >= from) add(nameOf(x), x.activeMs, x.rate > 0, x.earned);
-  if (live) add(nameOf(live.active), live.ms, live.paid, live.earned);
-  const all = [...rows.values()].sort((a, b) => b.ms - a.ms);
+  const all = effortRows(sessions, projects, live, from, L('专注', 'Focus'));
   const total = all.reduce((a, r) => a + r.ms, 0);
   const paidMs = all.filter((r) => r.paid).reduce((a, r) => a + r.ms, 0);
   const list = all.filter((r) => show === 'all' || (show === 'paid') === r.paid);
   const shown = list.reduce((a, r) => a + r.ms, 0);
   // stable colour per activity (by first appearance in the full list)
-  const colorOf = (id: string) => {
-    const i = all.findIndex((r) => r.id === id);
-    const k = SLICE_COLORS[i % SLICE_COLORS.length];
-    return cssVar(`--p-${k}`, '#888');
-  };
+  const colorOf = (id: string) => sliceColor(all, id);
   const paidRim = cssVar('--c-wealth', '#1ba677');
   const freeRim = cssVar('--p-violet', '#7a5ae6');
   const slices = list.map((r) => ({ id: r.id, value: Math.max(1, Math.round(r.ms / 60_000)), color: colorOf(r.id), rim: r.paid ? paidRim : freeRim }));
