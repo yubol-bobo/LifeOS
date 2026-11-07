@@ -385,9 +385,20 @@ function SyncModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [id, setId] = useState(scholar.authorId);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  // Google Scholar is fetched by the repo's scheduled workflow; here we show its status and bind it
+  const feed = useScholarFeed();
+  const bound = useStore((x) => (feed ? scholarBound(x, feed) : false));
+  const lastApplied = useStore((x) => x.scholar.gsFetch);
+  const bindFeed = () => {
+    if (!feed) return;
+    if (bound) actions.applyScholarFeed(feed);
+    else actions.bindScholarFeed(feed);
+    notify({ title: bound ? L('已是最新', 'Up to date') : L('已绑定 Google Scholar', 'Google Scholar bound'), body: L(`${feed.papers.length} 篇论文已合并进「学术」，之后每次抓取都会自动更新。`, `${feed.papers.length} papers merged into Research; every new fetch updates them automatically.`), icon: 'graduation', tone: 'good' });
+    onClose();
+  };
 
   const run = async () => {
-    if (provider === 'gscholar') return;
+    if (provider === 'gscholar') return bindFeed();
     setBusy(true);
     setErr('');
     try {
@@ -413,9 +424,15 @@ function SyncModal({ open, onClose }: { open: boolean; onClose: () => void }) {
           <Button variant="ghost" onClick={onClose}>
             {L('取消', 'Cancel')}
           </Button>
-          <Button variant="primary" icon="refresh" onClick={run} disabled={busy || !id.trim() || provider === 'gscholar'}>
-            {busy ? L('同步中…', 'Syncing…') : L('开始同步', 'Sync now')}
-          </Button>
+          {provider === 'gscholar' ? (
+            <Button variant="primary" icon={bound ? 'check' : 'graduation'} onClick={bindFeed} disabled={!feed || (bound && lastApplied === feed.lastFetch)}>
+              {!feed ? L('等待第一次自动抓取', 'Waiting for the first fetch') : !bound ? L('这是我的，绑定并合并', 'It’s mine — bind & merge') : lastApplied === feed.lastFetch ? L('已是最新 ✓', 'Up to date ✓') : L('合并最新数据', 'Merge the latest fetch')}
+            </Button>
+          ) : (
+            <Button variant="primary" icon="refresh" onClick={run} disabled={busy || !id.trim()}>
+              {busy ? L('同步中…', 'Syncing…') : L('开始同步', 'Sync now')}
+            </Button>
+          )}
         </>
       }
     >
@@ -433,7 +450,24 @@ function SyncModal({ open, onClose }: { open: boolean; onClose: () => void }) {
         </Field>
         {provider === 'gscholar' ? (
           <div className="gs-setup">
-            <p>{L('Google Scholar 通过仓库的定时任务自动同步（借助 SerpAPI），每 8 小时一次，每月最多 100 次调用。浏览器端不需要做任何事。', 'Google Scholar syncs automatically through the repo’s scheduled workflow (via SerpAPI) every 8 hours, capped at 100 calls a month. Nothing to do in the browser.')}</p>
+            {feed ? (
+              <div className={`gs-status ${bound ? 'is-bound' : ''}`}>
+                <b>
+                  <Icon name="circle-check" size={15} /> {L('自动同步正常', 'Auto-sync is working')}
+                </b>
+                <span>
+                  {feed.profile.name || feed.authorId} · {L(`${feed.papers.length} 篇论文`, `${feed.papers.length} papers`)}
+                  {feed.totals ? L(` · ${feed.totals.citations} 次引用`, ` · ${feed.totals.citations} citations`) : ''}
+                </span>
+                <span className="muted small">
+                  {feed.lastFetch ? L(`上次抓取：${ago(feed.lastFetch, L)}`, `Last fetch: ${ago(feed.lastFetch, L)}`) : ''} · {L(`本月已用 ${feed.callsThisMonth} 次 SerpAPI 调用`, `${feed.callsThisMonth} SerpAPI calls this month`)}
+                </span>
+                <span className="small">{bound ? L('已绑定到这个 LifeOS：每次打开「学术」都会自动合并最新的论文和引用。', 'Bound to this LifeOS: the latest papers and citations merge in automatically whenever you open Research.') : L('还没绑定到这个 LifeOS：点下面的按钮，把这些论文和引用合并进来。', 'Not bound to this LifeOS yet: use the button below to merge these papers and citations in.')}</span>
+              </div>
+            ) : (
+              <p className="gs-status is-wait">{L('还没有抓取到数据。确认下面的 Secret / Variable 已设置，然后等定时任务运行一次（或在仓库的 Actions → Deploy to GitHub Pages 里点 Run workflow）。', 'No data fetched yet. Check the secret / variable below, then wait for the scheduled run (or Actions → Deploy to GitHub Pages → Run workflow in your repo).')}</p>
+            )}
+            <p>{L('Google Scholar 由仓库的定时任务自动抓取（借助 SerpAPI），每 8 小时一次，每月最多 100 次调用，所以这里没有「立即同步」按钮。设置方法：', 'Google Scholar is fetched by the repo’s scheduled workflow (via SerpAPI) every 8 hours, capped at 100 calls a month, so there’s no “sync now” here. Setup:')}</p>
             <ol>
               <li>{L('GitHub 仓库 → Settings → Secrets and variables → Actions', 'GitHub repo → Settings → Secrets and variables → Actions')}</li>
               <li>
