@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { useL } from '../lib/i18n';
-import { planCount } from '../store/plans';
+import { planCountDeep } from '../store/plans';
 import { actions, getState, useStore } from '../store/store';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/kit';
@@ -50,7 +50,7 @@ export function PlanNoteSheet() {
   if (!ask || !plan) return null;
   const counted = !!plan.target;
   const existing = ask.logId ? plan.log?.find((l) => l.id === ask.logId) : undefined;
-  const before = planCount(plan) - (existing?.amount ?? 0);
+  const before = planCountDeep(getState(), plan) - (existing?.amount ?? 0);
   const after = before + (counted ? amount : 0);
   const unit = plan.unit ?? '';
   const save = () => {

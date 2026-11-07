@@ -135,6 +135,7 @@ export function Quests() {
 
   function row({ q, done, onToggle, onEdit, week }: { q: Quest; done: boolean; onToggle: () => void; onEdit: () => void; week?: (boolean | null)[] }) {
     const tracker = q.log ? s.trackers.find((t) => t.id === q.log!.trackerId) : undefined;
+    const planOf = (id: string) => s.plans.find((p) => p.id === id);
     const running = s.active?.questId === q.id;
     return (
       <li key={q.id} className={`quest ${done ? 'is-done' : ''}`}>
@@ -158,6 +159,11 @@ export function Quests() {
             <GoalTag goalId={q.goalId} />
             <ProjectTag id={q.projectId} />
             <PlanTag id={q.planId} />
+            {q.planId && planOf(q.planId)?.target ? (
+              <span className="link-hint num">
+                +{q.planAmount ?? 1} {planOf(q.planId)?.unit ?? ''}
+              </span>
+            ) : null}
             {!done && <DueChip due={q.due} />}
           </span>
         </div>
@@ -214,6 +220,7 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
   const lang = useLang();
   const goals = useStore((s) => s.milestones).filter((m) => m.status !== 'done');
   const trackers = useStore((s) => s.trackers);
+  const allPlans = useStore((s) => s.plans);
   const [draft, setDraft] = useState<Partial<Quest>>({});
   const [lastId, setLastId] = useState<string | undefined>('__');
   const key = value ? (value.id ?? 'new') : undefined;
@@ -236,12 +243,19 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
       log: d.log?.trackerId ? d.log : undefined,
       projectId: d.projectId || undefined,
       due: d.kind === 'once' ? d.due || undefined : undefined,
+      planId: d.planId || undefined,
+      planAmount: d.planId && d.planAmount && d.planAmount !== 1 ? d.planAmount : undefined,
     };
     if (d.id) actions.updateQuest(d.id, patch);
     else actions.addQuest(patch);
     onClose();
   };
   const linkedGoal = goals.find((g) => g.id === d.goalId);
+  // plans of this week / month / year you can feed (plus whatever it's linked to already)
+  const periods = { week: periodOf('week'), month: periodOf('month'), year: periodOf('year') } as const;
+  const scopeLabel = { week: L('本周', 'This week'), month: L('本月', 'This month'), year: L('今年', 'This year') } as const;
+  const feedable = (['week', 'month', 'year'] as const).map((sc) => ({ sc, plans: allPlans.filter((p) => p.scope === sc && ((p.period === periods[sc] && !p.done) || p.id === d.planId)) }));
+  const linkedPlan = allPlans.find((p) => p.id === d.planId);
   return (
     <Modal
       open={!!value}
@@ -325,6 +339,35 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
             <Icon name="route" size={15} />
             <strong>{L('联动', 'Links')}</strong>
             <span className="muted small">{L('可选：完成这个任务时，自动推动别的东西。', 'Optional: what this quest moves automatically.')}</span>
+          </div>
+          <div className="row2">
+            <Field label={L('推进哪个计划', 'Moves which plan')} hint={L('完成这个任务时，进度会记到这个计划上，并自动累加到同单位的上级计划（周 → 月 → 年）。', 'Each completion is logged on this plan and rolls up to its parent plans in the same unit (week → month → year).')}>
+              <select className="input" value={d.planId ?? ''} onChange={(e) => set({ planId: e.target.value || undefined })}>
+                <option value="">{L('— 不关联 —', '— None —')}</option>
+                {feedable
+                  .filter((g) => g.plans.length)
+                  .map((g) => (
+                    <optgroup key={g.sc} label={scopeLabel[g.sc]}>
+                      {g.plans.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title}
+                          {p.target ? ` (${p.target}${p.unit ? ' ' + p.unit : ''})` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+              </select>
+            </Field>
+            {linkedPlan?.target ? (
+              <Field label={L('每次完成增加', 'Each completion adds')}>
+                <div className="input-group">
+                  <input className="input" type="number" min={0.1} step="any" value={d.planAmount ?? 1} onChange={(e) => set({ planAmount: +e.target.value > 0 ? +e.target.value : 1 })} aria-label={L('每次增加多少', 'Amount per completion')} />
+                  <span className="input-addon">{linkedPlan.unit || L('个', 'units')}</span>
+                </div>
+              </Field>
+            ) : (
+              linkedPlan && <p className="muted small plan-link-hint">{L('这个计划没有数量目标：完成任务会计入它的完成比例。', 'This plan has no numeric target: the quest counts toward its completion.')}</p>
+            )}
           </div>
           <Field
             label={L('贡献给目标', 'Counts toward goal')}

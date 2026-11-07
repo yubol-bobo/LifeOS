@@ -1310,7 +1310,7 @@ function setQuestDone(d: State, q: Quest, day: string, on: boolean): number {
   if (plan?.target) {
     plan.log ??= [];
     if (on) {
-      if (!plan.log.some((l) => l.questId === q.id && l.day === day)) plan.log.push({ id: uid(), ts: Date.now(), day, amount: 1, questId: q.id });
+      if (!plan.log.some((l) => l.questId === q.id && l.day === day)) plan.log.push({ id: uid(), ts: Date.now(), day, amount: q.planAmount && q.planAmount > 0 ? q.planAmount : 1, questId: q.id });
     } else {
       const gone = plan.log.filter((l) => l.questId === q.id && l.day === day);
       plan.log = plan.log.filter((l) => !(l.questId === q.id && l.day === day));
