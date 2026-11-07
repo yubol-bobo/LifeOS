@@ -133,6 +133,8 @@ export function migrate(parsed: Partial<State>): State {
     s.ui.dock.splice(after >= 0 ? after + 1 : Math.max(0, s.ui.dock.length - 1), 0, id);
   });
   s.ui.dock = s.ui.dock.filter((id) => DEFAULT_DOCK.includes(id));
+  // Before 0.9.3, tasks added inside a project were plain quests and crowded Today's list; they are project steps.
+  for (const q of s.quests ?? []) if (q.kind === 'once' && q.projectId && !q.planId && q.step === undefined) q.step = true;
   // Papers synced before 0.9 got full stage XP as if written inside LifeOS. Re-base them: the stages
   // they arrived at give a one-time "past work" XP instead; later moves on the board still count.
   if (s.papers?.some((p) => !p.importedAs && p.source && IMPORT_SOURCES.has(p.source)))
@@ -503,6 +505,16 @@ export const actions = {
       (d) => {
         d.ui.dock = order;
         d.ui.hidden = hidden.filter((h) => !PINNED.includes(h));
+      },
+      { silent: true },
+    );
+  },
+  /** Which projects the desktop's Project progress tile shows (undefined = automatic). */
+  setDesktopProjects(ids: string[] | undefined) {
+    commit(
+      (d) => {
+        if (ids) d.ui.desktopProjects = ids;
+        else delete d.ui.desktopProjects;
       },
       { silent: true },
     );
@@ -1298,7 +1310,7 @@ function setQuestDone(d: State, q: Quest, day: string, on: boolean): number {
   if (plan?.target) {
     plan.log ??= [];
     if (on) {
-      if (!plan.log.some((l) => l.questId === q.id && l.day === day)) plan.log.push({ id: uid(), ts: Date.now(), day, amount: 1, questId: q.id });
+      if (!plan.log.some((l) => l.questId === q.id && l.day === day)) plan.log.push({ id: uid(), ts: Date.now(), day, amount: q.planAmount && q.planAmount > 0 ? q.planAmount : 1, questId: q.id });
     } else {
       const gone = plan.log.filter((l) => l.questId === q.id && l.day === day);
       plan.log = plan.log.filter((l) => !(l.questId === q.id && l.day === day));

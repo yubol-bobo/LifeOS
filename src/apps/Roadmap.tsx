@@ -1,4 +1,5 @@
 import { openWeek } from './DayXp';
+import { open } from '../os/router';
 import { LifeSettingsModal } from './LifeSettings';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { dayKey, daysBetween, lifeProgress, parseDay } from '../lib/date';
@@ -17,7 +18,51 @@ import { goalProgress } from '../store/links';
 import { useMetrics } from '../store/hooks';
 import type { KeyResult, KrKind, KrMetric } from '../store/types';
 
+/** Open the Roadmap scrolled to a section: the goals timeline or Life in weeks (used by desktop tiles). */
+export function openRoadmap(section: 'goals' | 'weeks') {
+  try {
+    sessionStorage.setItem('lifeos:roadmap-section', section);
+  } catch {
+    /* ignore */
+  }
+  open('roadmap');
+  window.dispatchEvent(new CustomEvent('lifeos:roadmap-section', { detail: section }));
+}
+
+function useSectionFocus() {
+  useEffect(() => {
+    const go = (section: string | null) => {
+      if (!section) return;
+      try {
+        sessionStorage.removeItem('lifeos:roadmap-section');
+      } catch {
+        /* ignore */
+      }
+      // wait for the window to open and lay out
+      window.setTimeout(() => {
+        const el = document.querySelector<HTMLElement>(`[data-rm="${section}"]`);
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.classList.remove('is-flash');
+        void el.offsetWidth;
+        el.classList.add('is-flash');
+      }, 120);
+    };
+    let first: string | null = null;
+    try {
+      first = sessionStorage.getItem('lifeos:roadmap-section');
+    } catch {
+      /* ignore */
+    }
+    go(first);
+    const f = (e: Event) => go((e as CustomEvent<string>).detail);
+    window.addEventListener('lifeos:roadmap-section', f);
+    return () => window.removeEventListener('lifeos:roadmap-section', f);
+  }, []);
+}
+
 export function Roadmap() {
+  useSectionFocus();
   const [lifeOpen, setLifeOpen] = useState(false);
   const L = useL();
   const lang = useLang();
@@ -55,6 +100,7 @@ export function Roadmap() {
       </div>
 
       <div className="grid-1-1 roadmap-grid">
+        <div className="rm-sec" data-rm="goals">
         <Card title={L('目标', 'Goals')} icon="route" action={<span className="muted small">{L('从现在出发 →', 'From now on →')}</span>}>
           {future.length === 0 ? (
             <Empty icon="flag" title={L('还没有进行中的目标', 'No open goals')} body={L('毕业、搬家、第一次马拉松……给它加上关键结果，日常行动就会自动推动它。', 'Graduation, a move, a first marathon… add key results and daily actions will push it forward.')} />
@@ -72,8 +118,10 @@ export function Roadmap() {
             </ol>
           )}
         </Card>
+        </div>
 
         <div className="stack">
+          <div className="rm-sec" data-rm="weeks">
           <Card
             title={L('人生周格', 'Life in weeks')}
             icon="grid"
@@ -87,6 +135,7 @@ export function Roadmap() {
             <LifeWeeks />
             <LifeSettingsModal open={lifeOpen} onClose={() => setLifeOpen(false)} />
           </Card>
+          </div>
           <Card title={L('已抵达', 'Reached')} icon="mountain">
             {past.length === 0 ? (
               <p className="muted small">{L('达成的里程碑会收藏在这里。', 'Reached milestones are collected here.')}</p>

@@ -23,7 +23,7 @@ import { FocusGoal } from '../ui/FocusGoal';
 import { ParkedList } from '../os/ParkedList';
 import { fmtMinutes } from '../lib/nextCountdown';
 import { GoalTag, ProjectTag } from './goals';
-import { isScheduled } from '../store/links';
+import { isScheduled, onToday } from '../store/links';
 
 export function Earn() {
   const L = useL();
@@ -53,7 +53,8 @@ export function Earn() {
   const goals = useStore((s) => s.milestones).filter((g) => g.status !== 'done');
   const quests = useStore((s) => s.quests);
   const completions = useStore((s) => s.completions);
-  const openQuests = quests.filter((q) => (q.kind === 'daily' ? isScheduled(q, dayKey()) && !(completions[dayKey()] ?? []).includes(q.id) : !q.archived && !q.doneAt));
+  const openQuests = quests.filter((q) => (q.kind === 'daily' ? isScheduled(q, dayKey()) && !(completions[dayKey()] ?? []).includes(q.id) : onToday(q) && !q.doneAt));
+  const openSteps = quests.filter((q) => q.kind === 'once' && q.step && !q.archived && !q.doneAt && !onToday(q));
   const start = () => {
     const q = link.startsWith('q:') ? quests.find((x) => x.id === link.slice(2)) : undefined;
     const goalId = q ? q.goalId : link.startsWith('g:') ? link.slice(2) : undefined;
@@ -192,6 +193,15 @@ export function Earn() {
                         <option key={q.id} value={`q:${q.id}`}>
                           {q.title}
                           {q.focusMin ? ` · ${q.focusMin}′` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {openSteps.length > 0 && (
+                    <optgroup label={L('项目步骤', 'Project steps')}>
+                      {openSteps.map((q) => (
+                        <option key={q.id} value={`q:${q.id}`}>
+                          {q.title}
                         </option>
                       ))}
                     </optgroup>

@@ -1,7 +1,7 @@
 import { useRef, useState, type CSSProperties } from 'react';
 import { useLang } from '../lib/i18n';
 import { dayKey } from '../lib/date';
-import { isScheduled } from '../store/links';
+import { isScheduled, onToday } from '../store/links';
 import { useStore } from '../store/store';
 import { AppGlyph } from '../ui/kit';
 import { APPS, type AppId } from './apps';
@@ -14,7 +14,7 @@ export function Dock({ app }: { app: AppId }) {
   const [mx, setMx] = useState<number | null>(null);
   const pending = useStore((s) => {
     const done = new Set(s.completions[dayKey()] ?? []);
-    return s.quests.filter((q) => (q.kind === 'daily' ? isScheduled(q, dayKey()) && !done.has(q.id) : !q.archived && !q.doneAt)).length;
+    return s.quests.filter((q) => (q.kind === 'daily' ? isScheduled(q, dayKey()) && !done.has(q.id) : onToday(q) && !q.doneAt)).length;
   });
   // which timer app has a session running: 'earn' (paid) or 'projects' (project time)
   const runningApp = useStore((s) => (s.active ? (s.active.rate > 0 ? 'earn' : 'projects') : null));

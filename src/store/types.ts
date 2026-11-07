@@ -101,6 +101,7 @@ export interface UiPrefs {
   dock: AppId[]; // order
   hidden: AppId[]; // hidden from the dock (still reachable via Spotlight)
   widgets: string[]; // hidden desktop widgets
+  desktopProjects?: string[]; // projects shown on the Project progress tile (unset = the ones in progress)
 }
 
 export interface MoodEntry {
@@ -218,7 +219,10 @@ export interface Quest {
   focusMin?: number; // auto-completes after this many focused minutes on it today
   log?: { trackerId: string; amount: number }; // logs to a tracker when completed
   projectId?: string; // a task of this project
-  planId?: string; // pulled in from a week plan item
+  planId?: string; // feeds this plan (week / month / year); pulled in from a plan, or linked in the editor
+  planAmount?: number; // how much each completion adds to a counted plan (default 1), e.g. +3 chapters
+  due?: string; // optional due date (YYYY-MM-DD)
+  step?: boolean; // a step of a project (added in the project): lives in the project, never on today's list
 }
 
 export type MilestoneSize = 'small' | 'big' | 'epic';

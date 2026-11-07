@@ -27,11 +27,25 @@ export interface PlanProgress {
 
 export const planCount = (p: Plan) => (p.log ?? []).reduce((a, l) => a + (l.amount || 0), 0);
 
+/** Same unit (or either side has none), so amounts can roll up: chapters → chapters, not chapters → books. */
+const sameUnit = (a?: string, b?: string) => !a || !b || a.trim().toLowerCase() === b.trim().toLowerCase();
+
+/**
+ * A counted plan's total: what was logged on it plus what was logged on the plans below it in the
+ * same unit — "+3 chapters" on this week's plan also counts toward the month and the year.
+ */
+export function planCountDeep(s: State, p: Plan, depth = 0): number {
+  let n = planCount(p);
+  if (depth > 4) return n;
+  for (const c of s.plans) if (c.parentId === p.id && c.target && sameUnit(c.unit, p.unit)) n += planCountDeep(s, c, depth + 1);
+  return n;
+}
+
 export function planProgress(s: State, p: Plan, mx: Metrics = metrics(s), depth = 0): PlanProgress {
   const children = s.plans.filter((x) => x.parentId === p.id);
   // A counted plan ("read 8 books") is measured by what was logged — linked quests log into it.
   if (p.target && p.target > 0) {
-    const count = planCount(p);
+    const count = planCountDeep(s, p);
     const qs = s.quests.filter((q) => q.planId === p.id && !q.archived);
     return { pct: Math.min(1, count / p.target), parts: 1, children, quests: qs.length, questsDone: qs.filter((q) => q.doneAt).length, count, target: p.target };
   }

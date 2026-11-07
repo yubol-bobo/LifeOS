@@ -6,13 +6,13 @@ import { useL, useLang } from '../lib/i18n';
 import { open } from '../os/router';
 import { useMetrics } from '../store/hooks';
 import { useAttrs } from '../store/attrs';
-import { isScheduled } from '../store/links';
+import { isScheduled, onToday } from '../store/links';
 import { QUEST_XP } from '../store/rules';
 import { actions, getState, useStore } from '../store/store';
 import type { Attr, Difficulty, Quest } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, Card, CheckBubble, Chip, Empty, Field, Modal, Segmented, Stat } from '../ui/kit';
-import { GoalTag, PlanTag, ProjectSelect, ProjectTag } from './goals';
+import { GoalTag, PlanTag, ProjectSelect, ProjectTag, DueChip } from './goals';
 
 export const WEEKDAYS: [string, string][] = [
   ['一', 'M'],
@@ -38,8 +38,8 @@ export function Quests() {
   const dailies = allDailies.filter((q) => isScheduled(q, day));
   const resting = allDailies.filter((q) => !isScheduled(q, day));
   const once = s.quests.filter((q) => q.kind === 'once' && !q.archived);
-  const openOnce = once.filter((q) => !q.doneAt);
-  const doneOnce = once.filter((q) => q.doneAt).sort((a, b) => b.doneAt! - a.doneAt!);
+  const openOnce = once.filter((q) => !q.doneAt && onToday(q, day));
+  const doneOnce = once.filter((q) => q.doneAt && (!q.step || q.planId)).sort((a, b) => b.doneAt! - a.doneAt!);
   const dailyDone = dailies.filter((q) => done.has(q.id)).length;
   const week = lastNDays(7);
   const xpToday = dailies.filter((q) => done.has(q.id)).reduce((a, q) => a + QUEST_XP[q.difficulty], 0);
@@ -135,6 +135,7 @@ export function Quests() {
 
   function row({ q, done, onToggle, onEdit, week }: { q: Quest; done: boolean; onToggle: () => void; onEdit: () => void; week?: (boolean | null)[] }) {
     const tracker = q.log ? s.trackers.find((t) => t.id === q.log!.trackerId) : undefined;
+    const planOf = (id: string) => s.plans.find((p) => p.id === id);
     const running = s.active?.questId === q.id;
     return (
       <li key={q.id} className={`quest ${done ? 'is-done' : ''}`}>
@@ -158,6 +159,12 @@ export function Quests() {
             <GoalTag goalId={q.goalId} />
             <ProjectTag id={q.projectId} />
             <PlanTag id={q.planId} />
+            {q.planId && planOf(q.planId)?.target ? (
+              <span className="link-hint num">
+                +{q.planAmount ?? 1} {planOf(q.planId)?.unit ?? ''}
+              </span>
+            ) : null}
+            {!done && <DueChip due={q.due} />}
           </span>
         </div>
         {week && (
@@ -213,6 +220,7 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
   const lang = useLang();
   const goals = useStore((s) => s.milestones).filter((m) => m.status !== 'done');
   const trackers = useStore((s) => s.trackers);
+  const allPlans = useStore((s) => s.plans);
   const [draft, setDraft] = useState<Partial<Quest>>({});
   const [lastId, setLastId] = useState<string | undefined>('__');
   const key = value ? (value.id ?? 'new') : undefined;
@@ -234,12 +242,20 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
       focusMin: d.focusMin || undefined,
       log: d.log?.trackerId ? d.log : undefined,
       projectId: d.projectId || undefined,
+      due: d.kind === 'once' ? d.due || undefined : undefined,
+      planId: d.planId || undefined,
+      planAmount: d.planId && d.planAmount && d.planAmount !== 1 ? d.planAmount : undefined,
     };
     if (d.id) actions.updateQuest(d.id, patch);
     else actions.addQuest(patch);
     onClose();
   };
   const linkedGoal = goals.find((g) => g.id === d.goalId);
+  // plans of this week / month / year you can feed (plus whatever it's linked to already)
+  const periods = { week: periodOf('week'), month: periodOf('month'), year: periodOf('year') } as const;
+  const scopeLabel = { week: L('本周', 'This week'), month: L('本月', 'This month'), year: L('今年', 'This year') } as const;
+  const feedable = (['week', 'month', 'year'] as const).map((sc) => ({ sc, plans: allPlans.filter((p) => p.scope === sc && ((p.period === periods[sc] && !p.done) || p.id === d.planId)) }));
+  const linkedPlan = allPlans.find((p) => p.id === d.planId);
   return (
     <Modal
       open={!!value}
@@ -324,6 +340,35 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
             <strong>{L('联动', 'Links')}</strong>
             <span className="muted small">{L('可选：完成这个任务时，自动推动别的东西。', 'Optional: what this quest moves automatically.')}</span>
           </div>
+          <div className="row2">
+            <Field label={L('推进哪个计划', 'Moves which plan')} hint={L('完成这个任务时，进度会记到这个计划上，并自动累加到同单位的上级计划（周 → 月 → 年）。', 'Each completion is logged on this plan and rolls up to its parent plans in the same unit (week → month → year).')}>
+              <select className="input" value={d.planId ?? ''} onChange={(e) => set({ planId: e.target.value || undefined })}>
+                <option value="">{L('— 不关联 —', '— None —')}</option>
+                {feedable
+                  .filter((g) => g.plans.length)
+                  .map((g) => (
+                    <optgroup key={g.sc} label={scopeLabel[g.sc]}>
+                      {g.plans.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title}
+                          {p.target ? ` (${p.target}${p.unit ? ' ' + p.unit : ''})` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+              </select>
+            </Field>
+            {linkedPlan?.target ? (
+              <Field label={L('每次完成增加', 'Each completion adds')}>
+                <div className="input-group">
+                  <input className="input" type="number" min={0.1} step="any" value={d.planAmount ?? 1} onChange={(e) => set({ planAmount: +e.target.value > 0 ? +e.target.value : 1 })} aria-label={L('每次增加多少', 'Amount per completion')} />
+                  <span className="input-addon">{linkedPlan.unit || L('个', 'units')}</span>
+                </div>
+              </Field>
+            ) : (
+              linkedPlan && <p className="muted small plan-link-hint">{L('这个计划没有数量目标：完成任务会计入它的完成比例。', 'This plan has no numeric target: the quest counts toward its completion.')}</p>
+            )}
+          </div>
           <Field
             label={L('贡献给目标', 'Counts toward goal')}
             hint={
@@ -356,9 +401,16 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
               <input className="input" type="number" step="any" disabled={!d.log} value={d.log?.amount ?? ''} onChange={(e) => d.log && set({ log: { ...d.log, amount: +e.target.value } })} />
             </Field>
           </div>
-          <Field label={L('属于哪个项目', 'Project')}>
-            <ProjectSelect value={d.projectId} onChange={(v) => set({ projectId: v })} />
-          </Field>
+          <div className="row2">
+            <Field label={L('属于哪个项目', 'Project')}>
+              <ProjectSelect value={d.projectId} onChange={(v) => set({ projectId: v })} />
+            </Field>
+            {d.kind === 'once' && (
+              <Field label={L('截止日期（可选）', 'Due date (optional)')}>
+                <input className="input" type="date" value={d.due ?? ''} onChange={(e) => set({ due: e.target.value || undefined })} />
+              </Field>
+            )}
+          </div>
           <Field label={L('专注满多少分钟自动完成', 'Auto-complete after focusing (min)')} hint={L('点任务旁的 ▶ 开始专注，当天累计够时长就自动打勾。', 'Hit ▶ on the quest to focus; it ticks itself once today’s focus reaches this.')}>
             <input className="input" type="number" min={0} step={5} value={d.focusMin ?? ''} placeholder={L('不设置', 'Off')} onChange={(e) => set({ focusMin: e.target.value ? +e.target.value : undefined })} />
           </Field>

@@ -281,7 +281,7 @@ const WIDGETS: { id: string; zh: string; en: string }[] = [
   { id: 'effort', zh: '今日时间分配', en: 'Time split' },
   { id: 'attrs', zh: '属性雷达（在等级卡片里）', en: 'Attribute radar (in the level tile)' },
   { id: 'research', zh: '学术', en: 'Research' },
-  { id: 'goals', zh: '目标进度', en: 'Goals' },
+  { id: 'projprog', zh: '项目进度', en: 'Project progress' },
   { id: 'assets', zh: '净资产', en: 'Net worth' },
   { id: 'heat', zh: '经验热力图', en: 'XP heatmap' },
   { id: 'review', zh: '本周回顾', en: 'Weekly review' },
