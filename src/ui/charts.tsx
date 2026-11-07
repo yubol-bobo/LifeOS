@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Attr } from '../store/types';
-import { parseDay } from '../lib/date';
+import { dayOfWeek, getWeekStart, parseDay } from '../lib/date';
 import { toneVar } from './kit';
 
 function useWidth<T extends HTMLElement>() {
@@ -253,10 +253,11 @@ export function Heatmap({
   className?: string;
 }) {
   const [tip, setTip] = useState<{ x: number; y: number; body: ReactNode } | null>(null);
+  const ws = getWeekStart(); // parents re-render when the setting changes
   const cols = useMemo(() => {
-    // Align so the last column ends on today; rows are Mon..Sun.
+    // Align so the last column ends on today; rows run from the user's first day of the week.
     const last = days[days.length - 1];
-    const lastDow = (parseDay(last).getDay() + 6) % 7;
+    const lastDow = dayOfWeek(parseDay(last));
     const total = weeks * 7 - (6 - lastDow);
     const slice = days.slice(-total);
     const out: (string | null)[][] = [];
@@ -272,7 +273,7 @@ export function Heatmap({
     }
     if (col.length) out.push([...col, ...Array(7 - col.length).fill(null)]);
     return out;
-  }, [days, weeks]);
+  }, [days, weeks, ws]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className={`heat ${onPick ? 'is-pickable' : ''} ${className}`} onPointerLeave={() => setTip(null)}>
       {cols.map((c, i) => (

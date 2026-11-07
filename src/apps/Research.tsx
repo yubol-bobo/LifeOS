@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { parseDay } from '../lib/date';
+import { useBoardDrag } from '../ui/useBoardDrag';
+import { dayKey, parseDay } from '../lib/date';
 import { num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { syncScholar } from '../lib/scholar';
@@ -119,47 +120,7 @@ export function Research() {
         {s.papers.length === 0 ? (
           <Empty icon="book-open" title={L('还没有论文', 'No papers yet')} body={L('手动添加，或从 OpenAlex / Semantic Scholar 同步。', 'Add one by hand, or sync from OpenAlex / Semantic Scholar.')} />
         ) : view === 'board' ? (
-          <div className="board">
-            {PAPER_FLOW.map((st) => {
-              const list = s.papers.filter((p) => p.status === st);
-              return (
-                <div className="board-col" key={st}>
-                  <div className="board-head">
-                    <Icon name={STATUS_ICON[st]} size={14} />
-                    <span>{label(st)}</span>
-                    <span className="num muted">{list.length}</span>
-                  </div>
-                  <div className="board-xp num">{PAPER_XP[st] ? `+${PAPER_XP[st]} XP` : '\u00a0'}</div>
-                  {list.map((p) => {
-                    const i = PAPER_FLOW.indexOf(p.status);
-                    return (
-                      <article className="paper-card" key={p.id}>
-                        <button className="paper-title" onClick={() => setEdit(p)}>
-                          {p.title}
-                        </button>
-                        <div className="paper-meta">
-                          {p.venue && <span>{p.venue}</span>}
-                          {p.year && <span className="num">{p.year}</span>}
-                          {p.firstAuthor && <Chip tone="spirit">{L('一作', '1st')}</Chip>}
-                          {p.removed && <Chip>{L('已从主页消失', 'Gone from profile')}</Chip>}
-                          <ProjectTag id={p.projectId} />
-                        </div>
-                        <div className="paper-foot">
-                          <span className="num cite">
-                            <Icon name="quote" size={12} /> {p.citations}
-                            {(fOf(p)?.d7 ?? 0) > 0 && <span className="cite-up">+{fOf(p)!.d7}</span>}
-                          </span>
-                          <span className="spacer" />
-                          <Button size="sm" variant="ghost" icon="chevron-left" title={L('后退', 'Move back')} disabled={i === 0} onClick={() => actions.setPaperStatus(p.id, PAPER_FLOW[i - 1])} />
-                          <Button size="sm" variant="ghost" icon="chevron-right" title={L('推进', 'Advance')} disabled={i === PAPER_FLOW.length - 1} onClick={() => actions.setPaperStatus(p.id, PAPER_FLOW[i + 1])} />
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
+          <PaperBoard papers={s.papers} onOpen={setEdit} fOf={fOf} />
         ) : (
           <div className="table-wrap">
             <table className="table">
@@ -215,6 +176,90 @@ export function Research() {
   );
 }
 
+const DAY_MS = 86_400_000;
+/** When the paper entered its current stage, if we know. */
+const enteredAt = (p: Paper) => [...(p.history ?? [])].reverse().find((m) => m.status === p.status)?.at;
+
+/**
+ * Kanban board. Drag a card to another column to change its stage (the time is recorded);
+ * mouse drags start after a few pixels, touch drags after a short press so the board still scrolls.
+ * The ‹ › buttons remain for keyboards and precise moves.
+ */
+function PaperBoard({ papers, onOpen, fOf }: { papers: Paper[]; onOpen: (p: Paper) => void; fOf: (p: Paper) => { d7?: number | null } | undefined }) {
+  const L = useL();
+  const lang = useLang();
+  const label = useStatusLabel();
+  const [now] = useState(() => Date.now());
+  const { drag, board, start, ghostEl, justDragged } = useBoardDrag<PaperStatus>((id, _from, to) => {
+    actions.setPaperStatus(id, to);
+    const d = new Date().toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' });
+    notify({ title: L(`已移到「${label(to)}」`, `Moved to ${label(to)}`), body: L(`变更时间已记录：${d}`, `Recorded on ${d}`), icon: STATUS_ICON[to], tone: to === 'accepted' || to === 'published' ? 'gold' : 'info' });
+  });
+
+  const dragged = drag ? papers.find((p) => p.id === drag.id) : undefined;
+  return (
+    <div className={`board ${drag ? 'is-dragging' : ''}`} ref={board}>
+      {PAPER_FLOW.map((stage) => {
+        const list = papers.filter((p) => p.status === stage);
+        const over = drag?.over === stage && drag.from !== stage;
+        return (
+          <div className={`board-col ${over ? 'is-over' : ''}`} key={stage} data-col={stage}>
+            <div className="board-head">
+              <Icon name={STATUS_ICON[stage]} size={14} />
+              <span>{label(stage)}</span>
+              <span className="num muted">{list.length}</span>
+            </div>
+            <div className="board-xp num">{PAPER_XP[stage] ? `+${PAPER_XP[stage]} XP` : '\u00a0'}</div>
+            {list.map((p) => {
+              const i = PAPER_FLOW.indexOf(p.status);
+              const since = enteredAt(p);
+              const days = since != null ? Math.max(0, Math.floor((now - since) / DAY_MS)) : null;
+              return (
+                <article className={`paper-card ${drag?.id === p.id ? 'is-dragging' : ''}`} key={p.id} onPointerDown={(e) => start(e, p.id, p.status)}>
+                  <button className="paper-title" onClick={() => !justDragged() && onOpen(p)}>
+                    {p.title}
+                  </button>
+                  <div className="paper-meta">
+                    {p.venue && <span>{p.venue}</span>}
+                    {p.year && <span className="num">{p.year}</span>}
+                    {p.firstAuthor && <Chip tone="spirit">{L('一作', '1st')}</Chip>}
+                    {p.removed && <Chip>{L('已从主页消失', 'Gone from profile')}</Chip>}
+                    <ProjectTag id={p.projectId} />
+                  </div>
+                  <div className="paper-foot">
+                    <span className="num cite">
+                      <Icon name="quote" size={12} /> {p.citations}
+                      {(fOf(p)?.d7 ?? 0) > 0 && <span className="cite-up">+{fOf(p)!.d7}</span>}
+                    </span>
+                    {days != null && (
+                      <span className="paper-age num" title={L(`${dayKey(since!)} 进入「${label(p.status)}」`, `${label(p.status)} since ${dayKey(since!)}`)}>
+                        <Icon name="clock" size={11} /> {days === 0 ? L('今天', 'today') : L(`${days} 天`, `${days}d`)}
+                      </span>
+                    )}
+                    <span className="spacer" />
+                    <span data-nodrag className="pf-arrows">
+                      <Button size="sm" variant="ghost" icon="chevron-left" title={L('后退', 'Move back')} disabled={i === 0} onClick={() => actions.setPaperStatus(p.id, PAPER_FLOW[i - 1])} />
+                      <Button size="sm" variant="ghost" icon="chevron-right" title={L('推进', 'Advance')} disabled={i === PAPER_FLOW.length - 1} onClick={() => actions.setPaperStatus(p.id, PAPER_FLOW[i + 1])} />
+                    </span>
+                  </div>
+                </article>
+              );
+            })}
+            {over && <div className="board-drop">{L('放到这里', 'Drop here')}</div>}
+          </div>
+        );
+      })}
+      {dragged &&
+        ghostEl(
+          <>
+            <b>{dragged.title}</b>
+            <span className="muted small">{drag?.over && drag.over !== dragged.status ? `${label(dragged.status)} → ${label(drag.over)}` : label(dragged.status)}</span>
+          </>,
+        )}
+    </div>
+  );
+}
+
 function PaperEditor({ value, onClose }: { value: Partial<Paper> | null; onClose: () => void }) {
   const L = useL();
   const label = useStatusLabel();
@@ -226,6 +271,8 @@ function PaperEditor({ value, onClose }: { value: Partial<Paper> | null; onClose
     if (value) setD(value);
   }
   const p = { status: 'idea', citations: 0, firstAuthor: true, title: '', ...d } as Paper;
+  const hist = useStore((x) => (p.id ? x.papers.find((q) => q.id === p.id)?.history : undefined));
+  const today = dayKey();
   const save = () => {
     if (!p.title.trim()) return;
     actions.savePaper({ ...p, title: p.title.trim(), source: p.source ?? 'manual' });
@@ -275,6 +322,36 @@ function PaperEditor({ value, onClose }: { value: Partial<Paper> | null; onClose
             ))}
           </select>
         </Field>
+        {p.id && (
+          <Field label={L('进展记录', 'Stage history')} hint={hist?.length ? L('日期可以改，比如你晚了几天才拖动卡片', 'Dates are editable, e.g. if you moved the card a few days late') : undefined}>
+            {hist?.length ? (
+              <ol className="paper-hist">
+                {hist.map((m, i) => {
+                  const gap = i > 0 ? Math.round((m.at - hist[i - 1].at) / DAY_MS) : null;
+                  const midnight = parseDay(dayKey(m.at)).getTime();
+                  return (
+                    <li key={`${i}-${m.at}`}>
+                      <Chip icon={STATUS_ICON[m.status]}>{label(m.status)}</Chip>
+                      <input
+                        className="input input-date"
+                        type="date"
+                        max={today}
+                        value={dayKey(m.at)}
+                        aria-label={L('日期', 'Date')}
+                        onChange={(e) => e.target.value && actions.setPaperMoveTime(p.id, i, parseDay(e.target.value).getTime() + (m.at - midnight))}
+                      />
+                      <span className="muted small num">{gap != null ? L(`+${gap} 天`, `+${gap}d`) : L('开始', 'start')}</span>
+                      <span className="spacer" />
+                      <Button size="sm" variant="ghost" icon="x" title={L('删除这条记录', 'Remove this entry')} onClick={() => actions.removePaperMove(p.id, i)} />
+                    </li>
+                  );
+                })}
+              </ol>
+            ) : (
+              <p className="muted small">{L('这篇论文还没有进展记录。之后每次改变状态（拖动卡片、点 ‹ ›、或在这里改状态），时间都会记在这里。', 'No stage history yet. From now on, every stage change (dragging the card, the ‹ › buttons, or the status above) is recorded here with its date.')}</p>
+            )}
+          </Field>
+        )}
         <div className="row2">
           <Field label={L('引用数', 'Citations')}>
             <input className="input" type="number" min={0} value={p.citations} onChange={(e) => setD({ ...p, citations: +e.target.value })} />

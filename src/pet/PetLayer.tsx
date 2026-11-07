@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { addDays, dayKey } from '../lib/date';
+import { addDays, dayKey, dayOfWeek } from '../lib/date';
 import { openSummary } from '../ai/summary';
 import { hasReview } from '../store/review';
 import { useL } from '../lib/i18n';
@@ -889,7 +889,7 @@ export function PetLayer({ app }: { app: AppId }) {
         const wk = periodOf('week');
         const mo = periodOf('month');
         const needMonth = dnow.getDate() <= 3 && !s.plans.some((p) => p.scope === 'month' && p.period === mo) && localStorage.getItem('lifeos:pet:askedPlan') !== mo;
-        const needWeek = (dnow.getDay() + 6) % 7 <= 1 && !s.plans.some((p) => p.scope === 'week' && p.period === wk) && localStorage.getItem('lifeos:pet:askedPlan') !== wk;
+        const needWeek = dayOfWeek(dnow) <= 1 && !s.plans.some((p) => p.scope === 'week' && p.period === wk) && localStorage.getItem('lifeos:pet:askedPlan') !== wk;
         if (needMonth || needWeek) {
           try {
             localStorage.setItem('lifeos:pet:askedPlan', needMonth ? mo : wk);

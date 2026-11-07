@@ -1,7 +1,9 @@
-import { addDays, dayKey, parseDay } from './date';
+import { addDays, dayKey, getWeekStart, parseDay } from './date';
 import type { PlanScope } from '../store/types';
 
-/* Periods: '2026' · '2026-11' · '2026-W45' (ISO weeks, Monday first). */
+/* Periods: '2026' · '2026-11' · '2026-W45'.
+ * Weeks are numbered like ISO weeks. With Monday as the first day they are exactly ISO weeks; with
+ * Sunday first, week N runs from the Sunday before ISO week N's Monday to the Saturday after it. */
 
 function isoWeek(d: Date): { year: number; week: number } {
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -15,7 +17,8 @@ export function periodOf(scope: PlanScope, d: Date | string = new Date()): strin
   const x = typeof d === 'string' ? parseDay(d) : d;
   if (scope === 'year') return String(x.getFullYear());
   if (scope === 'month') return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`;
-  const w = isoWeek(x);
+  // a Sunday-first week shares its number with the ISO week of its Monday (the next day)
+  const w = isoWeek(getWeekStart() === 0 && x.getDay() === 0 ? new Date(x.getFullYear(), x.getMonth(), x.getDate() + 1) : x);
   return `${w.year}-W${String(w.week).padStart(2, '0')}`;
 }
 
@@ -35,7 +38,7 @@ export function range(period: string): [string, string] {
   // Monday of ISO week 1 = the Monday on or before Jan 4.
   const jan4 = new Date(y, 0, 4);
   const mon = new Date(y, 0, 4 - ((jan4.getDay() + 6) % 7) + (w - 1) * 7);
-  const start = dayKey(mon);
+  const start = addDays(dayKey(mon), getWeekStart() === 0 ? -1 : 0);
   return [start, addDays(start, 6)];
 }
 
@@ -54,7 +57,7 @@ export function parentPeriod(period: string): string | null {
   const sc = scopeOf(period);
   if (sc === 'year') return null;
   if (sc === 'month') return period.slice(0, 4);
-  return periodOf('month', addDays(range(period)[0], 3));
+  return periodOf('month', addDays(range(period)[0], getWeekStart() === 0 ? 4 : 3));
 }
 
 /** How far through the period we are (0..1). */

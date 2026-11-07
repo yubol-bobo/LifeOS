@@ -60,6 +60,28 @@ export function buildTimeline(s: State, lang: 'zh' | 'en', money: (v: number) =>
   const covered = new Set<EventKind>(['focus', 'mood', 'review', 'tracker', 'assets', 'wellness']);
   const byKind: Partial<Record<EventKind, TlCat>> = { quest: 'quest', perfect: 'quest', milestone: 'goal', step: 'goal', paper: 'research', achievement: 'growth', plan: 'plan', reward: 'reward' };
   const sorted = [...s.events].sort((a, b) => a.ts - b.ts);
+  // Paper stage changes carry the stage name, so they replace the matching paper XP lines.
+  const PAPER: Record<string, [string, string]> = { idea: ['想法', 'Idea'], drafting: ['写作中', 'Drafting'], submitted: ['已投稿', 'Submitted'], review: ['审稿中', 'In review'], accepted: ['已接收', 'Accepted'], published: ['已发表', 'Published'] };
+  const stage = (st?: string) => (st && PAPER[st] ? L(...PAPER[st]) : '');
+  const paperXp = new Map(sorted.filter((e) => e.kind === 'paper').map((e) => [e.ref, e]));
+  const coveredEv = new Set<string>();
+  for (const p of s.papers)
+    (p.history ?? []).forEach((m, i) => {
+      const ev = paperXp.get(`paper:${p.id}:${m.status}`);
+      // XP is granted once per stage, on the first time the paper reached it
+      const first = p.history!.findIndex((x) => x.status === m.status) === i;
+      if (ev && first) coveredEv.add(ev.id);
+      push({
+        id: `pm:${p.id}:${i}`,
+        ts: m.at,
+        cat: 'research',
+        icon: m.status === 'accepted' || m.status === 'published' ? 'circle-check' : 'route',
+        title: p.title,
+        detail: m.from ? `${stage(m.from)} → ${stage(m.status)}` : L(`新论文 · ${stage(m.status)}`, `New paper · ${stage(m.status)}`),
+        xp: ev && first && ev.xp > 0 ? ev.xp : undefined,
+        kind: 'paper',
+      });
+    });
   let xp = 0;
   let lvl = 1;
   for (const e of sorted) {
@@ -69,13 +91,14 @@ export function buildTimeline(s: State, lang: 'zh' | 'en', money: (v: number) =>
       push({ id: `lv:${now}:${e.id}`, ts: e.ts + 1, cat: 'growth', icon: 'trending-up', color: 'amber', title: L(`升到 Lv.${now}`, `Reached Lv.${now}`) });
       lvl = now;
     }
-    if (covered.has(e.kind) || e.ref.startsWith('plannote:')) continue;
+    if (covered.has(e.kind) || e.ref.startsWith('plannote:') || coveredEv.has(e.id)) continue;
     const cat = byKind[e.kind] ?? 'growth';
     push({
       id: `ev:${e.id}`,
       ts: e.ts,
       cat,
       title: e.label,
+      detail: e.kind === 'paper' ? stage(e.ref.split(':')[2]) || undefined : undefined,
       xp: e.xp > 0 ? e.xp : undefined,
       value: e.kind === 'reward' ? `${e.coins} 🪙` : undefined,
       kind: e.kind,
@@ -91,7 +114,7 @@ export function buildTimeline(s: State, lang: 'zh' | 'en', money: (v: number) =>
       ts: x.start,
       cat: 'focus',
       title: name,
-      detail: x.rate ? L('赚钱的工作', 'Paid work') : L('不计薪的努力', 'Unpaid effort'),
+      detail: x.rate ? L('赚钱的工作', 'Paid work') : L('项目时间', 'Project time'),
       value: hm(x.activeMs) + (x.rate ? ` · ${money(x.earned)}` : ''),
       xp: Math.round(x.activeMs / 60_000) || undefined,
       kind: 'focus',

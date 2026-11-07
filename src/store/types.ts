@@ -26,13 +26,16 @@ export interface Category {
  * A project is the hub everything can hang off: quests (tasks), goals, papers, plans,
  * focus sessions and income (it doubles as the wage timer's "working for" entry), countdowns.
  */
+export type ProjectStatus = 'planning' | 'active' | 'paused' | 'done';
+
 export interface Project {
   id: string;
   name: string;
   color: PaletteKey;
   rate?: number;
   category?: string;
-  status?: 'active' | 'paused' | 'done';
+  status?: ProjectStatus;
+  history?: { status: ProjectStatus; from?: ProjectStatus; at: number }[]; // status changes, oldest first
   deadline?: string;
   note?: string;
   createdAt?: number;
@@ -194,6 +197,7 @@ export interface Profile {
   lang: Lang;
   theme: ThemePref;
   reduceMotion: boolean;
+  weekStart?: 0 | 1; // first day of the week: 1 = Monday (default), 0 = Sunday
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
@@ -260,6 +264,13 @@ export interface Milestone {
 export type PaperStatus = 'idea' | 'drafting' | 'submitted' | 'review' | 'accepted' | 'published';
 export const PAPER_FLOW: PaperStatus[] = ['idea', 'drafting', 'submitted', 'review', 'accepted', 'published'];
 
+/** One stage change on the paper board: when the paper entered `status` (and from where). */
+export interface PaperMove {
+  status: PaperStatus;
+  from?: PaperStatus;
+  at: number;
+}
+
 export interface Paper {
   id: string;
   title: string;
@@ -273,6 +284,7 @@ export interface Paper {
   scholarId?: string; // Google Scholar citation_id
   projectId?: string;
   removed?: boolean; // no longer on the Scholar profile (kept, not deleted)
+  history?: PaperMove[]; // stage changes, oldest first (papers created before 0.8 have none)
   updatedAt: number;
 }
 

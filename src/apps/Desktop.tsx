@@ -237,8 +237,8 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
             <Button variant="primary" icon="play" onClick={() => actions.startFocus(s.profile.hourlyRate, 'craft')}>
               {L(`开始工作 · ${money(s.profile.hourlyRate, s.profile.currency, 0)}/h`, `Start work · ${money(s.profile.hourlyRate, s.profile.currency, 0)}/h`)}
             </Button>
-            <Button variant="soft" icon="sprout" onClick={() => (localStorage.setItem('lifeos:focus-mode', 'free'), open('earn'))}>
-              {L('不计薪', 'Unpaid')}
+            <Button variant="soft" icon="briefcase" onClick={() => (localStorage.setItem('lifeos:focus-mode', 'free'), open('earn'))}>
+              {L('项目', 'Projects')}
             </Button>
           </div>
         )}

@@ -879,3 +879,109 @@
 .cal-d[role='button'] {
   cursor: pointer;
 }
+
+/* ---- week view (Life in weeks → click a square) ---- */
+.wk-label {
+  font-weight: 600;
+  font-size: 0.8em;
+}
+
+.wk-goals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 12px;
+}
+
+.wk-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin: 4px 0 14px;
+}
+
+.wk-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  box-shadow: var(--shadow-inset);
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.wk-day:not(:disabled):hover {
+  transform: translateY(-2px);
+  background: color-mix(in oklab, var(--accent) 10%, var(--surface-2));
+}
+
+.wk-day:disabled {
+  opacity: 0.45;
+}
+
+.wk-day.is-today {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.wk-dow {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+.wk-date {
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.wk-bar {
+  display: flex;
+  align-items: flex-end;
+  width: 14px;
+  height: 46px;
+  border-radius: 6px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.wk-bar i {
+  display: block;
+  width: 100%;
+  min-height: 2px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 70%, white), var(--accent));
+}
+
+.wk-n {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+.wk-log li.wk-first {
+  border-top: 1px dashed var(--line, rgba(0, 0, 0, 0.08));
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.wk-log li:first-child {
+  border-top: 0;
+  margin-top: 0;
+}
+
+.wk-log li {
+  grid-template-columns: 92px 26px minmax(0, 1fr) auto auto;
+}
+
+@media (max-width: 560px) {
+  .wk-days {
+    gap: 4px;
+  }
+  .wk-log li {
+    grid-template-columns: 70px 26px minmax(0, 1fr) auto;
+  }
+  .wk-log .dx-attr {
+    display: none;
+  }
+}

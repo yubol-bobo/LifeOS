@@ -179,6 +179,16 @@ function General() {
                 ]}
               />
             </Field>
+            <Field label={L('每周从哪天开始', 'Week starts on')} hint={L('热力图、心情日历、周计划、本周统计都按这个分周。', 'Heatmaps, the mood calendar, weekly plans and "this week" stats all follow this.')}>
+              <Segmented
+                value={p.weekStart === 0 ? 'sun' : 'mon'}
+                onChange={(v) => actions.profile({ weekStart: v === 'sun' ? 0 : 1 })}
+                options={[
+                  { value: 'mon', label: L('周一', 'Monday') },
+                  { value: 'sun', label: L('周日', 'Sunday') },
+                ]}
+              />
+            </Field>
             <Field label={L('动效', 'Motion')}>
               <Segmented
                 value={p.reduceMotion ? 'reduce' : 'full'}

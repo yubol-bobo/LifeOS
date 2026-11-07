@@ -1,5 +1,5 @@
 import { useRef, useSyncExternalStore } from 'react';
-import { dayKey } from '../lib/date';
+import { dayKey, setWeekStart } from '../lib/date';
 import { uid } from '../lib/id';
 import { burst, notify } from '../os/notify';
 import { celebrate } from '../ui/celebrate';
@@ -30,6 +30,7 @@ import type {
   Plan,
   MoodEntry,
   Project,
+  ProjectStatus,
   EventKind,
   Milestone,
   Paper,
@@ -135,6 +136,7 @@ function load(): State {
 }
 
 let state: State = load();
+setWeekStart(state.profile.weekStart);
 const subs = new Set<() => void>();
 const commitSubs = new Set<(prev: State, next: State) => void>();
 /** Observe every committed change (used by multi-device sync to stamp what changed). */
@@ -215,6 +217,7 @@ export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
   const readyBefore = new Set(readyGoals(state));
   const draft: State = structuredClone(state);
   mutate(draft);
+  setWeekStart(draft.profile.weekStart);
 
   // Plans complete themselves when everything attached to them is done (and reopen if that changes).
   const planDone: string[] = [];
@@ -636,6 +639,16 @@ export const actions = {
     });
     return id;
   },
+  /** Move a project on the board (planning → active → done …); the time of each change is kept. */
+  setProjectStatus(id: string, status: ProjectStatus) {
+    commit((d) => {
+      const p = d.projects.find((x) => x.id === id);
+      const from = p?.status ?? 'active';
+      if (!p || from === status) return;
+      (p.history ??= []).push({ status, from, at: Date.now() });
+      p.status = status;
+    });
+  },
   deleteProject(id: string) {
     commit((d) => {
       d.projects = d.projects.filter((p) => p.id !== id);
@@ -793,10 +806,14 @@ export const actions = {
   /* ---- research ---- */
   savePaper(p: Omit<Paper, 'id' | 'updatedAt'> & { id?: string }) {
     commit((d) => {
+      const now = Date.now();
       let paper = p.id ? d.papers.find((x) => x.id === p.id) : undefined;
-      if (paper) Object.assign(paper, p, { updatedAt: Date.now() });
-      else {
-        paper = { ...p, id: uid(), updatedAt: Date.now() } as Paper;
+      if (paper) {
+        const from = paper.status;
+        Object.assign(paper, p, { updatedAt: now, history: paper.history });
+        if (p.status && p.status !== from) (paper.history ??= []).push({ status: p.status, from, at: now });
+      } else {
+        paper = { ...p, id: uid(), updatedAt: now, history: [{ status: p.status, at: now }] } as Paper;
         d.papers.push(paper);
       }
       syncPaper(d, paper);
@@ -806,12 +823,33 @@ export const actions = {
   setPaperStatus(id: string, status: PaperStatus) {
     commit((d) => {
       const p = d.papers.find((x) => x.id === id);
-      if (!p) return;
+      if (!p || p.status === status) return;
+      const now = Date.now();
+      (p.history ??= []).push({ status, from: p.status, at: now });
       p.status = status;
-      p.updatedAt = Date.now();
+      p.updatedAt = now;
       syncPaper(d, p);
     });
     if (status === 'accepted' && !state.profile.reduceMotion) celebrate();
+  },
+  /** Correct when a stage change happened (e.g. you moved the card a few days late). Keeps the time of day. */
+  setPaperMoveTime(id: string, index: number, at: number) {
+    commit((d) => {
+      const p = d.papers.find((x) => x.id === id);
+      const m = p?.history?.[index];
+      if (!p || !m || !Number.isFinite(at)) return;
+      m.at = Math.min(at, Date.now());
+      p.history!.sort((a, b) => a.at - b.at);
+      p.updatedAt = Date.now();
+    });
+  },
+  removePaperMove(id: string, index: number) {
+    commit((d) => {
+      const p = d.papers.find((x) => x.id === id);
+      if (!p?.history?.[index]) return;
+      p.history.splice(index, 1);
+      p.updatedAt = Date.now();
+    });
   },
   setCitations(id: string, citations: number) {
     commit((d) => {
