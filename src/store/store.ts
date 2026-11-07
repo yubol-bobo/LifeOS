@@ -1,5 +1,6 @@
 import { useRef, useSyncExternalStore } from 'react';
 import { dayKey, setWeekStart } from '../lib/date';
+import { getNextCountdown } from '../lib/nextCountdown';
 import { uid } from '../lib/id';
 import { burst, notify } from '../os/notify';
 import { celebrate } from '../ui/celebrate';
@@ -29,6 +30,7 @@ import type {
   Countdown,
   Plan,
   MoodEntry,
+  ActiveSession,
   Project,
   ProjectStatus,
   EventKind,
@@ -991,10 +993,48 @@ export const actions = {
   },
 
   /* ---- focus & earnings ---- */
+  /**
+   * Start a session. Without an explicit targetMin it uses the countdown picked in Earn / Projects
+   * (0 = count up). A session that's already running is paused and set aside, so you can switch tasks
+   * and resume it later.
+   */
   startFocus(rate: number, attr: Attr, note = '', link: { goalId?: string; questId?: string; projectId?: string; targetMin?: number } = {}) {
+    const target = link.targetMin ?? getNextCountdown();
     commit((d) => {
-      d.active = { start: Date.now(), rate, attr, note, pausedMs: 0, ...link };
+      parkActive(d);
+      const { targetMin: _t, ...rest } = link;
+      void _t;
+      d.active = { start: Date.now(), rate, attr, note, pausedMs: 0, ...rest, ...(target > 0 ? { targetMin: target } : {}) };
     });
+  },
+  /** Pause the running session and set it aside (to switch to something else). */
+  parkFocus() {
+    commit((d) => parkActive(d));
+  },
+  /** Bring a set-aside session back; whatever is running now is set aside in its place. */
+  resumeParked(index: number) {
+    commit((d) => {
+      const p = d.parked?.[index];
+      if (!p) return;
+      d.parked!.splice(index, 1);
+      parkActive(d);
+      if (p.pausedAt) {
+        p.pausedMs += Date.now() - p.pausedAt;
+        p.pausedAt = undefined;
+      }
+      d.active = p;
+    });
+  },
+  /** Finish (log) or discard a set-aside session. */
+  stopParked(index: number, keep = true) {
+    let summary: WorkSession | null = null;
+    commit((d) => {
+      const p = d.parked?.[index];
+      if (!p) return;
+      d.parked!.splice(index, 1);
+      summary = finishSession(d, p, keep);
+    });
+    return summary as WorkSession | null;
   },
   /** Start a focus session on a specific quest — inherits its goal and attribute. */
   focusOnQuest(questId: string) {
@@ -1050,50 +1090,18 @@ export const actions = {
       if (d.active) Object.assign(d.active, patch);
     });
   },
-  stopFocus(keep = true) {
+  /** Stop the running session and log it (keep = false discards it). capToTarget: stop the clock exactly at the countdown. */
+  stopFocus(keep = true, opts: { capToTarget?: boolean } = {}) {
     let summary: WorkSession | null = null;
     let autoDone = '';
     commit((d) => {
       const a = d.active;
       if (!a) return;
-      const end = Date.now();
-      const paused = a.pausedMs + (a.pausedAt ? end - a.pausedAt : 0);
-      const activeMs = Math.max(0, end - a.start - paused);
       d.active = null;
-      if (!keep || activeMs < 60_000) return;
-      const s: WorkSession = {
-        id: uid(),
-        start: a.start,
-        end,
-        activeMs,
-        rate: a.rate,
-        earned: (activeMs / 3_600_000) * a.rate,
-        note: a.note,
-        attr: a.attr,
-        goalId: a.goalId,
-        questId: a.questId,
-        projectId: a.projectId,
-        ...(a.targetMin ? { targetMin: a.targetMin } : {}),
-      };
-      d.sessions.push(s);
-      const xp = Math.round(activeMs / 60_000); // 1 XP per focused minute — paid or not
-      grant(d, `focus:${s.id}`, 'focus', xp, a.note || tr('专注时段', 'Focus session'), a.attr);
-      // Finished the countdown you set yourself: a small bonus.
-      if (a.targetMin && activeMs >= a.targetMin * 60_000 - 5_000) {
-        grant(d, `focusgoal:${s.id}`, 'focus', Math.max(5, Math.round(a.targetMin / 5)), tr(`完成 ${a.targetMin} 分钟专注倒计时`, `${a.targetMin}-min countdown complete`), a.attr);
-        d.stats.focusTargets = (d.stats.focusTargets ?? 0) + 1;
-      }
-      summary = s;
-      // Linkage: enough focus on a quest today completes it.
+      const before = new Set(d.quests.filter((q) => q.focusMin).map((q) => q.id + ':' + isDone(d, q, dayKey())));
+      summary = finishSession(d, a, keep, opts.capToTarget);
       const q = a.questId ? d.quests.find((x) => x.id === a.questId) : undefined;
-      const today = dayKey();
-      if (q?.focusMin && !isDone(d, q, today)) {
-        const spent = d.sessions.filter((x) => x.questId === q.id && dayKey(x.start) === today).reduce((acc, x) => acc + x.activeMs, 0);
-        if (spent >= q.focusMin * 60_000) {
-          setQuestDone(d, q, today, true);
-          autoDone = q.title;
-        }
-      }
+      if (q?.focusMin && !before.has(q.id + ':true') && isDone(d, q, dayKey())) autoDone = q.title;
     });
     if (autoDone) notify({ title: tr('任务自动完成', 'Quest auto-completed'), body: tr(`专注时长已达标：「${autoDone}」`, `Focus target reached: “${autoDone}”`), icon: 'circle-check', tone: 'good' });
     return summary as WorkSession | null;
@@ -1208,6 +1216,55 @@ function logCitations(d: State) {
   const last = d.citationLog[d.citationLog.length - 1];
   if (last && last.date === today) last.total = total;
   else if (!last || last.total !== total) d.citationLog.push({ date: today, total });
+}
+
+/** Pause the running session (if any) and put it at the front of the set-aside list. */
+function parkActive(d: State) {
+  const a = d.active;
+  if (!a) return;
+  if (!a.pausedAt) a.pausedAt = Date.now();
+  d.parked = [a, ...(d.parked ?? [])].slice(0, 8);
+  d.active = null;
+}
+
+/** Turn a running / set-aside session into a logged WorkSession with its XP (or drop it). */
+function finishSession(d: State, a: ActiveSession, keep: boolean, capToTarget = false): WorkSession | null {
+  const now = Date.now();
+  const paused = a.pausedMs + (a.pausedAt ? now - a.pausedAt : 0);
+  let activeMs = Math.max(0, now - a.start - paused);
+  // When a countdown finished while LifeOS wasn't watching, count exactly the countdown, not the overshoot.
+  if (capToTarget && a.targetMin) activeMs = Math.min(activeMs, a.targetMin * 60_000);
+  if (!keep || activeMs < 60_000) return null;
+  const end = a.pausedAt ? a.pausedAt : a.start + paused + activeMs;
+  const s: WorkSession = {
+    id: uid(),
+    start: a.start,
+    end,
+    activeMs,
+    rate: a.rate,
+    earned: (activeMs / 3_600_000) * a.rate,
+    note: a.note,
+    attr: a.attr,
+    goalId: a.goalId,
+    questId: a.questId,
+    projectId: a.projectId,
+    ...(a.targetMin ? { targetMin: a.targetMin } : {}),
+  };
+  d.sessions.push(s);
+  grant(d, `focus:${s.id}`, 'focus', Math.round(activeMs / 60_000), a.note || tr('专注时段', 'Focus session'), a.attr); // 1 XP per focused minute
+  // Finished the countdown you set yourself: a small bonus.
+  if (a.targetMin && activeMs >= a.targetMin * 60_000 - 5_000) {
+    grant(d, `focusgoal:${s.id}`, 'focus', Math.max(5, Math.round(a.targetMin / 5)), tr(`完成 ${a.targetMin} 分钟专注倒计时`, `${a.targetMin}-min countdown complete`), a.attr);
+    d.stats.focusTargets = (d.stats.focusTargets ?? 0) + 1;
+  }
+  // Linkage: enough focus on a quest today completes it.
+  const q = a.questId ? d.quests.find((x) => x.id === a.questId) : undefined;
+  const today = dayKey();
+  if (q?.focusMin && !isDone(d, q, today)) {
+    const spent = d.sessions.filter((x) => x.questId === q.id && dayKey(x.start) === today).reduce((acc, x) => acc + x.activeMs, 0);
+    if (spent >= q.focusMin * 60_000) setQuestDone(d, q, today, true);
+  }
+  return s;
 }
 
 function isDone(d: State, q: Quest, day: string) {

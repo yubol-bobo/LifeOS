@@ -31,11 +31,8 @@ const DONE_SHOWN = 5;
 export function focusProject(p: Project, opts: { open?: boolean } = {}) {
   const st = getState();
   const tr = (zh: string, en: string) => (st.profile.lang === 'zh' ? zh : en);
-  if (st.active) {
-    notify({ title: tr('先结束当前的计时', 'Finish the current session first'), icon: 'info' });
-    open(st.active.rate > 0 ? 'earn' : 'projects');
-    return;
-  }
+  const prev = st.active;
+  if (prev) notify({ title: tr(`已暂停「${prev.note || '专注'}」`, `Paused “${prev.note || 'Focus'}”`), body: tr('在「暂停中」可以随时恢复。', 'Resume it any time from “Paused”.'), icon: 'pause', tone: 'info' });
   actions.startFocus(p.rate ?? 0, st.attributes[0]?.id ?? 'mind', p.name, { projectId: p.id });
   notify({ title: tr(`开始专注：${p.name}`, `Focusing on ${p.name}`), icon: 'timer', tone: 'good' });
   if (opts.open !== false) open(p.rate != null ? 'earn' : 'projects');
@@ -207,7 +204,7 @@ export function LiveFocusBar() {
   const live = useLiveSession(500);
   const projects = useStore((s) => s.projects);
   if (!live) return null;
-  const name = live.active.note || projects.find((p) => p.id === live.active.projectId)?.name || L('专注', 'Focus');
+  const name = live.active.note || projects.find((p) => p.id === live.active.projectId)?.name || (live.paid ? L('赚钱的工作', 'Paid work') : L('专注', 'Focus'));
   const since = new Date(live.active.start).toLocaleTimeString(lang === 'zh' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' });
   if (live.paid)
     return (
@@ -234,9 +231,9 @@ export function LiveFocusBar() {
       </div>
       <span className="pl-clock num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : clock(live.ms)}</span>
       <div className="row-gap wrap">
-        {[15, 25, 45].map((m) => (
+        {[15, 30, 60].map((m) => (
           <Button key={m} size="sm" variant="ghost" icon="plus" title={L(`倒计时加 ${m} 分钟`, `Add ${m} min to the countdown`)} onClick={() => actions.extendFocus(m)}>
-            {m}′
+            {m === 60 ? '1h' : `${m}′`}
           </Button>
         ))}
         <Button size="sm" icon={live.paused ? 'play' : 'pause'} onClick={actions.pauseFocus}>
@@ -256,6 +253,16 @@ export function LiveFocusBar() {
         </Button>
         <Button size="sm" variant="ghost" icon="trash" title={L('丢弃本次', 'Discard')} onClick={() => actions.stopFocus(false)} />
       </div>
+      <span className="pl-switch muted small">
+        {live.paused
+          ? L('已暂停：点任意项目的「专注」就能切换到别的任务，这个会留在「暂停中」随时恢复。', 'Paused: start any other project and this one waits under “Paused” until you resume it.')
+          : L('想切换任务？直接点别的项目的「专注」，当前这个会自动暂停保存。', 'Switching? Just start another project — this one is paused and kept.')}
+        {!live.paused && (
+          <button type="button" className="link-btn" onClick={actions.parkFocus}>
+            {L('先暂停放一边', 'Pause & set aside')}
+          </button>
+        )}
+      </span>
     </section>
   );
 }
@@ -265,7 +272,6 @@ export function QuickStart({ onEdit }: { onEdit: () => void }) {
   const L = useL();
   const presets = useStore((s) => s.focusPresets);
   const attrIds = useStore((s) => s.attributes).map((a) => a.id);
-  const busy = useStore((s) => !!s.active);
   return (
     <div className="free-presets proj-quick" role="group" aria-label={L('快捷开始', 'Quick start')}>
       <span className="muted small fp-label">{L('快捷开始专注（不属于任何项目的常做的事）', 'Quick start (regular activities outside any project)')}</span>
@@ -273,7 +279,6 @@ export function QuickStart({ onEdit }: { onEdit: () => void }) {
         <button
           key={p.id}
           className="chip"
-          disabled={busy}
           onClick={() => {
             actions.startFocus(0, attrIds.includes(p.attr) ? p.attr : attrIds[0], p.name);
             notify({ title: L(`开始专注：${p.name}`, `Focusing on ${p.name}`), icon: p.icon, tone: 'good' });

@@ -333,3 +333,141 @@
 .effort-list li.is-dim {
   opacity: 0.5;
 }
+
+/* ---- stackable countdown picker ---- */
+.cd-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.cd-val {
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+}
+
+.cd-val b {
+  font-size: 15px;
+}
+
+.cd-btns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.cd-hint {
+  flex-basis: 100%;
+}
+
+/* ---- paused (set-aside) sessions ---- */
+.parked {
+  margin: 10px 0 14px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--surface-2) 70%, transparent);
+  box-shadow: var(--shadow-inset);
+}
+
+.parked-h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+}
+
+.parked ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.parked li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.parked-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--p-violet);
+  flex: none;
+}
+
+.parked-dot.is-paid {
+  background: var(--c-wealth);
+}
+
+.parked-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.parked-name b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- optional daily goals ---- */
+.fgoal {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 14px;
+  text-align: left;
+  background: color-mix(in oklab, var(--surface) 60%, transparent);
+}
+
+.fgoal:hover {
+  background: color-mix(in oklab, var(--accent) 8%, var(--surface));
+}
+
+.fgoal-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.fgoal.is-off {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 650;
+  border: 1.5px dashed color-mix(in oklab, var(--ink-3) 35%, transparent);
+  background: transparent;
+}
+
+.fgoal.is-edit {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+}
+
+.fgoal-step,
+.fgoal-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fgoal.is-compact {
+  padding: 6px 8px;
+}

@@ -17,6 +17,9 @@ import { scopeName } from './Plan';
 import { focusProject, LiveFocusBar, ProjectBoard, QuickStart } from './ProjectBoard';
 import { EffortCard, PresetEditor } from './Earn';
 import { useLiveSession } from '../os/live';
+import { ParkedList } from '../os/ParkedList';
+import { CountdownPicker } from '../ui/CountdownPicker';
+import { FocusGoal } from '../ui/FocusGoal';
 
 export function useCategories() {
   const lang = useLang();
@@ -55,6 +58,7 @@ export function Projects() {
   const [catsOpen, setCatsOpen] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
   const live = useLiveSession(1000);
+  const projectMsToday = s.sessions.filter((x) => !x.rate && dayKey(x.start) === dayKey()).reduce((a, x) => a + x.activeMs, 0) + (live && !live.paid ? live.ms : 0);
   // Board (planning / in progress / done, papers included) or the card grid
   const [view, setViewRaw] = useState<'board' | 'cards'>(() => {
     try {
@@ -93,6 +97,11 @@ export function Projects() {
       </div>
 
       <LiveFocusBar />
+      <ParkedList />
+      <div className="proj-start">
+        <CountdownPicker compact />
+        <FocusGoal kind="focus" doneMs={projectMsToday} compact />
+      </div>
       <QuickStart onEdit={() => setPresetsOpen(true)} />
 
       <div className="proj-view">

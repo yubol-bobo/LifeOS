@@ -34,6 +34,7 @@ import { cssVar, effortRows, sliceColor } from './effort';
 import { Pie3D } from '../scene/Pie3D';
 import { useTheme } from '../os/theme';
 import { useLayout } from '../os/display';
+import { FocusGoal } from '../ui/FocusGoal';
 import { hasReview, reviewStreak } from '../store/review';
 import { openSummary } from '../ai/summary';
 
@@ -529,7 +530,6 @@ function EffortWidget({ live }: { live: ReturnType<typeof useLiveSession> }) {
   const dark = useTheme();
   const sessions = useStore((s) => s.sessions);
   const projects = useStore((s) => s.projects);
-  const goalMin = useStore((s) => s.profile.focusGoalMin);
   const reduce = useStore((s) => s.profile.reduceMotion);
   const [sel, setSel] = useState<string | null>(null);
   const compact = useLayout() === 'landscape';
@@ -588,14 +588,9 @@ function EffortWidget({ live }: { live: ReturnType<typeof useLiveSession> }) {
       ) : (
         <p className="muted small effort-empty">{L('今天还没有专注记录。开始一段计时，这里会出现一个 3D 环形图。', 'No focus yet today. Start a session and a 3D donut appears here.')}</p>
       )}
-      <div className="goal">
-        <div className="goal-top">
-          <span className="muted small">{L('今日专注目标', "Today's focus goal")}</span>
-          <span className="num small">
-            {h(total)} / {(goalMin / 60).toFixed(1)}h
-          </span>
-        </div>
-        <Bar value={total / (goalMin * 60_000)} tone="violet" height={7} label="focus goal" />
+      <div className="effort-goals">
+        <FocusGoal kind="focus" doneMs={all.filter((r) => !r.paid).reduce((a, r) => a + r.ms, 0)} compact />
+        <FocusGoal kind="work" doneMs={all.filter((r) => r.paid).reduce((a, r) => a + r.ms, 0)} compact />
       </div>
       {live && !live.paid ? (
         <div className="row-gap">
