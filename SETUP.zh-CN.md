@@ -111,8 +111,9 @@ Google Scholar 没有官方 API，LifeOS 通过 [SerpAPI](https://serpapi.com) �
 
 **会发生什么**
 
-- 定时任务每 8 小时运行一次（只在 `main` 分支上），抓取：每篇论文的引用数、新增 / 消失的论文、总引用、h-index、i10、每年引用。
-- 两道保险保证不超额：两次抓取至少间隔 `intervalHours`；每月调用不超过 `monthlyLimit`。100 篇论文以内每次只用 1 次调用 → 每月约 90 次，在免费额度内。
+- 工作流每小时醒来一次（只在 `main` 分支上），距离上次抓取满 `intervalHours` 小时才真正抓取：每篇论文的引用数、新增 / 消失的论文、总引用、h-index、i10、每年引用。不需要抓取的那几次几秒就结束，也不会重新部署网站。GitHub 的定时任务有时会晚一点开始。
+- **立即抓取**：学术 → 同步引用 → Google Scholar → 「**立即抓取（去 GitHub 运行）**」，会打开 **Actions → Deploy to GitHub Pages → Run workflow**。手动运行会马上抓取，不受间隔限制（每月额度照样算）。1–2 分钟后回来点「**检查新数据**」。
+- 几道保险保证不超额：两次抓取至少间隔 `intervalHours`；如果按这个节奏月底前会用完 `monthlyLimit`，会自动把间隔拉开一点；每月调用永远不超过 `monthlyLimit`。100 篇论文以内每次只用 1 次调用：每 8 小时一次约每月 90 次，在 100 次免费额度内；每 6 小时一次约 120 次，免费额度下实际会接近每 7 小时一次。
 - 数据保存在仓库的 `scholar-data` 分支，发布时打包进网站。打开 LifeOS 会自动合并到「学术」里，并显示近 7 / 30 天的变化。
 
 **检查是否生效**：仓库 **Actions** → 最新一次 *Deploy to GitHub Pages* → *Sync Google Scholar* 步骤的日志：

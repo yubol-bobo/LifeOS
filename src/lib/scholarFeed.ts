@@ -24,6 +24,12 @@ export interface ScholarFeed {
   profile: { name?: string; affiliations?: string; thumbnail?: string; byYear?: { year: number; citations: number }[] };
   lastFetch: number | null;
   callsThisMonth: number;
+  /** Written by newer versions of the sync script. */
+  monthlyLimit?: number;
+  intervalHours?: number;
+  /** Actual spacing this month: the interval, stretched if needed so the budget lasts. */
+  paceHours?: number | null;
+  nextFetch?: number | null;
   totals: { citations: number; h: number | null; i10: number | null } | null;
   deltas: { d1: number | null; d7: number | null; d30: number | null };
   history: { date: string; total: number }[];

@@ -111,8 +111,9 @@ Google Scholar has no official API, so LifeOS reads your Scholar profile through
 
 **What happens**
 
-- A scheduled job runs every 8 hours (on `main` only) and fetches each paper's citation count, new and removed papers, total citations, h-index, i10 and citations per year.
-- Two safeguards keep you within quota: fetches are at least `intervalHours` apart, and calls per month never exceed `monthlyLimit`. Up to 100 papers costs 1 call per fetch, so about 90 calls a month, within the free tier.
+- The workflow wakes up every hour (on `main` only) and fetches once `intervalHours` have passed since the last fetch: each paper's citation count, new and removed papers, total citations, h-index, i10 and citations per year. Hourly runs that don't fetch finish in seconds and don't redeploy the site. GitHub sometimes starts scheduled runs late, so expect a little slack.
+- **Fetch now**: Research → Sync citations → Google Scholar → **Fetch now (run on GitHub)** opens **Actions → Deploy to GitHub Pages → Run workflow**. A manual run fetches right away, ignoring the interval (the monthly limit still applies). Come back after 1–2 minutes and click **Check for new data**.
+- Safeguards keep you within quota: fetches are at least `intervalHours` apart; if that pace would use up `monthlyLimit` before the month ends, fetches are spaced out a little more; and calls per month never exceed `monthlyLimit`. Up to 100 papers costs 1 call per fetch: every 8 h is about 90 calls a month, within the free tier of 100; every 6 h would be about 120, so on the free tier it ends up nearer every 7 h.
 - Data is stored on the repo's `scholar-data` branch and bundled into the site at deploy time. LifeOS merges it into Research when you open it, and shows each paper's 7- and 30-day changes.
 
 **Check that it works**: repo **Actions** → the latest *Deploy to GitHub Pages* run → the *Sync Google Scholar* step's log:

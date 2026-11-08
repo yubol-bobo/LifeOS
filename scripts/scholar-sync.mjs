@@ -4,18 +4,24 @@
  *
  * Runs inside the Pages workflow. It is rate-limited by design:
  *   - at most one fetch per SCHOLAR_INTERVAL_HOURS (default 8 h), no matter how often the workflow runs
+ *     (the workflow wakes up hourly, so the interval is what decides)
+ *   - paced so the month's budget lasts: if the interval would use up the budget before the month ends,
+ *     fetches are spaced out a little more (remaining hours ÷ remaining fetches)
  *   - never more than SCHOLAR_MONTHLY_LIMIT SerpAPI calls per calendar month (default 100, the free plan)
+ *   - SCHOLAR_FORCE=true (a manual "Run workflow") skips the interval and pacing, not the monthly limit
  *
  * Usage: node scripts/scholar-sync.mjs <data-dir>
  * Config: lifeos.config.json → scholar.{id, intervalHours, monthlyLimit, timezone}; env vars override.
  * Env:   SERPAPI_KEY (secret), SCHOLAR_ID (variable), optional SCHOLAR_INTERVAL_HOURS, SCHOLAR_MONTHLY_LIMIT,
- *        SCHOLAR_TZ (IANA zone for "today", default UTC), SERPAPI_MOCK (path to a JSON fixture, for tests)
+ *        SCHOLAR_TZ (IANA zone for "today", default UTC), SCHOLAR_FORCE, SERPAPI_MOCK (path to a JSON fixture, for tests)
+ * Output: writes fetched=true to $GITHUB_OUTPUT after a successful fetch (the workflow skips the
+ *         rebuild on scheduled runs that fetched nothing).
  *
  * Files in <data-dir>:
  *   scholar-history.json — full history (daily snapshots, per-paper metadata, fetch log)
  *   scholar.json         — compact view the web app reads
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const dir = process.argv[2] || '.scholar-data';
@@ -32,6 +38,7 @@ const INTERVAL_H = Number(process.env.SCHOLAR_INTERVAL_HOURS || cfg.intervalHour
 const MONTHLY_LIMIT = Number(process.env.SCHOLAR_MONTHLY_LIMIT || cfg.monthlyLimit || 100);
 const TZ = process.env.SCHOLAR_TZ || cfg.timezone || 'UTC';
 const MOCK = process.env.SERPAPI_MOCK || '';
+const FORCE = process.env.SCHOLAR_FORCE === 'true';
 const MAX_PAGES = 5;
 
 const log = (...a) => console.log('[scholar]', ...a);
@@ -42,6 +49,19 @@ const now = new Date();
 const dayOf = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
 const today = dayOf(now);
 const month = today.slice(0, 7);
+
+const monthCalls = (h, m = month) => h.fetches.filter((f) => f.month === m).reduce((a, f) => a + f.calls, 0);
+
+/** Hours between fetches right now: the configured interval, stretched if the budget wouldn't last the month. */
+function paceHours(h, at = now) {
+  const left = MONTHLY_LIMIT - monthCalls(h);
+  const perFetch = Math.max(1, h.fetches.at(-1)?.calls || 1);
+  const fetchesLeft = Math.floor(left / perFetch);
+  const end = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1));
+  const hoursLeft = (end.getTime() - at.getTime()) / 3600_000;
+  if (fetchesLeft <= 0) return Infinity;
+  return Math.max(INTERVAL_H, hoursLeft / fetchesLeft);
+}
 
 function load() {
   if (!existsSync(histPath)) return { version: 1, authorId: ID, profile: {}, papers: {}, days: [], fetches: [] };
@@ -60,10 +80,13 @@ async function main() {
 
   // ---- rate limits ----
   const last = h.fetches.at(-1);
-  if (last && now.getTime() - last.ts < INTERVAL_H * 3600_000 - 10 * 60_000) {
-    return log(`Last fetch ${((now.getTime() - last.ts) / 3600_000).toFixed(1)} h ago (< ${INTERVAL_H} h) — skipping.`);
+  const pace = paceHours(h);
+  if (FORCE) log('Manual run — fetching now (the monthly limit still applies).');
+  else if (last && now.getTime() - last.ts < pace * 3600_000 - 10 * 60_000) {
+    const why = pace > INTERVAL_H ? ` (interval ${INTERVAL_H} h, stretched to ${pace.toFixed(1)} h so this month's budget lasts)` : '';
+    return log(`Last fetch ${((now.getTime() - last.ts) / 3600_000).toFixed(1)} h ago (< ${pace.toFixed(1)} h${why}) — skipping.`);
   }
-  const used = h.fetches.filter((f) => f.month === month).reduce((a, f) => a + f.calls, 0);
+  const used = monthCalls(h);
   if (used >= MONTHLY_LIMIT) return log(`Monthly budget reached (${used}/${MONTHLY_LIMIT} calls in ${month}) — skipping.`);
 
   // ---- fetch (paginated, 100 per page) ----
@@ -146,6 +169,7 @@ async function main() {
   else h.days.push(snap);
 
   save(h);
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'fetched=true\n');
   const prevDay = h.days.at(-2);
   log(`Fetched ${articles.length} papers in ${calls} call(s); total citations ${total}${prevDay ? ` (${total - prevDay.total >= 0 ? '+' : ''}${total - prevDay.total} since ${prevDay.date})` : ''}. Month usage ${used + calls}/${MONTHLY_LIMIT}.`);
 }
@@ -183,13 +207,19 @@ function view(h) {
       series: recent.map((d) => d.cites[id] ?? null),
     };
   });
-  const month = new Date().toISOString().slice(0, 7);
+  const lastFetch = h.fetches.at(-1)?.ts ?? null;
+  const pace = paceHours(h);
   return {
     version: 1,
     authorId: h.authorId,
     profile: h.profile,
-    lastFetch: h.fetches.at(-1)?.ts ?? null,
-    callsThisMonth: h.fetches.filter((f) => f.month === month).reduce((a, f) => a + f.calls, 0),
+    lastFetch,
+    callsThisMonth: monthCalls(h),
+    monthlyLimit: MONTHLY_LIMIT,
+    intervalHours: INTERVAL_H,
+    paceHours: Number.isFinite(pace) ? Math.round(pace * 10) / 10 : null,
+    // Earliest time the hourly workflow will fetch again (it runs at a random-ish minute each hour).
+    nextFetch: lastFetch && Number.isFinite(pace) ? lastFetch + pace * 3600_000 : null,
     totals: cur ? { citations: cur.total, h: cur.h, i10: cur.i10 } : null,
     deltas: { d1: d1 && cur ? cur.total - d1.total : null, d7: d7 && cur ? cur.total - d7.total : null, d30: d30 && cur ? cur.total - d30.total : null },
     history: days.map((d) => ({ date: d.date, total: d.total })),

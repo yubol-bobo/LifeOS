@@ -6,11 +6,19 @@ on:
   # (The preview replaces the live site until the next push to main.)
   push:
     branches: [main]
-  # Google Scholar sync: every 8 hours (≈ 90 SerpAPI calls / month for ≤ 100 papers).
+  # Google Scholar sync: wake up every hour; the script decides whether it's time to fetch
+  # (SCHOLAR_INTERVAL_HOURS, default 8, paced to fit SCHOLAR_MONTHLY_LIMIT). Hourly runs that fetch
+  # nothing finish in seconds and skip the rebuild. GitHub may start scheduled runs late.
   # Schedules only run on the default branch.
   schedule:
-    - cron: '17 */8 * * *'
+    - cron: '23 * * * *'
+  # Manual run (Actions → Deploy to GitHub Pages → Run workflow): fetches Scholar right away.
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Fetch Google Scholar now, even if the last fetch was recent (the monthly limit still applies)'
+        type: boolean
+        default: true
 
 permissions:
   contents: write # push the scholar-data branch
@@ -24,6 +32,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.gate.outputs.deploy }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -44,8 +54,10 @@ jobs:
           fi
 
       - name: Sync Google Scholar (rate-limited inside the script)
+        id: sync
         continue-on-error: true
         env:
+          SCHOLAR_FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
           SCHOLAR_ID: ${{ vars.SCHOLAR_ID || secrets.SCHOLAR_ID }}
           SCHOLAR_INTERVAL_HOURS: ${{ vars.SCHOLAR_INTERVAL_HOURS }}
@@ -61,19 +73,35 @@ jobs:
           git -c user.name="lifeos-bot" -c user.email="lifeos-bot@users.noreply.github.com" commit --quiet -m "scholar: $(date -u +%Y-%m-%dT%H:%MZ)"
           git push --quiet origin HEAD:scholar-data
 
+      # An hourly run that fetched nothing has nothing new to publish.
+      - name: Decide whether to rebuild
+        id: gate
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ] || [ "${{ steps.sync.outputs.fetched }}" = "true" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "No new Scholar data; skipping the rebuild."
+          fi
+
       - name: Bundle scholar data into the site
+        if: steps.gate.outputs.deploy == 'true'
         run: |
           mkdir -p public/data
           if [ -f .scholar-data/scholar.json ]; then cp .scholar-data/scholar.json public/data/scholar.json; fi
 
-      - run: npm ci
-      - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+      - if: steps.gate.outputs.deploy == 'true'
+        run: npm ci
+      - if: steps.gate.outputs.deploy == 'true'
+        run: npm run build
+      - if: steps.gate.outputs.deploy == 'true'
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
   deploy:
     needs: build
+    if: needs.build.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
