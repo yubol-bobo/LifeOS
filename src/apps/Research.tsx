@@ -4,7 +4,7 @@ import { dayKey, parseDay } from '../lib/date';
 import { num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { syncScholar } from '../lib/scholar';
-import { useScholarFeed, type ScholarFeed } from '../lib/scholarFeed';
+import { loadFeed, useScholarFeed, type ScholarFeed } from '../lib/scholarFeed';
 import { notify } from '../os/notify';
 import { useMetrics } from '../store/hooks';
 import { PAPER_XP } from '../store/rules';
@@ -460,14 +460,16 @@ function SyncModal({ open, onClose }: { open: boolean; onClose: () => void }) {
                   {feed.totals ? L(` · ${feed.totals.citations} 次引用`, ` · ${feed.totals.citations} citations`) : ''}
                 </span>
                 <span className="muted small">
-                  {feed.lastFetch ? L(`上次抓取：${ago(feed.lastFetch, L)}`, `Last fetch: ${ago(feed.lastFetch, L)}`) : ''} · {L(`本月已用 ${feed.callsThisMonth} 次 SerpAPI 调用`, `${feed.callsThisMonth} SerpAPI calls this month`)}
+                  {feed.lastFetch ? L(`上次抓取：${ago(feed.lastFetch, L)}`, `Last fetch: ${ago(feed.lastFetch, L)}`) : ''}
+                  {feed.nextFetch ? ` · ${feed.nextFetch <= Date.now() ? L('下次：一小时内', 'next: within the hour') : L(`下次：约 ${until(feed.nextFetch, L)}`, `next: in about ${until(feed.nextFetch, L)}`)}` : ''} · {L(`本月已用 ${feed.callsThisMonth}/${feed.monthlyLimit ?? 100} 次 SerpAPI 调用`, `${feed.callsThisMonth}/${feed.monthlyLimit ?? 100} SerpAPI calls this month`)}
                 </span>
                 <span className="small">{bound ? L('已绑定到这个 LifeOS：每次打开「学术」都会自动合并最新的论文和引用。', 'Bound to this LifeOS: the latest papers and citations merge in automatically whenever you open Research.') : L('还没绑定到这个 LifeOS：点下面的按钮，把这些论文和引用合并进来。', 'Not bound to this LifeOS yet: use the button below to merge these papers and citations in.')}</span>
               </div>
             ) : (
               <p className="gs-status is-wait">{L('还没有抓取到数据。确认下面的 Secret / Variable 已设置，然后等定时任务运行一次（或在仓库的 Actions → Deploy to GitHub Pages 里点 Run workflow）。', 'No data fetched yet. Check the secret / variable below, then wait for the scheduled run (or Actions → Deploy to GitHub Pages → Run workflow in your repo).')}</p>
             )}
-            <p>{L('Google Scholar 由仓库的定时任务自动抓取（借助 SerpAPI），每 8 小时一次，每月最多 100 次调用，所以这里没有「立即同步」按钮。设置方法：', 'Google Scholar is fetched by the repo’s scheduled workflow (via SerpAPI) every 8 hours, capped at 100 calls a month, so there’s no “sync now” here. Setup:')}</p>
+            {feed && <ScholarNow feed={feed} />}
+            <p>{L('设置方法：', 'Setup:')}</p>
             <ol>
               <li>{L('GitHub 仓库 → Settings → Secrets and variables → Actions', 'GitHub repo → Settings → Secrets and variables → Actions')}</li>
               <li>
@@ -478,7 +480,7 @@ function SyncModal({ open, onClose }: { open: boolean; onClose: () => void }) {
                 {L('Variable：', 'Variable: ')}
                 <code>SCHOLAR_ID</code> {L('（Scholar 主页网址中 user= 后面的部分）', '(the user= part of your Scholar profile URL)')}
               </li>
-              <li>{L('可选 Variable：SCHOLAR_INTERVAL_HOURS（默认 8）、SCHOLAR_MONTHLY_LIMIT（默认 100）', 'Optional variables: SCHOLAR_INTERVAL_HOURS (default 8), SCHOLAR_MONTHLY_LIMIT (default 100)')}</li>
+              <li>{L('可选 Variable：SCHOLAR_INTERVAL_HOURS（每隔几小时抓一次，默认 8）、SCHOLAR_MONTHLY_LIMIT（每月最多调用几次，默认 100，即免费额度）。间隔太短、额度不够撑到月底时，会自动拉开一点间隔。', 'Optional variables: SCHOLAR_INTERVAL_HOURS (hours between fetches, default 8) and SCHOLAR_MONTHLY_LIMIT (calls per month, default 100, the free plan). If the interval would run out of budget before the month ends, fetches are spaced out a little more.')}</li>
             </ol>
           </div>
         ) : (
@@ -502,6 +504,59 @@ function SyncModal({ open, onClose }: { open: boolean; onClose: () => void }) {
       </div>
     </Modal>
   );
+}
+
+/** The repo's "Run workflow" page, when the site is served from GitHub Pages (<owner>.github.io/<repo>). */
+function actionsUrl() {
+  const m = location.hostname.match(/^([\w-]+)\.github\.io$/i);
+  if (!m) return null;
+  const repo = location.pathname.split('/').filter(Boolean)[0] || `${m[1]}.github.io`;
+  return `https://github.com/${m[1]}/${repo}/actions/workflows/deploy.yml`;
+}
+
+/** How the schedule works, plus "fetch now" (a manual workflow run) and "check for new data". */
+function ScholarNow({ feed }: { feed: ScholarFeed }) {
+  const L = useL();
+  const [checking, setChecking] = useState(false);
+  const url = actionsUrl();
+  const every = feed.intervalHours ?? 8;
+  const pace = feed.paceHours ?? every;
+  const check = async () => {
+    setChecking(true);
+    const before = feed.lastFetch;
+    const f = await loadFeed(true);
+    setChecking(false);
+    const fresh = !!f?.lastFetch && f.lastFetch !== before;
+    notify({ title: fresh ? L('拿到新数据了', 'New data is in') : L('还没有新数据', 'Nothing new yet'), body: fresh ? L(`抓取于 ${ago(f!.lastFetch!, L)}`, `Fetched ${ago(f!.lastFetch!, L)}`) : L('手动运行一般要 1–2 分钟才会上线，稍后再点一次。', 'A manual run usually takes 1–2 minutes to go live; try again shortly.'), icon: 'refresh', tone: fresh ? 'good' : 'info' });
+  };
+  return (
+    <div className="gs-now">
+      <p>
+        {L(`由仓库的定时任务借助 SerpAPI 自动抓取：每 ${every} 小时一次`, `Fetched by the repo’s scheduled workflow via SerpAPI, every ${every} h`)}
+        {pace > every + 0.05 ? L(`（本月为了额度够用，实际约每 ${pace} 小时）`, ` (about every ${pace} h this month, so the budget lasts)`) : ''}
+        {L(`，每月最多 ${feed.monthlyLimit ?? 100} 次调用。GitHub 的定时任务有时会晚一点开始。`, `, at most ${feed.monthlyLimit ?? 100} calls a month. GitHub sometimes starts scheduled runs a little late.`)}
+      </p>
+      <div className="row-gap wrap">
+        {url && (
+          <a className="btn btn-soft btn-sm" href={url} target="_blank" rel="noreferrer">
+            <Icon name="zap" size={15} />
+            <span>{L('立即抓取（去 GitHub 运行）', 'Fetch now (run on GitHub)')}</span>
+          </a>
+        )}
+        <Button size="sm" variant="ghost" icon="refresh" disabled={checking} onClick={() => void check()}>
+          {checking ? L('检查中…', 'Checking…') : L('检查新数据', 'Check for new data')}
+        </Button>
+      </div>
+      {url && <p className="muted small">{L('打开的页面里点「Run workflow」→ 绿色的「Run workflow」，1–2 分钟后回来点「检查新数据」。手动运行会立即抓取，不受间隔限制，但仍算进每月额度。', 'On that page click “Run workflow” → the green “Run workflow”, then come back in 1–2 minutes and click “Check for new data”. A manual run fetches right away, ignoring the interval, but still counts toward the monthly budget.')}</p>}
+    </div>
+  );
+}
+
+function until(ts: number, L: (zh: string, en: string) => string) {
+  const m = Math.max(1, Math.round((ts - Date.now()) / 60_000));
+  if (m < 60) return L(`${m} 分钟后`, `${m} min`);
+  const h = Math.round(m / 6) / 10;
+  return L(`${h} 小时后`, `${h} h`);
 }
 
 function ago(ts: number, L: (zh: string, en: string) => string) {
@@ -529,7 +584,7 @@ function ScholarCard({ feed }: { feed: ScholarFeed }) {
       icon="graduation"
       action={
         <span className="muted small">
-          {feed.lastFetch ? L(`${ago(feed.lastFetch, L)}同步 · 每 8 小时自动更新 · 本月 API ${feed.callsThisMonth}/100`, `Synced ${ago(feed.lastFetch, L)} · auto every 8 h · ${feed.callsThisMonth}/100 calls this month`) : ''}
+          {feed.lastFetch ? L(`${ago(feed.lastFetch, L)}同步 · 每 ${feed.paceHours ?? feed.intervalHours ?? 8} 小时自动更新 · 本月 API ${feed.callsThisMonth}/${feed.monthlyLimit ?? 100}`, `Synced ${ago(feed.lastFetch, L)} · auto every ${feed.paceHours ?? feed.intervalHours ?? 8} h · ${feed.callsThisMonth}/${feed.monthlyLimit ?? 100} calls this month`) : ''}
         </span>
       }
     >
