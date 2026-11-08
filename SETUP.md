@@ -181,13 +181,14 @@ Let your pet read your day and write a short, fun day summary that you can edit 
 
    | Provider | Get a key | Default model (changeable) | Notes |
    |---|---|---|---|
-   | Claude (Anthropic) | console.anthropic.com → API Keys | `claude-opus-5-5` | Optional web search for news (costs a bit more); for lower cost switch to `claude-sonnet-5-5` or `claude-haiku-5-5` |
-   | OpenAI | platform.openai.com/api-keys | `gpt-5-mini` | |
-   | DeepSeek | platform.deepseek.com/api_keys | `deepseek-chat` | |
-   | Kimi (Moonshot) | platform.moonshot.cn → API Key | `moonshot-v1-8k` | For international accounts set the base URL to `https://api.moonshot.ai/v1` |
-   | GLM (Zhipu) | open.bigmodel.cn → API Keys | `glm-4-flash` | |
+   | Claude (Anthropic) | console.anthropic.com → API Keys | `claude-opus-5-5` | Built-in web search; for lower cost switch to `claude-sonnet-5-5` or `claude-haiku-5-5` |
+   | OpenAI | platform.openai.com/api-keys | `gpt-5-mini` | Built-in web search |
+   | DeepSeek | platform.deepseek.com/api_keys | `deepseek-chat` | No built-in search; news comes from Wikipedia |
+   | Kimi (Moonshot) | platform.moonshot.cn → API Key | `moonshot-v1-8k` | Built-in web search (a model with a larger context, e.g. `kimi-latest`, works better with it). For international accounts set the base URL to `https://api.moonshot.ai/v1` |
+   | GLM (Zhipu) | open.bigmodel.cn → API Keys | `glm-4-flash` | Built-in web search |
 
 2. Open your LifeOS → **Settings → AI**, pick the provider, paste the key, and click **Test connection**.
+   - Optional: turn on **Go online for inspiration**. The browser fetches a few recent news stories and "on this day" events from Wikipedia (free, works with every provider), and providers with built-in web search can also look things up (costs a little more). If a provider's search doesn't work with your model, the summary is simply written without it.
 3. It's a good idea to **set a spending limit** on the key in the provider's console. A summary uses a few hundred to about a thousand tokens, so once a day costs very little.
 
 **What gets sent?** Only when a summary is generated, the browser sends a digest of that day (names of completed quests, focus time and projects, income, XP, mood and notes, water and stretch breaks, this week's plan and goal progress, upcoming countdowns, and the review you wrote that day) directly to the provider you chose. Neither your key nor your data passes through any server in between.

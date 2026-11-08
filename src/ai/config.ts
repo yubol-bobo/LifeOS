@@ -18,8 +18,12 @@ export interface ProviderDef {
   keyHint: string;
   /** OpenAI's newer models want `max_completion_tokens` and no custom temperature. */
   completionTokens?: boolean;
-  web?: boolean; // server-side web search supported here
+  /** The provider's own web search, if it has one. Every provider also gets news and "on this day"
+   *  items the browser fetches from Wikipedia (see inspiration.ts). */
+  search?: SearchKind;
 }
+
+export type SearchKind = 'claude' | 'openai' | 'kimi' | 'glm';
 
 export const PROVIDERS: ProviderDef[] = [
   {
@@ -32,7 +36,7 @@ export const PROVIDERS: ProviderDef[] = [
     models: ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-5-5'],
     keyUrl: 'https://console.anthropic.com/settings/keys',
     keyHint: 'sk-ant-…',
-    web: true,
+    search: 'claude',
   },
   {
     id: 'openai',
@@ -45,6 +49,7 @@ export const PROVIDERS: ProviderDef[] = [
     keyUrl: 'https://platform.openai.com/api-keys',
     keyHint: 'sk-…',
     completionTokens: true,
+    search: 'openai',
   },
   {
     id: 'deepseek',
@@ -67,6 +72,7 @@ export const PROVIDERS: ProviderDef[] = [
     models: ['moonshot-v1-8k', 'kimi-k2-turbo-preview', 'kimi-latest'],
     keyUrl: 'https://platform.moonshot.cn/console/api-keys',
     keyHint: 'sk-…',
+    search: 'kimi',
   },
   {
     id: 'glm',
@@ -78,6 +84,7 @@ export const PROVIDERS: ProviderDef[] = [
     models: ['glm-4-flash', 'glm-4.5', 'glm-4-plus'],
     keyUrl: 'https://open.bigmodel.cn/usercenter/apikeys',
     keyHint: '…',
+    search: 'glm',
   },
 ];
 
@@ -88,7 +95,7 @@ export interface AiConfig {
   keys: Partial<Record<ProviderId, string>>;
   models: Partial<Record<ProviderId, string>>;
   baseUrls: Partial<Record<ProviderId, string>>;
-  web: boolean; // let the model search the web for a news tie-in (where supported)
+  web: boolean; // go online for inspiration: recent news, on this day (all providers)
 }
 
 const KEY = 'lifeos:ai';
@@ -130,6 +137,6 @@ export function activeProvider(c: AiConfig = cfg) {
   const p = providerById(c.provider);
   const key = c.keys[p.id]?.trim();
   if (!key) return null;
-  return { def: p, key, model: c.models[p.id]?.trim() || p.model, baseUrl: (c.baseUrls[p.id]?.trim() || p.baseUrl).replace(/\/+$/, ''), web: !!(c.web && p.web) };
+  return { def: p, key, model: c.models[p.id]?.trim() || p.model, baseUrl: (c.baseUrls[p.id]?.trim() || p.baseUrl).replace(/\/+$/, ''), web: !!c.web, search: c.web ? p.search : undefined };
 }
 export type ActiveProvider = NonNullable<ReturnType<typeof activeProvider>>;

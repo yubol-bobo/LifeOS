@@ -25,7 +25,7 @@ export function AiSettings() {
     setTest({ state: 'running', text: '' });
     try {
       const text = await generate({
-        provider: prov,
+        provider: { ...prov, search: undefined }, // a quick hello doesn't need web search
         system: lang === 'zh' ? '你是一只可爱的桌面宠物。' : 'You are a cute desktop pet.',
         user: lang === 'zh' ? '用不超过 15 个字跟主人打个招呼。' : 'Say hi to your human in under 12 words.',
         onText: (t) => setTest({ state: 'running', text: t }),
@@ -104,14 +104,25 @@ export function AiSettings() {
             </Field>
           </div>
           <div className="toggle-list">
-            <button className={`toggle-row ${ai.web && p.web ? 'is-on' : ''}`} role="switch" aria-checked={ai.web && !!p.web} disabled={!p.web} onClick={() => setAi({ web: !ai.web })}>
+            <button className={`toggle-row ${ai.web ? 'is-on' : ''}`} role="switch" aria-checked={ai.web} onClick={() => setAi({ web: !ai.web })}>
               <span>
-                {L('联网找一条最近的新闻，和你今天做的事联系起来', 'Search the web for a recent news tie-in')}
-                <small className="muted"> {p.web ? L('（会多一点费用）', '(costs a little more)') : L('（目前仅 Claude 支持）', '(Claude only for now)')}</small>
+                {L('联网找灵感：最近的新闻、历史上的今天', 'Go online for inspiration: recent news, on this day')}
+                <small className="muted">
+                  {' '}
+                  {p.search
+                    ? L(`（${p.zh.replace(/（.*/, '')} 自带联网搜索，加上维基百科的新闻；会多一点费用）`, `(${p.name.replace(/ \(.*/, '')}'s own web search, plus Wikipedia's news feed; costs a little more)`)
+                    : L('（DeepSeek 没有自带搜索，由浏览器从维基百科取新闻和历史上的今天，免费）', "(DeepSeek has no web search of its own; the browser fetches news and on-this-day from Wikipedia, free)")}
+                </small>
               </span>
               <i className="switch" />
             </button>
           </div>
+          <p className="muted small">
+            {L(
+              '每份总结都有一段「✨ 发散联想」：从你今天做的事出发，联想到一条新闻、历史上的今天、一句金句或诗词、一个浪漫或有趣的画面、一句打气或一点人生哲理，每次换个花样。',
+              'Every summary ends with a “✨” line that wanders off from something you did today: a news story, this day in history, a quote or a line of poetry, a romantic or playful thought, some cheering on or a bit of life wisdom, different each time.',
+            )}
+          </p>
           <div className="row-gap wrap">
             <Button icon="zap" disabled={!key || test.state === 'running'} onClick={() => void runTest()}>
               {test.state === 'running' ? L('测试中…', 'Testing…') : L('测试连接', 'Test connection')}
