@@ -4,6 +4,7 @@
  * and the offline summary when no AI provider is set up.
  */
 import { addDays, dayKey, parseDay } from '../lib/date';
+import { quoteFor } from './quotes';
 import { money } from '../lib/format';
 import { periodOf } from '../lib/period';
 import { ACH_BY_ID } from './achievements';
@@ -224,6 +225,7 @@ export function localSummary(d: DayDigest, lang: Lang) {
   out.push('• ' + body.join(zh ? '，' : ', ') + (zh ? '。' : '.'));
   const g = d.goals[0];
   if (g) out.push('• ' + (zh ? `「${g.title}」已完成 ${g.pct}%` : `“${g.title}” is ${g.pct}% done`) + (d.countdowns[0] ? (zh ? `；「${d.countdowns[0].title}」还有 ${d.countdowns[0].days} 天。` : `; “${d.countdowns[0].title}” in ${d.countdowns[0].days} days.`) : zh ? '。' : '.'));
+  out.push('✨ ' + quoteFor(d.day, lang));
   if (d.questsMissed.length) out.push(zh ? `明天可以先从「${d.questsMissed[0]}」开始。` : `Tomorrow, maybe start with “${d.questsMissed[0]}”.`);
   else out.push(zh ? '明天继续，保持这个节奏。' : 'Same rhythm tomorrow.');
   return out.join('\n');

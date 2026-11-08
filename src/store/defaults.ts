@@ -2,6 +2,11 @@ import type { AttrDef, PaletteKey, PayConfig } from './types';
 
 /** Identity colors — each hand-tuned per theme (see styles/tokens.css --p-*). */
 export const PALETTE: PaletteKey[] = ['blue', 'orange', 'jade', 'amber', 'pink', 'violet', 'teal', 'red', 'lime', 'indigo', 'slate', 'brown'];
+/** Colour names for screen readers, in both languages. */
+export const PALETTE_NAMES: Record<PaletteKey, [string, string]> = {
+  blue: ['蓝', 'Blue'], orange: ['橙', 'Orange'], jade: ['翠绿', 'Jade'], amber: ['琥珀', 'Amber'], pink: ['粉', 'Pink'], violet: ['紫', 'Violet'],
+  teal: ['青', 'Teal'], red: ['红', 'Red'], lime: ['黄绿', 'Lime'], indigo: ['靛蓝', 'Indigo'], slate: ['石板灰', 'Slate'], brown: ['棕', 'Brown'],
+};
 
 export const ATTR_ICONS = [
   'brain', 'dumbbell', 'coins', 'hammer', 'heart', 'leaf', 'book-open', 'code', 'palette', 'music', 'camera', 'globe',

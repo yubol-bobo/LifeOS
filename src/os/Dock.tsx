@@ -25,7 +25,7 @@ export function Dock({ app }: { app: AppId }) {
   return (
     <nav
       className="dock-wrap"
-      aria-label="Dock"
+      aria-label={lang === 'zh' ? '程序坞' : 'Dock'}
       onPointerMove={(e) => e.pointerType === 'mouse' && !reduce && setMx(e.clientX)}
       onPointerLeave={() => setMx(null)}
     >

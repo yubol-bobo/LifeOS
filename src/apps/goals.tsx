@@ -138,10 +138,11 @@ export function ProjectTag({ id }: { id?: string }) {
 /** A quest's optional due date: "due today", "3 days left", "2 days late". */
 export function DueChip({ due }: { due?: string }) {
   const L = useL();
+  const lang = useStore((s) => s.profile.lang);
   if (!due) return null;
   const n = daysBetween(dayKey(), due);
   const cls = n < 0 ? 'is-late' : n === 0 ? 'is-today' : n <= 3 ? 'is-soon' : '';
-  const text = n < 0 ? L(`逾期 ${-n} 天`, `${-n}d late`) : n === 0 ? L('今天到期', 'due today') : n <= 14 ? L(`还剩 ${n} 天`, `${n}d left`) : parseDay(due).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
+  const text = n < 0 ? L(`逾期 ${-n} 天`, `${-n}d late`) : n === 0 ? L('今天到期', 'due today') : n <= 14 ? L(`还剩 ${n} 天`, `${n}d left`) : parseDay(due).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'numeric', day: 'numeric' });
   return (
     <span className={`due-chip num ${cls}`} title={L(`截止 ${due}`, `Due ${due}`)}>
       <Icon name="calendar" size={11} /> {text}

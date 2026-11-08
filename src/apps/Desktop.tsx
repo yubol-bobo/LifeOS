@@ -160,7 +160,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
             {dailyDone}/{dailies.length}
           </span>
         </WidgetHead>
-        <Bar value={dailies.length ? dailyDone / dailies.length : 0} height={8} label="daily progress" />
+        <Bar value={dailies.length ? dailyDone / dailies.length : 0} height={8} label={L('每日习惯进度', 'Daily progress')} />
         <ul className="mini-quests">
           {quests.slice(0, 7).map((q) => {
             const done = q.kind === 'daily' ? doneToday.has(q.id) : !!q.doneAt;
@@ -646,7 +646,7 @@ function ProjectProgressWidget({ live }: { live: ReturnType<typeof useLiveSessio
                   <i style={{ width: `${Math.round((pct ?? 0) * 100)}%` }} />
                 </span>
                 <span className="pp-meta muted small num">
-                  {total ? L(`待办 ${st.doneTasks.length}/${total}`, `${st.doneTasks.length}/${total} to-dos`) : L('还没拆分待办', 'No to-dos yet')}
+                  {total ? L(`步骤 ${st.doneTasks.length}/${total}`, `${st.doneTasks.length}/${total} steps`) : L('还没拆分步骤', 'No steps yet')}
                   {' · '}
                   {L(`今天 ${(ms / 3_600_000).toFixed(1)}h`, `today ${(ms / 3_600_000).toFixed(1)}h`)}
                   {days != null && <> · {days >= 0 ? L(`还剩 ${days} 天`, `${days}d left`) : L('已逾期', 'overdue')}</>}
@@ -668,6 +668,7 @@ function ProjectProgressWidget({ live }: { live: ReturnType<typeof useLiveSessio
 }
 
 function WidgetHead({ icon, title, onOpen, children }: { icon: string; title: string; onOpen?: () => void; children?: ReactNode }) {
+  const L = useL();
   return (
     <header className="w-head">
       <span className="w-ic">
@@ -677,7 +678,7 @@ function WidgetHead({ icon, title, onOpen, children }: { icon: string; title: st
       <div className="w-head-end">
         {children}
         {onOpen && (
-          <button className="w-open" onClick={onOpen} aria-label={`Open ${title}`}>
+          <button className="w-open" onClick={onOpen} aria-label={L(`打开「${title}」`, `Open ${title}`)}>
             <Icon name="chevron-right" size={16} />
           </button>
         )}

@@ -181,13 +181,14 @@ Google Scholar 没有官方 API，LifeOS 通过 [SerpAPI](https://serpapi.com) �
 
    | 服务商 | 获取 Key | 默认模型（可改） | 备注 |
    |---|---|---|---|
-   | Claude（Anthropic） | console.anthropic.com → API Keys | `claude-opus-5-5` | 可选开启「联网找新闻」（会多一点费用）；想更省可以改成 `claude-sonnet-5-5` 或 `claude-haiku-5-5` |
-   | OpenAI | platform.openai.com/api-keys | `gpt-5-mini` | |
-   | DeepSeek | platform.deepseek.com/api_keys | `deepseek-chat` | |
-   | Kimi（月之暗面） | platform.moonshot.cn → API Key | `moonshot-v1-8k` | 海外账号把接口地址改成 `https://api.moonshot.ai/v1` |
-   | GLM（智谱） | open.bigmodel.cn → API Keys | `glm-4-flash` | |
+   | Claude（Anthropic） | console.anthropic.com → API Keys | `claude-opus-5-5` | 自带联网搜索；想更省可以改成 `claude-sonnet-5-5` 或 `claude-haiku-5-5` |
+   | OpenAI | platform.openai.com/api-keys | `gpt-5-mini` | 自带联网搜索 |
+   | DeepSeek | platform.deepseek.com/api_keys | `deepseek-chat` | 没有自带搜索，新闻来自维基百科 |
+   | Kimi（月之暗面） | platform.moonshot.cn → API Key | `moonshot-v1-8k` | 自带联网搜索（配合上下文更长的模型如 `kimi-latest` 效果更好）；海外账号把接口地址改成 `https://api.moonshot.ai/v1` |
+   | GLM（智谱） | open.bigmodel.cn → API Keys | `glm-4-flash` | 自带联网搜索 |
 
 2. 打开你的 LifeOS → **系统设置 → AI 宠物**，选服务商，粘贴 Key，点 **测试连接**。
+   - 可选：打开「**联网找灵感**」。浏览器会从维基百科取几条最近的新闻和「历史上的今天」（免费，所有服务商都能用）；自带联网搜索的服务商还会自己去搜（会多一点费用）。如果某个模型不支持搜索，会自动改成不联网再写一次，不会失败。
 3. 建议在服务商后台给这个 Key **设置额度上限**。一份总结大约几百到一千多个 token，一天一次花费很低。
 
 **会发送什么？** 只有在生成总结时，浏览器把当天的数据摘要（完成的任务名、专注时长和项目、入账、XP、心情和备注、喝水起身、本周计划和目标进度、即将到来的倒计时、你当天写的复盘）直接发给你选的服务商。Key 和数据都不经过任何中间服务器。

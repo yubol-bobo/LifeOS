@@ -1,3 +1,4 @@
+import { PALETTE_NAMES } from '../store/defaults';
 import { ExpectancyInput } from './LifeSettings';
 import { AiSettings } from './AiSettings';
 import { setLayout, setWindowPrefs, useLayout, useWindowPrefs } from '../os/display';
@@ -366,10 +367,11 @@ function DockSettings() {
 /* ------------------------------------------------------------------ */
 
 function Swatches({ value, onChange }: { value: PaletteKey; onChange: (c: PaletteKey) => void }) {
+  const L = useL();
   return (
     <div className="swatches">
       {PALETTE.map((c) => (
-        <button key={c} type="button" aria-label={c} className={value === c ? 'is-on' : ''} style={{ '--sw': `var(--p-${c})` } as CSSProperties} onClick={() => onChange(c)} />
+        <button key={c} type="button" aria-label={L(...PALETTE_NAMES[c as keyof typeof PALETTE_NAMES])} className={value === c ? 'is-on' : ''} style={{ '--sw': `var(--p-${c})` } as CSSProperties} onClick={() => onChange(c)} />
       ))}
     </div>
   );

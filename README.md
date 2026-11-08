@@ -40,29 +40,32 @@ LifeOS is a steady rhythm of managing and recording your life, so you can keep y
 
 | | |
 | --- | --- |
-| 🖥️ **Desktop** | An OS-style dashboard: today's quests, life progress, attribute radar, XP heatmap, and a 3D planet that grows as you level up |
-| ✅ **Quests & plans** | Daily habits and one-off tasks; break the year into months, weeks and today, with progress flowing upward; log a note at every step of plans like "read 8 books" |
-| ⏱️ **Earn & focus** | **Earn**: time paid work and watch earnings tick up by the second. **Projects**: start focusing on any project (or the gym, reading…) in one tap, and see where your hours went on a 3D donut; set a countdown and get a celebration when it ends |
-| 🐾 **Desktop pets** | Three companions remind you to drink water, stretch and sleep; connect OpenAI, Claude, DeepSeek, Kimi or GLM and your pet writes up your day each night |
+| 🖥️ **Desktop** | An OS-style dashboard: your level with the attribute radar, today's quests, today's earnings, a 3D donut of where your time went, the projects you're pushing forward, life progress, an XP heatmap, and a 3D planet that grows as you level up |
+| ✅ **Quests & plans** | Daily habits and one-off tasks; break the year into months, weeks and today, with progress flowing upward. Link today's quest to a plan by an amount ("Read the book · +3 chapters") and the week, month and year move with it; log a note at every step |
+| 📁 **Projects** | Split a project into steps, each with an optional due date; steps stay off Today until you schedule them. A board with Planning / In progress / Done columns (your papers included), drag to move, every move recorded. Start focusing from any card, and pick which projects show on the desktop |
+| ⏱️ **Earn & focus** | **Earn**: time paid work and watch earnings tick up by the second. **Project focus**: one tap on any project (or the gym, reading…). Stack countdowns with +15m / +30m / +1h; at zero the session settles itself and the confetti flies. Pause one task, switch to another, resume it later. Optional daily goals for paid work and for project focus |
+| 🐾 **Desktop pets** | Three companions remind you to drink water, stretch and sleep; connect OpenAI, Claude, DeepSeek, Kimi or GLM and your pet writes up your day each night, ending with a ✨ line that wanders to the news, this day in history, a poem or a bit of cheering on |
 | 📝 **Daily review** | One line is enough: highlight, lesson, blocker, gratitude, tomorrow's one thing; a reflection heatmap and "one year ago today" |
 | 🕰️ **Timeline** | Everything LifeOS recorded, in order, searchable and filterable; open any day for a cute 3D XP-blocks view |
 | 🌱 **Growth** | 100 levels, 20 eras, 199 achievements; unlock pet accessories, wallpapers and planet upgrades |
-| 📊 **And more** | Mood and what drives it, assets and net worth, papers and citations (auto-sync from Google Scholar), custom trackers, a reward shop |
+| 📊 **And more** | Mood and what drives it, assets and net worth, a paper board you drag from idea to accepted with every stage dated, citations auto-synced from Google Scholar, custom trackers, a reward shop |
 
-English and Chinese · light and dark themes · portrait card feed or full-screen landscape dashboard · works on phones. Every feature in detail: **[Feature guide](docs/FEATURES.md)**.
+English and Chinese · light and dark themes · weeks start on Monday or Sunday · portrait card feed or full-screen landscape dashboard · works on phones. Every feature in detail: **[Feature guide](docs/FEATURES.md)**.
 
 ## Screenshots
 
 | | |
 | --- | --- |
-| ![Desktop, dark](docs/shots/desktop-dark.jpg) | ![Plan progress notes](docs/shots/plan-note.jpg) |
-| **Desktop** (dark mode) | **Plans**: a note at every step |
-| ![Focus donut](docs/shots/focus-donut.jpg) | ![Focus celebration](docs/shots/focus-celebration.jpg) |
-| **Where the effort went**: 3D donut | **Countdown done**: confetti |
+| ![Desktop, dark](docs/shots/desktop-dark.jpg) | ![Projects board](docs/shots/projects.jpg) |
+| **Desktop** (dark mode) | **Projects**: board, live focus bar, a paused task |
+| ![Earn](docs/shots/earn.jpg) | ![Countdown done](docs/shots/focus-celebration.jpg) |
+| **Earn**: paid time, earnings by the second | **Countdown done**: settled automatically, confetti |
+| ![Paper board](docs/shots/research-board.jpg) | ![Plan progress notes](docs/shots/plan-note.jpg) |
+| **Research**: drag papers between stages | **Plans**: a note at every step |
 | ![Pet day summary](docs/shots/pet-summary.jpg) | ![Daily review](docs/shots/review.jpg) |
 | **Your pet's day summary** | **Daily review** and reflection heatmap |
 | ![Timeline](docs/shots/timeline.jpg) | ![Growth road](docs/shots/growth-road.jpg) |
-| **Timeline**: everything traceable | **The road**: 20 eras |
+| **Timeline**: everything traceable | **The road to Lv.100**: 20 eras |
 
 ---
 
@@ -95,8 +98,8 @@ Keys and tokens go **only into the web page or GitHub Secrets**, never into code
 
 ### 4. A day with LifeOS
 
-- **Morning**: glance at today's quests and countdowns; in Plans, send this week's items to today.
-- **During the day**: start a Focus session before you work (add a countdown if you like), tick things off, and watch XP and progress add up.
+- **Morning**: glance at today's quests and countdowns; in Plans, send this week's items to today, or add a quest like "Read · +3 chapters" that feeds your monthly reading plan.
+- **During the day**: hit ▶ on a project card (or Start work in Earn), add +30m or +1h if you want a countdown, and let it settle itself at zero. Something urgent? Pause, switch, and resume from the menu bar later. Drag a project or paper to its next column when it moves.
 - **Evening**: tap your mood, spend a minute on the review, or click your pet → "Day summary", tweak it and save it to your review.
 - **Looking back**: open Timeline, or click any day on any heatmap.
 
