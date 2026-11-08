@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useBoardDrag } from '../ui/useBoardDrag';
 import { dayKey, parseDay } from '../lib/date';
 import { num } from '../lib/format';
@@ -8,12 +8,13 @@ import { loadFeed, useScholarFeed, type ScholarFeed } from '../lib/scholarFeed';
 import { notify } from '../os/notify';
 import { useMetrics } from '../store/hooks';
 import { PAPER_XP } from '../store/rules';
-import { actions, scholarBound, useStore } from '../store/store';
+import { actions, getState, scholarBound, useStore } from '../store/store';
 import { PAPER_FLOW, type Paper, type PaperStatus } from '../store/types';
 import { AreaChart, Columns, Sparkline } from '../ui/charts';
 import { Icon } from '../ui/Icon';
 import { Button, Card, Chip, Empty, Field, Modal, Segmented, Stat } from '../ui/kit';
 import { ProjectSelect, ProjectTag } from './goals';
+import { PaperCitations, useFeedPaper } from './PaperCitations';
 
 export function useStatusLabel() {
   const L = useL();
@@ -36,7 +37,29 @@ export function Research() {
   const s = useStore((x) => x);
   const m = useMetrics();
   const label = useStatusLabel();
-  const [edit, setEdit] = useState<Partial<Paper> | null>(null);
+  const [edit, setEdit] = useState<Partial<Paper> | null>(() => {
+    try {
+      const id = sessionStorage.getItem('lifeos:paper-open');
+      sessionStorage.removeItem('lifeos:paper-open');
+      return (id && s.papers.find((p) => p.id === id)) || null;
+    } catch {
+      return null;
+    }
+  });
+  // Other apps (the project board, a project's page) can ask to open one paper
+  useEffect(() => {
+    const f = (e: Event) => {
+      const p = getState().papers.find((x) => x.id === (e as CustomEvent<string>).detail);
+      if (p) setEdit(p);
+      try {
+        sessionStorage.removeItem('lifeos:paper-open');
+      } catch {
+        /* ignore */
+      }
+    };
+    window.addEventListener('lifeos:paper-open', f);
+    return () => window.removeEventListener('lifeos:paper-open', f);
+  }, []);
   const [sync, setSync] = useState(false);
   const [view, setView] = useState<'board' | 'list'>('board');
 
@@ -272,6 +295,7 @@ function PaperEditor({ value, onClose }: { value: Partial<Paper> | null; onClose
   }
   const p = { status: 'idea', citations: 0, firstAuthor: true, title: '', ...d } as Paper;
   const hist = useStore((x) => (p.id ? x.papers.find((q) => q.id === p.id)?.history : undefined));
+  const fp = useFeedPaper(p.id ? p : undefined);
   const today = dayKey();
   const save = () => {
     if (!p.title.trim()) return;
@@ -301,6 +325,11 @@ function PaperEditor({ value, onClose }: { value: Partial<Paper> | null; onClose
       }
     >
       <div className="form">
+        {fp && (
+          <Field label={L('引用变化（Google Scholar）', 'Citations over time (Google Scholar)')}>
+            <PaperCitations fp={fp} />
+          </Field>
+        )}
         <Field label={L('标题', 'Title')}>
           <input className="input" value={p.title} onChange={(e) => setD({ ...p, title: e.target.value })} />
         </Field>

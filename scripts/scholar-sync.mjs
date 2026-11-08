@@ -9,6 +9,9 @@
  *     fetches are spaced out a little more (remaining hours ÷ remaining fetches)
  *   - never more than SCHOLAR_MONTHLY_LIMIT SerpAPI calls per calendar month (default 100, the free plan)
  *   - SCHOLAR_FORCE=true (a manual "Run workflow") skips the interval and pacing, not the monthly limit
+ *   - per-paper "citations per year" graphs (one extra call per paper) are fetched only from spare budget:
+ *     what's left after reserving enough calls for the regular fetches until the month ends. Up to
+ *     SCHOLAR_PAPER_GRAPHS (default 3) per run, papers without a graph first, then graphs older than 30 days.
  *
  * Usage: node scripts/scholar-sync.mjs <data-dir>
  * Config: lifeos.config.json → scholar.{id, intervalHours, monthlyLimit, timezone}; env vars override.
@@ -39,6 +42,9 @@ const MONTHLY_LIMIT = Number(process.env.SCHOLAR_MONTHLY_LIMIT || cfg.monthlyLim
 const TZ = process.env.SCHOLAR_TZ || cfg.timezone || 'UTC';
 const MOCK = process.env.SERPAPI_MOCK || '';
 const FORCE = process.env.SCHOLAR_FORCE === 'true';
+// An unset repo variable arrives as an empty string, so treat '' as "not set".
+const GRAPHS_PER_RUN = Number(process.env.SCHOLAR_PAPER_GRAPHS || (cfg.paperGraphsPerRun ?? 3));
+const GRAPH_MAX_AGE_DAYS = 30;
 const MAX_PAGES = 5;
 
 const log = (...a) => console.log('[scholar]', ...a);
@@ -50,7 +56,7 @@ const dayOf = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'num
 const today = dayOf(now);
 const month = today.slice(0, 7);
 
-const monthCalls = (h, m = month) => h.fetches.filter((f) => f.month === m).reduce((a, f) => a + f.calls, 0);
+const monthCalls = (h, m = month) => h.fetches.filter((f) => f.month === m).reduce((a, f) => a + f.calls + (f.extra || 0), 0);
 
 /** Hours between fetches right now: the configured interval, stretched if the budget wouldn't last the month. */
 function paceHours(h, at = now) {
@@ -145,6 +151,7 @@ async function main() {
     cites[id] = Number(a.cited_by?.value) || 0;
     const prev = h.papers[id] || {};
     h.papers[id] = {
+      ...prev, // keeps byYear / graphAt
       title: a.title ?? prev.title,
       venue: a.publication ?? prev.venue ?? '',
       year: Number(a.year) || prev.year || null,
@@ -168,10 +175,65 @@ async function main() {
   if (h.days.at(-1)?.date === today) h.days[h.days.length - 1] = snap;
   else h.days.push(snap);
 
+  await fetchGraphs(h, articles);
   save(h);
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'fetched=true\n');
   const prevDay = h.days.at(-2);
   log(`Fetched ${articles.length} papers in ${calls} call(s); total citations ${total}${prevDay ? ` (${total - prevDay.total >= 0 ? '+' : ''}${total - prevDay.total} since ${prevDay.date})` : ''}. Month usage ${used + calls}/${MONTHLY_LIMIT}.`);
+}
+
+/** Pull a "citations per year" table out of a view_citation response, whatever shape it comes in. */
+function yearTable(res) {
+  const c = res.citation || {};
+  const raw = c.total_citations?.table || c.total_citations?.graph || c.cited_by?.graph || c.cited_by?.table || res.cited_by?.graph || [];
+  return raw
+    .map((r) => ({ year: Number(r.year), citations: Number(r.citations ?? r.cited_by ?? r.value) || 0 }))
+    .filter((r) => r.year > 1900)
+    .sort((a, b) => a.year - b.year);
+}
+
+/** Per-paper yearly graphs, from spare budget only (see the header). */
+async function fetchGraphs(h, articles) {
+  if (GRAPHS_PER_RUN <= 0 || MOCK) return;
+  const fetch0 = h.fetches.at(-1);
+  const left = MONTHLY_LIMIT - monthCalls(h);
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const hoursLeft = (end.getTime() - now.getTime()) / 3600_000;
+  const reserve = Math.ceil(hoursLeft / Math.max(INTERVAL_H, 1)) * Math.max(1, fetch0.calls);
+  const spare = left - reserve;
+  if (spare <= 0) return log(`No spare budget for per-paper graphs this run (${left} left, ${reserve} reserved).`);
+  const stale = (id) => {
+    const at = h.papers[id]?.graphAt;
+    return !at || (now.getTime() - new Date(`${at}T00:00:00Z`).getTime()) / 86_400_000 > GRAPH_MAX_AGE_DAYS;
+  };
+  const queue = articles
+    .filter((a) => a.citation_id && stale(a.citation_id) && (Number(a.cited_by?.value) || 0) > 0)
+    .sort((a, b) => Number(!!h.papers[a.citation_id]?.graphAt) - Number(!!h.papers[b.citation_id]?.graphAt) || (h.papers[a.citation_id]?.graphAt || '').localeCompare(h.papers[b.citation_id]?.graphAt || '') || (Number(b.cited_by?.value) || 0) - (Number(a.cited_by?.value) || 0))
+    .slice(0, Math.min(GRAPHS_PER_RUN, spare));
+  let extra = 0;
+  for (const a of queue) {
+    const url = new URL('https://serpapi.com/search.json');
+    url.search = new URLSearchParams({ engine: 'google_scholar_author', view_op: 'view_citation', citation_id: a.citation_id, hl: 'en', api_key: KEY }).toString();
+    try {
+      const r = await fetch(url);
+      extra++;
+      const res = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+      if (res.error) {
+        log(`Graph for "${(a.title || '').slice(0, 50)}": ${res.error}`);
+        continue;
+      }
+      const table = yearTable(res);
+      const p = h.papers[a.citation_id];
+      p.graphAt = today; // even if empty, don't ask again for a month
+      if (table.length) p.byYear = table;
+      else log(`Graph for "${(a.title || '').slice(0, 50)}": no yearly table (keys: ${Object.keys(res.citation || res).join(', ')})`);
+    } catch (e) {
+      log(`Graph fetch failed: ${e.message}`);
+    }
+  }
+  fetch0.extra = extra;
+  const missing = articles.filter((a) => a.citation_id && !h.papers[a.citation_id]?.graphAt && (Number(a.cited_by?.value) || 0) > 0).length;
+  if (extra) log(`Per-paper graphs: ${extra} call(s) this run, ${missing} paper(s) still without one.`);
 }
 
 function save(h) {
@@ -197,9 +259,18 @@ function view(h) {
   const papers = Object.entries(h.papers).map(([id, p]) => {
     const now = cur?.cites[id];
     const diff = (d) => (now != null && d?.cites[id] != null ? now - d.cites[id] : null);
+    // Every day's count, kept only where it changed (plus the latest day), as [date, citations].
+    const hist = [];
+    for (const d of days) {
+      const v = d.cites[id];
+      if (v == null) continue;
+      if (!hist.length || hist[hist.length - 1][1] !== v) hist.push([d.date, v]);
+      else if (d === cur) hist.push([d.date, v]);
+    }
     return {
       id,
       ...p,
+      hist,
       citations: now ?? null,
       d1: diff(d1),
       d7: diff(d7),

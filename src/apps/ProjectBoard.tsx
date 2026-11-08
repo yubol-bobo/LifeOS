@@ -13,6 +13,7 @@ import { useBoardDrag } from '../ui/useBoardDrag';
 import { useLiveSession } from '../os/live';
 import { clock } from './Earn';
 import { useStatusLabel } from './Research';
+import { openPaper } from './PaperCitations';
 
 /** The three columns of the project board. Research papers are placed by their stage. */
 type Col = 'planning' | 'active' | 'done';
@@ -110,7 +111,7 @@ export function ProjectBoard({ onFocus }: { onFocus: (projectId: string) => void
                 <ProjectCard key={it.key} p={it.p} st={stats.get(it.p.id)!} today={today} dragging={drag?.id === it.key} onPointerDown={(e) => start(e, it.key, it.col)} onOpen={() => !justDragged() && openProject(it.p.id)} onFocus={() => onFocus(it.p.id)} />
               ) : (
                 <article key={it.key} className={`paper-card pb-paper ${drag?.id === it.key ? 'is-dragging' : ''}`} onPointerDown={(e) => start(e, it.key, it.col)}>
-                  <button className="paper-title" onClick={() => !justDragged() && open('research')}>
+                  <button className="paper-title" onClick={() => !justDragged() && openPaper(it.p.id)}>
                     {it.p.title}
                   </button>
                   <div className="paper-meta">

@@ -63,6 +63,7 @@ jobs:
           SCHOLAR_INTERVAL_HOURS: ${{ vars.SCHOLAR_INTERVAL_HOURS }}
           SCHOLAR_MONTHLY_LIMIT: ${{ vars.SCHOLAR_MONTHLY_LIMIT }}
           SCHOLAR_TZ: ${{ vars.SCHOLAR_TZ }}
+          SCHOLAR_PAPER_GRAPHS: ${{ vars.SCHOLAR_PAPER_GRAPHS }}
         run: node scripts/scholar-sync.mjs .scholar-data
 
       - name: Save scholar data

@@ -22,6 +22,9 @@ import { useLiveSession } from '../os/live';
 import { ParkedList } from '../os/ParkedList';
 import { CountdownPicker } from '../ui/CountdownPicker';
 import { FocusGoal } from '../ui/FocusGoal';
+import { useStatusLabel } from './Research';
+import { openPaper, PaperSpark, useFeedPaper } from './PaperCitations';
+import type { Paper } from '../store/types';
 
 export function useCategories() {
   const lang = useLang();
@@ -238,9 +241,16 @@ function ProjectCard({ p, onOpen }: { p: Project; onOpen: () => void }) {
 
 /* ------------------------------------------------------------------ */
 
+/** A paper's citation trend from Google Scholar, if it has one. */
+function FeedSpark({ paper }: { paper: Paper }) {
+  const fp = useFeedPaper(paper);
+  return fp ? <PaperSpark fp={fp} /> : null;
+}
+
 function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const L = useL();
   const lang = useLang();
+  const paperLabel = useStatusLabel();
   const s = useStore((x) => x);
   const mx = useMetrics();
   const cats = useCategories();
@@ -365,10 +375,13 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
               </h4>
               {st.papers.map((pp) => (
                 <div key={pp.id} className="pd-plan">
-                  <span>{pp.title}</span>
+                  <button className="link pd-paper" onClick={() => openPaper(pp.id)} title={L('打开论文和它的引用曲线', 'Open the paper and its citation curve')}>
+                    {pp.title}
+                  </button>
                   <Button size="sm" variant="ghost" icon="x" title={L('移出项目', 'Unlink')} onClick={() => actions.linkProject('papers', pp.id, undefined)} />
-                  <span className="muted small num">
-                    {pp.status} · <Icon name="quote" size={11} /> {pp.citations}
+                  <span className="muted small num pd-paper-meta">
+                    {paperLabel(pp.status)} · <Icon name="quote" size={11} /> {pp.citations}
+                    <FeedSpark paper={pp} />
                   </span>
                 </div>
               ))}
