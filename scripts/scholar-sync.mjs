@@ -9,9 +9,9 @@
  *     fetches are spaced out a little more (remaining hours ÷ remaining fetches)
  *   - never more than SCHOLAR_MONTHLY_LIMIT SerpAPI calls per calendar month (default 100, the free plan)
  *   - SCHOLAR_FORCE=true (a manual "Run workflow") skips the interval and pacing, not the monthly limit
- *   - per-paper "citations per year" graphs (one extra call per paper) are fetched only from spare budget:
- *     what's left after reserving enough calls for the regular fetches until the month ends. Up to
- *     SCHOLAR_PAPER_GRAPHS (default 3) per run, papers without a graph first, then graphs older than 30 days.
+ *   - per-paper "citations per year" come from OpenAlex (free, no key, no SerpAPI calls), matched by
+ *     title, refreshed weekly, up to SCHOLAR_PAPER_GRAPHS (default 30, 0 = off) papers per run.
+ *     (SerpAPI's per-paper citation view kept failing with "couldn't get valid results".)
  *
  * Usage: node scripts/scholar-sync.mjs <data-dir>
  * Config: lifeos.config.json → scholar.{id, intervalHours, monthlyLimit, timezone}; env vars override.
@@ -43,8 +43,9 @@ const TZ = process.env.SCHOLAR_TZ || cfg.timezone || 'UTC';
 const MOCK = process.env.SERPAPI_MOCK || '';
 const FORCE = process.env.SCHOLAR_FORCE === 'true';
 // An unset repo variable arrives as an empty string, so treat '' as "not set".
-const GRAPHS_PER_RUN = Number(process.env.SCHOLAR_PAPER_GRAPHS || (cfg.paperGraphsPerRun ?? 3));
-const GRAPH_MAX_AGE_DAYS = 30;
+const GRAPHS_PER_RUN = Number(process.env.SCHOLAR_PAPER_GRAPHS || (cfg.paperGraphsPerRun ?? 30));
+const GRAPH_MAX_AGE_DAYS = 7;
+const OPENALEX_MOCK = process.env.OPENALEX_MOCK || '';
 const MAX_PAGES = 5;
 
 const log = (...a) => console.log('[scholar]', ...a);
@@ -182,58 +183,66 @@ async function main() {
   log(`Fetched ${articles.length} papers in ${calls} call(s); total citations ${total}${prevDay ? ` (${total - prevDay.total >= 0 ? '+' : ''}${total - prevDay.total} since ${prevDay.date})` : ''}. Month usage ${used + calls}/${MONTHLY_LIMIT}.`);
 }
 
-/** Pull a "citations per year" table out of a view_citation response, whatever shape it comes in. */
-function yearTable(res) {
-  const c = res.citation || {};
-  const raw = c.total_citations?.table || c.total_citations?.graph || c.cited_by?.graph || c.cited_by?.table || res.cited_by?.graph || [];
-  return raw
-    .map((r) => ({ year: Number(r.year), citations: Number(r.citations ?? r.cited_by ?? r.value) || 0 }))
-    .filter((r) => r.year > 1900)
-    .sort((a, b) => a.year - b.year);
+const norm = (s) => (s || '').toLowerCase().replace(/<[^>]+>/g, '').replace(/[^a-z0-9]+/g, '');
+
+/** Same paper? Titles equal after normalising, or one is a near-complete prefix of the other. */
+function sameTitle(a, b) {
+  const x = norm(a);
+  const y = norm(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const [s, l] = x.length < y.length ? [x, y] : [y, x];
+  return s.length >= 24 && l.startsWith(s) && s.length / l.length > 0.8;
 }
 
-/** Per-paper yearly graphs, from spare budget only (see the header). */
+async function openAlexSearch(title) {
+  if (OPENALEX_MOCK) return JSON.parse(readFileSync(OPENALEX_MOCK, 'utf8'));
+  const url = new URL('https://api.openalex.org/works');
+  url.search = new URLSearchParams({ search: title.slice(0, 200), 'per-page': '5', select: 'id,display_name,publication_year,cited_by_count,counts_by_year' }).toString();
+  const r = await fetch(url, { headers: { 'User-Agent': 'LifeOS scholar sync' }, signal: AbortSignal.timeout(15_000) });
+  if (!r.ok) throw new Error(`OpenAlex HTTP ${r.status}`);
+  return r.json();
+}
+
+/** Citations per year for each paper, from OpenAlex (matched by title). Free; no SerpAPI calls. */
 async function fetchGraphs(h, articles) {
-  if (GRAPHS_PER_RUN <= 0 || MOCK) return;
-  const fetch0 = h.fetches.at(-1);
-  const left = MONTHLY_LIMIT - monthCalls(h);
-  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
-  const hoursLeft = (end.getTime() - now.getTime()) / 3600_000;
-  const reserve = Math.ceil(hoursLeft / Math.max(INTERVAL_H, 1)) * Math.max(1, fetch0.calls);
-  const spare = left - reserve;
-  if (spare <= 0) return log(`No spare budget for per-paper graphs this run (${left} left, ${reserve} reserved).`);
+  if (GRAPHS_PER_RUN <= 0) return;
   const stale = (id) => {
     const at = h.papers[id]?.graphAt;
-    return !at || (now.getTime() - new Date(`${at}T00:00:00Z`).getTime()) / 86_400_000 > GRAPH_MAX_AGE_DAYS;
+    return !at || (now.getTime() - new Date(`${at}T00:00:00Z`).getTime()) / 86_400_000 >= GRAPH_MAX_AGE_DAYS;
   };
   const queue = articles
-    .filter((a) => a.citation_id && stale(a.citation_id) && (Number(a.cited_by?.value) || 0) > 0)
-    .sort((a, b) => Number(!!h.papers[a.citation_id]?.graphAt) - Number(!!h.papers[b.citation_id]?.graphAt) || (h.papers[a.citation_id]?.graphAt || '').localeCompare(h.papers[b.citation_id]?.graphAt || '') || (Number(b.cited_by?.value) || 0) - (Number(a.cited_by?.value) || 0))
-    .slice(0, Math.min(GRAPHS_PER_RUN, spare));
-  let extra = 0;
-  for (const a of queue) {
-    const url = new URL('https://serpapi.com/search.json');
-    url.search = new URLSearchParams({ engine: 'google_scholar_author', view_op: 'view_citation', citation_id: a.citation_id, hl: 'en', api_key: KEY }).toString();
+    .map((a) => ({ a, id: a.citation_id || `t:${(a.title || '').toLowerCase().replace(/\W+/g, '').slice(0, 60)}` }))
+    .filter(({ a, id }) => a.title && stale(id) && (Number(a.cited_by?.value) || 0) > 0)
+    .slice(0, GRAPHS_PER_RUN);
+  let found = 0;
+  for (const { a, id } of queue) {
+    const p = h.papers[id];
     try {
-      const r = await fetch(url);
-      extra++;
-      const res = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
-      if (res.error) {
-        log(`Graph for "${(a.title || '').slice(0, 50)}": ${res.error}`);
+      const res = await openAlexSearch(a.title);
+      const w = (res.results || []).find((x) => sameTitle(x.display_name, a.title));
+      p.graphAt = today;
+      if (!w) {
+        p.byYearMiss = true;
         continue;
       }
-      const table = yearTable(res);
-      const p = h.papers[a.citation_id];
-      p.graphAt = today; // even if empty, don't ask again for a month
-      if (table.length) p.byYear = table;
-      else log(`Graph for "${(a.title || '').slice(0, 50)}": no yearly table (keys: ${Object.keys(res.citation || res).join(', ')})`);
+      const counts = new Map((w.counts_by_year || []).map((c) => [Number(c.year), Number(c.cited_by_count) || 0]));
+      const ys = [...counts.keys()];
+      const from = Math.max(Math.min(w.publication_year || Infinity, ...ys), now.getUTCFullYear() - 11);
+      const to = Math.max(now.getUTCFullYear(), ...ys);
+      const table = [];
+      for (let y = from; y <= to; y++) table.push({ year: y, citations: counts.get(y) ?? 0 });
+      p.byYear = table;
+      p.byYearSource = 'openalex';
+      p.openalexId = w.id;
+      p.openalexTotal = w.cited_by_count ?? null;
+      delete p.byYearMiss;
+      found++;
     } catch (e) {
-      log(`Graph fetch failed: ${e.message}`);
+      log(`OpenAlex lookup failed for "${(a.title || '').slice(0, 50)}": ${e.message}`);
     }
   }
-  fetch0.extra = extra;
-  const missing = articles.filter((a) => a.citation_id && !h.papers[a.citation_id]?.graphAt && (Number(a.cited_by?.value) || 0) > 0).length;
-  if (extra) log(`Per-paper graphs: ${extra} call(s) this run, ${missing} paper(s) still without one.`);
+  if (queue.length) log(`Citations per year (OpenAlex): matched ${found}/${queue.length} paper(s).`);
 }
 
 function save(h) {

@@ -20,6 +20,11 @@ export interface FeedPaper {
   hist?: [string, number][];
   /** Citations per year from the paper's own Scholar page (filled in gradually). */
   byYear?: { year: number; citations: number }[];
+  /** Where byYear came from (OpenAlex, matched by title). */
+  byYearSource?: 'openalex';
+  byYearMiss?: boolean;
+  openalexId?: string;
+  openalexTotal?: number | null;
   graphAt?: string;
 }
 
