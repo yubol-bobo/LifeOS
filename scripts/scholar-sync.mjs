@@ -9,9 +9,6 @@
  *     fetches are spaced out a little more (remaining hours ÷ remaining fetches)
  *   - never more than SCHOLAR_MONTHLY_LIMIT SerpAPI calls per calendar month (default 100, the free plan)
  *   - SCHOLAR_FORCE=true (a manual "Run workflow") skips the interval and pacing, not the monthly limit
- *   - per-paper "citations per year" come from OpenAlex (free, no key, no SerpAPI calls), matched by
- *     title, refreshed weekly, up to SCHOLAR_PAPER_GRAPHS (default 30, 0 = off) papers per run.
- *     (SerpAPI's per-paper citation view kept failing with "couldn't get valid results".)
  *
  * Usage: node scripts/scholar-sync.mjs <data-dir>
  * Config: lifeos.config.json → scholar.{id, intervalHours, monthlyLimit, timezone}; env vars override.
@@ -42,10 +39,6 @@ const MONTHLY_LIMIT = Number(process.env.SCHOLAR_MONTHLY_LIMIT || cfg.monthlyLim
 const TZ = process.env.SCHOLAR_TZ || cfg.timezone || 'UTC';
 const MOCK = process.env.SERPAPI_MOCK || '';
 const FORCE = process.env.SCHOLAR_FORCE === 'true';
-// An unset repo variable arrives as an empty string, so treat '' as "not set".
-const GRAPHS_PER_RUN = Number(process.env.SCHOLAR_PAPER_GRAPHS || (cfg.paperGraphsPerRun ?? 30));
-const GRAPH_MAX_AGE_DAYS = 7;
-const OPENALEX_MOCK = process.env.OPENALEX_MOCK || '';
 const MAX_PAGES = 5;
 
 const log = (...a) => console.log('[scholar]', ...a);
@@ -152,7 +145,6 @@ async function main() {
     cites[id] = Number(a.cited_by?.value) || 0;
     const prev = h.papers[id] || {};
     h.papers[id] = {
-      ...prev, // keeps byYear / graphAt
       title: a.title ?? prev.title,
       venue: a.publication ?? prev.venue ?? '',
       year: Number(a.year) || prev.year || null,
@@ -176,73 +168,10 @@ async function main() {
   if (h.days.at(-1)?.date === today) h.days[h.days.length - 1] = snap;
   else h.days.push(snap);
 
-  await fetchGraphs(h, articles);
   save(h);
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, 'fetched=true\n');
   const prevDay = h.days.at(-2);
   log(`Fetched ${articles.length} papers in ${calls} call(s); total citations ${total}${prevDay ? ` (${total - prevDay.total >= 0 ? '+' : ''}${total - prevDay.total} since ${prevDay.date})` : ''}. Month usage ${used + calls}/${MONTHLY_LIMIT}.`);
-}
-
-const norm = (s) => (s || '').toLowerCase().replace(/<[^>]+>/g, '').replace(/[^a-z0-9]+/g, '');
-
-/** Same paper? Titles equal after normalising, or one is a near-complete prefix of the other. */
-function sameTitle(a, b) {
-  const x = norm(a);
-  const y = norm(b);
-  if (!x || !y) return false;
-  if (x === y) return true;
-  const [s, l] = x.length < y.length ? [x, y] : [y, x];
-  return s.length >= 24 && l.startsWith(s) && s.length / l.length > 0.8;
-}
-
-async function openAlexSearch(title) {
-  if (OPENALEX_MOCK) return JSON.parse(readFileSync(OPENALEX_MOCK, 'utf8'));
-  const url = new URL('https://api.openalex.org/works');
-  url.search = new URLSearchParams({ search: title.slice(0, 200), 'per-page': '5', select: 'id,display_name,publication_year,cited_by_count,counts_by_year' }).toString();
-  const r = await fetch(url, { headers: { 'User-Agent': 'LifeOS scholar sync' }, signal: AbortSignal.timeout(15_000) });
-  if (!r.ok) throw new Error(`OpenAlex HTTP ${r.status}`);
-  return r.json();
-}
-
-/** Citations per year for each paper, from OpenAlex (matched by title). Free; no SerpAPI calls. */
-async function fetchGraphs(h, articles) {
-  if (GRAPHS_PER_RUN <= 0) return;
-  const stale = (id) => {
-    const at = h.papers[id]?.graphAt;
-    return !at || (now.getTime() - new Date(`${at}T00:00:00Z`).getTime()) / 86_400_000 >= GRAPH_MAX_AGE_DAYS;
-  };
-  const queue = articles
-    .map((a) => ({ a, id: a.citation_id || `t:${(a.title || '').toLowerCase().replace(/\W+/g, '').slice(0, 60)}` }))
-    .filter(({ a, id }) => a.title && stale(id) && (Number(a.cited_by?.value) || 0) > 0)
-    .slice(0, GRAPHS_PER_RUN);
-  let found = 0;
-  for (const { a, id } of queue) {
-    const p = h.papers[id];
-    try {
-      const res = await openAlexSearch(a.title);
-      const w = (res.results || []).find((x) => sameTitle(x.display_name, a.title));
-      p.graphAt = today;
-      if (!w) {
-        p.byYearMiss = true;
-        continue;
-      }
-      const counts = new Map((w.counts_by_year || []).map((c) => [Number(c.year), Number(c.cited_by_count) || 0]));
-      const ys = [...counts.keys()];
-      const from = Math.max(Math.min(w.publication_year || Infinity, ...ys), now.getUTCFullYear() - 11);
-      const to = Math.max(now.getUTCFullYear(), ...ys);
-      const table = [];
-      for (let y = from; y <= to; y++) table.push({ year: y, citations: counts.get(y) ?? 0 });
-      p.byYear = table;
-      p.byYearSource = 'openalex';
-      p.openalexId = w.id;
-      p.openalexTotal = w.cited_by_count ?? null;
-      delete p.byYearMiss;
-      found++;
-    } catch (e) {
-      log(`OpenAlex lookup failed for "${(a.title || '').slice(0, 50)}": ${e.message}`);
-    }
-  }
-  if (queue.length) log(`Citations per year (OpenAlex): matched ${found}/${queue.length} paper(s).`);
 }
 
 function save(h) {
@@ -276,9 +205,11 @@ function view(h) {
       if (!hist.length || hist[hist.length - 1][1] !== v) hist.push([d.date, v]);
       else if (d === cur) hist.push([d.date, v]);
     }
+    // Fields from an earlier per-year experiment are not exported.
+    const { byYear, byYearSource, byYearMiss, openalexId, openalexTotal, graphAt, ...meta } = p;
     return {
       id,
-      ...p,
+      ...meta,
       hist,
       citations: now ?? null,
       d1: diff(d1),

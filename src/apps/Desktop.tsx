@@ -65,6 +65,13 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   const quests = s.quests.filter((q) => !q.archived && (q.kind === 'daily' ? isScheduled(q, today) : onToday(q, today) && (!q.doneAt || q.doneAt > Date.now() - 86_400_000)));
   const dailies = s.quests.filter((q) => isScheduled(q, today));
   const dailyDone = dailies.filter((q) => doneToday.has(q.id)).length;
+  // Everything on today's list: recurring quests due today, plus to-dos on Today (made today or
+  // carried over, still open, or finished today).
+  const todays = s.quests.filter((q) => onToday(q, today) && (!q.doneAt || dayKey(q.doneAt) === today));
+  const onceDone = todays.filter((q) => q.doneAt).length;
+  const todayTotal = dailies.length + todays.length;
+  const todayDone = dailyDone + onceDone;
+  const todayLeft = todayTotal - todayDone;
 
   const todaysFocus = s.sessions.filter((x) => dayKey(x.start) === today);
   const todayEarned = todaysFocus.reduce((a, x) => a + x.earned, 0) + (live?.earned ?? 0);
@@ -98,11 +105,11 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
             {s.profile.name ? (lang === 'zh' ? `，${s.profile.name}` : `, ${s.profile.name}`) : ''}
           </h1>
           <p className="hero-sub">
-            {dailies.length === 0
-              ? L('添加几个每日任务，开始养成你的星球。', 'Add a few daily quests to start growing your planet.')
-              : dailyDone === dailies.length
-                ? L('今日任务全部完成，星球在发光。', 'Every daily quest done — your planet is glowing.')
-                : L(`今天还有 ${dailies.length - dailyDone} 个每日任务等你。`, `${dailies.length - dailyDone} daily quests left today.`)}
+            {todayTotal === 0
+              ? L('今天还没有任务。添加几个，开始养成你的星球。', 'Nothing on today’s list yet. Add a few quests to start growing your planet.')
+              : todayLeft === 0
+                ? L('今日任务全部完成，星球在发光。', 'Everything on today’s list is done — your planet is glowing.')
+                : L(`今天还有 ${todayLeft} 个任务等你。`, todayLeft === 1 ? '1 quest left today.' : `${todayLeft} quests left today.`)}
           </p>
         </div>
         <div className="hero-planet">
@@ -157,10 +164,10 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       <section className="widget w-quests">
         <WidgetHead icon="list-checks" title={L('今日任务', "Today's quests")} onOpen={() => open('quests')}>
           <span className="num muted">
-            {dailyDone}/{dailies.length}
+            {todayDone}/{todayTotal}
           </span>
         </WidgetHead>
-        <Bar value={dailies.length ? dailyDone / dailies.length : 0} height={8} label={L('每日习惯进度', 'Daily progress')} />
+        <Bar value={todayTotal ? todayDone / todayTotal : 0} height={8} label={L('今日任务进度', 'Today’s progress')} />
         <ul className="mini-quests">
           {quests.slice(0, 7).map((q) => {
             const done = q.kind === 'daily' ? doneToday.has(q.id) : !!q.doneAt;
