@@ -95,13 +95,25 @@ export function PaperCitations({ fp }: { fp: FeedPaper }) {
       ) : years.length ? (
         <>
           <Columns data={years.map((y) => ({ x: String(y.year), y: y.citations }))} tone="spirit" height={150} />
-          <p className="muted small">{L('来自 Google Scholar 的论文页面，每月刷新一次。', 'From the paper’s Google Scholar page, refreshed monthly.')}</p>
+          <p className="muted small">
+            {L('每年新增的引用来自 OpenAlex（按标题匹配，每周刷新）。它收录的引用和 Google Scholar 不完全一样，所以总数可能略少。', 'Citations per year come from OpenAlex (matched by title, refreshed weekly). It indexes citations a little differently from Google Scholar, so totals can be somewhat lower.')}
+            {fp.openalexId && (
+              <>
+                {' '}
+                <a href={fp.openalexId} target="_blank" rel="noreferrer">
+                  {L('在 OpenAlex 查看', 'View on OpenAlex')}
+                </a>
+              </>
+            )}
+          </p>
         </>
       ) : (
         <p className="muted small pc-empty">
-          {(fp.citations ?? 0) > 0
-            ? L('每年引用会在接下来的几次自动抓取中补上（只用每月额度的富余部分，不影响常规抓取）。', 'Citations per year are filled in over the next few automatic fetches (using only spare monthly budget, never the regular fetches).')
-            : L('还没有引用，等有了引用就会出现每年的柱状图。', 'No citations yet; a per-year chart appears once it has some.')}
+          {(fp.citations ?? 0) === 0
+            ? L('还没有引用，等有了引用就会出现每年的柱状图。', 'No citations yet; a per-year chart appears once it has some.')
+            : fp.byYearMiss
+              ? L('在 OpenAlex 里没找到这篇论文（可能刚发布、还没被收录），每周会再找一次。', 'This paper wasn’t found on OpenAlex yet (it may be too new to be indexed); it’s looked up again weekly.')
+              : L('每年引用会在下一次自动抓取时补上（来自 OpenAlex，免费，不占 SerpAPI 额度）。', 'Citations per year are filled in at the next automatic fetch (from OpenAlex: free, no SerpAPI calls).')}
         </p>
       )}
     </section>
