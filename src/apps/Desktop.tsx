@@ -3,7 +3,7 @@ import { LifeSettingsModal } from './LifeSettings';
 import { openDay } from './DayXp';
 import { openRoadmap } from './Roadmap';
 import { focusProject, openProject } from './ProjectBoard';
-import { addDays, dayKey, daysBetween, lastNDays, lifeProgress, parseDay } from '../lib/date';
+import { addDays, dayKey, daysBetween, lastNDays, lifeProgress, startOfWeek, weekdayLetters } from '../lib/date';
 import { compact, money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { open } from '../os/router';
@@ -371,13 +371,17 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       <section className="widget w-mood">
         <WidgetHead icon="smile" title={L('今天心情', 'Mood today')} onOpen={() => open('mood')} />
         <MoodPicker size={36} />
-        <div className="mood-week">
-          {lastNDays(7).map((d) => (
-            <span key={d} title={d}>
-              {s.moods[d] ? <MoodFace v={s.moods[d].v} size={20} /> : <i />}
-              <small>{L('一二三四五六日'[(parseDay(d).getDay() + 6) % 7], 'MTWTFSS'[(parseDay(d).getDay() + 6) % 7])}</small>
-            </span>
-          ))}
+        {/* This week, starting on the day chosen in Settings (Monday or Sunday) */}
+        <div className="mood-week" aria-label={L('本周心情', 'This week')}>
+          {weekdayLetters(lang).map((letter, i) => {
+            const d = addDays(dayKey(startOfWeek()), i);
+            return (
+              <span key={d} title={d} className={d === today ? 'is-today' : d > today ? 'is-future' : ''}>
+                {s.moods[d] ? <MoodFace v={s.moods[d].v} size={20} /> : <i />}
+                <small>{letter}</small>
+              </span>
+            );
+          })}
         </div>
       </section>
       )}

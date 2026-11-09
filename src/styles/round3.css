@@ -1204,3 +1204,10 @@
 .pd-paper-meta .spark {
   margin-left: 6px;
 }
+
+.mood-week > span.is-today small {
+  color: var(--accent);
+}
+.mood-week > span.is-future {
+  opacity: 0.4;
+}
