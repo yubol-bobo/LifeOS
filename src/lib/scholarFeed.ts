@@ -18,14 +18,6 @@ export interface FeedPaper {
   series: (number | null)[];
   /** Every tracked day's count where it changed (plus the latest day): [date, citations]. */
   hist?: [string, number][];
-  /** Citations per year from the paper's own Scholar page (filled in gradually). */
-  byYear?: { year: number; citations: number }[];
-  /** Where byYear came from (OpenAlex, matched by title). */
-  byYearSource?: 'openalex';
-  byYearMiss?: boolean;
-  openalexId?: string;
-  openalexTotal?: number | null;
-  graphAt?: string;
 }
 
 export interface ScholarFeed {
