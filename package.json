@@ -1,7 +1,7 @@
 {
   "name": "lifeos",
   "private": true,
-  "version": "0.9.11",
+  "version": "0.9.13",
   "type": "module",
   "description": "LifeOS — a gamified, local-first life progress dashboard.",
   "scripts": {

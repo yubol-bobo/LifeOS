@@ -1,4 +1,5 @@
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { DashLayoutProvider, useDashBox, useDashBoxFn } from '../os/dashLayout';
 import { LifeSettingsModal } from './LifeSettings';
 import { openDay } from './DayXp';
 import { openRoadmap } from './Roadmap';
@@ -39,7 +40,17 @@ import { FocusGoal } from '../ui/FocusGoal';
 import { hasReview, reviewStreak } from '../store/review';
 import { openSummary } from '../ai/summary';
 
-export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
+export function Desktop(props: { dark: boolean; hidden: boolean }) {
+  const deskRef = useRef<HTMLDivElement>(null);
+  return (
+    <DashLayoutProvider desktop={deskRef}>
+      <DesktopTiles {...props} deskRef={deskRef} />
+    </DashLayoutProvider>
+  );
+}
+
+function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolean; deskRef: RefObject<HTMLDivElement | null> }) {
+  const box = useDashBoxFn();
   const L = useL();
   const lang = useLang();
   const s = useStore((x) => x);
@@ -93,11 +104,11 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
   })();
 
   return (
-    <div className={`desktop ${hidden ? 'is-hidden' : ''}`} aria-hidden={hidden}>
+    <div className={`desktop ${hidden ? 'is-hidden' : ''}`} aria-hidden={hidden} ref={deskRef}>
       <LifeSettingsModal open={lifeOpen} onClose={() => setLifeOpen(false)} />
       {/* ---------- hero / planet ---------- */}
       {!hide.has('hero') && (
-      <section className="widget w-hero">
+      <section className="widget w-hero" {...box('hero')}>
         <div className="hero-text">
           <p className="eyebrow">{new Date().toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
           <h1>
@@ -161,7 +172,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
 
       {/* ---------- today's quests ---------- */}
       {!hide.has('quests') && (
-      <section className="widget w-quests">
+      <section className="widget w-quests" {...box('quests')}>
         <WidgetHead icon="list-checks" title={L('今日任务', "Today's quests")} onOpen={() => open('quests')}>
           <span className="num muted">
             {todayDone}/{todayTotal}
@@ -194,7 +205,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
 
       {/* ---------- life progress ---------- */}
       {!hide.has('life') && (
-      <section className="widget w-life">
+      <section className="widget w-life" {...box('life')}>
         <WidgetHead icon="hourglass" title={L('人生进度', 'Life progress')} onOpen={() => openRoadmap('weeks')}>
           <button className="w-open" onClick={() => setLifeOpen(true)} aria-label={L('设置出生日期和预期寿命', 'Set birth date and life expectancy')} title={L('设置出生日期和预期寿命', 'Set birth date and life expectancy')}>
             <Icon name="pencil" size={14} />
@@ -223,7 +234,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
 
       {/* ---------- earn ---------- */}
       {!hide.has('earn') && (
-      <section className={`widget w-earn ${live ? 'is-live' : ''}`}>
+      <section className={`widget w-earn ${live ? 'is-live' : ''}`} {...box('earn')}>
         <WidgetHead icon="coins" title={L('今日收入', 'Earnings')} onOpen={() => open('earn')}>
           {live?.paid && <span className="muted num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : clock(live.ms)}</span>}
         </WidgetHead>
@@ -253,7 +264,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       )}
 
       {!hide.has('assets') && (
-      <section className="widget w-assets">
+      <section className="widget w-assets" {...box('assets')}>
         <WidgetHead icon="landmark" title={L('净资产', 'Net worth')} onOpen={() => open('assets')} />
         {assetSeries.length ? (
           <>
@@ -292,7 +303,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
 
       {/* ---------- research ---------- */}
       {!hide.has('research') && (
-      <section className="widget w-research">
+      <section className="widget w-research" {...box('research')}>
         <WidgetHead icon="graduation" title={L('学术', 'Research')} onOpen={() => open('research')} />
         <div className="research-mini">
           <div>
@@ -328,7 +339,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
 
       {/* ---------- activity ---------- */}
       {!hide.has('plans') && (
-      <section className="widget w-plans">
+      <section className="widget w-plans" {...box('plans')}>
         <WidgetHead icon="calendar" title={L('本周计划', 'This week')} onOpen={() => open('plan')}>
           <span className="muted num small">
             {weekPlans.filter((p) => p.done).length}/{weekPlans.length}
@@ -356,7 +367,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       )}
 
       {!hide.has('countdown') && (
-      <section className="widget w-countdown">
+      <section className="widget w-countdown" {...box('countdown')}>
         <WidgetHead icon="hourglass" title={L('倒计时', 'Countdown')} onOpen={() => (sessionStorage.setItem('lifeos:plan-tab', 'countdown'), open('plan'))} />
         {soon.length === 0 ? (
           <p className="muted small">{L('截稿、旅行、生日……加一个吧。', 'Deadlines, trips, birthdays — add one.')}</p>
@@ -375,7 +386,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       )}
 
       {!hide.has('mood') && (
-      <section className="widget w-mood">
+      <section className="widget w-mood" {...box('mood')}>
         <WidgetHead icon="smile" title={L('今天心情', 'Mood today')} onOpen={() => open('mood')} />
         <MoodPicker size={36} />
         {/* This week, starting on the day chosen in Settings (Monday or Sunday) */}
@@ -394,7 +405,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
       )}
 
       {!hide.has('journal') && (
-      <section className="widget w-journal">
+      <section className="widget w-journal" {...box('journal')}>
         <WidgetHead icon="notebook" title={L('每日复盘', 'Daily review')} onOpen={() => open('review')}>
           <span className="muted num">{L(`连续 ${reviewStreak(s)} 天`, `${reviewStreak(s)}-day streak`)}</span>
         </WidgetHead>
@@ -418,7 +429,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
 
 
       {!hide.has('heat') && (
-      <section className="widget w-heat">
+      <section className="widget w-heat" {...box('heat')}>
         <WidgetHead icon="calendar" title={L('经验热力图', 'XP activity')}>
           <span className="muted num">
             {L('最佳连胜', 'Best streak')} {m.streak.best}
@@ -451,7 +462,7 @@ export function Desktop({ dark, hidden }: { dark: boolean; hidden: boolean }) {
 
       {/* ---------- weekly review ---------- */}
       {!hide.has('review') && (
-      <section className="widget w-log">
+      <section className="widget w-log" {...box('review')}>
         <WidgetHead icon="sparkles" title={L('本周回顾', 'This week')} />
         <div className="review-stats">
           <div>
@@ -517,7 +528,7 @@ function EffortWidget({ live }: { live: ReturnType<typeof useLiveSession> }) {
   const focus = sel ? byId.get(sel) : undefined;
   const toFocus = () => open('projects');
   return (
-    <section className={`widget w-effort ${live ? 'is-live' : ''}`}>
+    <section className={`widget w-effort ${live ? 'is-live' : ''}`} {...useDashBox('effort')}>
       <WidgetHead icon="activity" title={L('今日时间分配', 'Time split')} onOpen={() => toFocus()}>
         {live && !live.paid && <span className="muted num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : clock(live.ms)}</span>}
       </WidgetHead>
@@ -596,14 +607,15 @@ function ProjectProgressWidget({ live }: { live: ReturnType<typeof useLiveSessio
   const open_ = s.projects.filter((p) => p.status !== 'done');
   const lastTouch = (id: string) => Math.max(0, ...s.sessions.filter((x) => x.projectId === id).map((x) => x.start));
   const auto = open_.filter((p) => p.status !== 'planning').sort((a, b) => lastTouch(b.id) - lastTouch(a.id)).slice(0, 5);
-  const shown = chosen ? s.projects.filter((p) => chosen.includes(p.id)) : auto;
+  // finished projects never show here, even ones you picked before they were done
+  const shown = chosen ? open_.filter((p) => chosen.includes(p.id)) : auto;
   const todayMs = (id: string) => s.sessions.filter((x) => x.projectId === id && dayKey(x.start) === today).reduce((a, x) => a + x.activeMs, 0) + (live && live.active.projectId === id ? live.ms : 0);
   const toggle = (id: string) => {
     const cur = chosen ?? auto.map((p) => p.id);
     actions.setDesktopProjects(cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]);
   };
   return (
-    <section className="widget w-projprog">
+    <section className="widget w-projprog" {...useDashBox('projprog')}>
       <WidgetHead icon="briefcase" title={L('项目进度', 'Project progress')} onOpen={() => open('projects')}>
         <button type="button" className="link-btn small" onClick={() => setEdit(!edit)}>
           {edit ? L('完成', 'Done') : L('选择项目', 'Choose')}

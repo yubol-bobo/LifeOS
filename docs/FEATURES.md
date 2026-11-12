@@ -31,7 +31,7 @@ LifeOS gathers the scattered systems of a life (daily to-dos, life milestones, p
 - **Settings**: almost everything can be changed.
   - **Sync**: end-to-end encrypted multi-device sync (see [SETUP §8](../SETUP.md#8-sync-between-devices)).
   - **AI**: connect OpenAI / Claude / DeepSeek / Kimi / GLM so your pet can write day summaries (see [SETUP §9](../SETUP.md#9-ai-pet-day-summary)).
-  - **Dock & Desktop**: drag to reorder, show or hide apps (hidden apps still open from ⌘K); turn **desktop widgets** on or off one by one and the desktop re-flows.
+  - **Dock & Desktop**: drag to reorder, show or hide apps (hidden apps still open from ⌘K); turn **desktop widgets** on or off one by one and the desktop re-flows. **Edit desktop layout** (View menu, or here): drag any tile to a new place and drag its bottom-right corner to make it wider, narrower, taller or shorter; the tile's size shows in the corner as you go. Landscape and portrait keep separate layouts (in portrait only the width changes, as height follows the content); **Reset** brings back the built-in layout; Esc or **Done** to finish.
   - **Attributes**: rename, change icon and colour, add or remove (3–10). When removing one, choose which attribute inherits its quests and earned XP.
   - **Work & Pay**: enter an hourly, daily, monthly or yearly rate and LifeOS works out the per-second speed. The "who you work for" list (employers, clients, projects) can be edited, each with its own rate, and Focus tallies income per project.
   - **Desktop Pet**: on/off, pick one of three, rename, activity level, water and stretch reminder intervals, pomodoro length, sounds, browser notifications.

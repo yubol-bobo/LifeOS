@@ -520,6 +520,19 @@ export const actions = {
       { silent: true },
     );
   },
+  /** Save (or reset, with undefined) the desktop layout for one view. */
+  setDash(mode: 'landscape' | 'portrait', layout: import('./types').DashLayout | undefined) {
+    commit(
+      (d) => {
+        const dash = { ...(d.ui.dash ?? {}) };
+        if (layout && (layout.order?.length || Object.keys(layout.size ?? {}).length)) dash[mode] = layout;
+        else delete dash[mode];
+        if (Object.keys(dash).length) d.ui.dash = dash;
+        else delete d.ui.dash;
+      },
+      { silent: true },
+    );
+  },
   toggleWidget(id: string) {
     commit(
       (d) => {

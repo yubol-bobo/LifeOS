@@ -102,6 +102,14 @@ export interface UiPrefs {
   hidden: AppId[]; // hidden from the dock (still reachable via Spotlight)
   widgets: string[]; // hidden desktop widgets
   desktopProjects?: string[]; // projects shown on the Project progress tile (unset = the ones in progress)
+  /** Custom desktop layout per view; unset = the built-in layout. */
+  dash?: Partial<Record<'landscape' | 'portrait', DashLayout>>;
+}
+
+/** Tile order plus optional spans: [columns, rows?]. */
+export interface DashLayout {
+  order?: string[];
+  size?: Record<string, [number, number?]>;
 }
 
 export interface MoodEntry {
