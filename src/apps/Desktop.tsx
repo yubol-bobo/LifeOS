@@ -607,7 +607,8 @@ function ProjectProgressWidget({ live }: { live: ReturnType<typeof useLiveSessio
   const open_ = s.projects.filter((p) => p.status !== 'done');
   const lastTouch = (id: string) => Math.max(0, ...s.sessions.filter((x) => x.projectId === id).map((x) => x.start));
   const auto = open_.filter((p) => p.status !== 'planning').sort((a, b) => lastTouch(b.id) - lastTouch(a.id)).slice(0, 5);
-  const shown = chosen ? s.projects.filter((p) => chosen.includes(p.id)) : auto;
+  // finished projects never show here, even ones you picked before they were done
+  const shown = chosen ? open_.filter((p) => chosen.includes(p.id)) : auto;
   const todayMs = (id: string) => s.sessions.filter((x) => x.projectId === id && dayKey(x.start) === today).reduce((a, x) => a + x.activeMs, 0) + (live && live.active.projectId === id ? live.ms : 0);
   const toggle = (id: string) => {
     const cur = chosen ?? auto.map((p) => p.id);
