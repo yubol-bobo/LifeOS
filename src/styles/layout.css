@@ -160,3 +160,136 @@
     display: none;
   }
 }
+
+/* =====================================================================
+   Custom desktop layout (View → Edit desktop layout)
+   ===================================================================== */
+
+/* saved order applies everywhere; saved sizes only where that view's grid is active */
+.desktop > .widget[data-w] {
+  order: var(--o, 0);
+}
+@media (min-width: 1100px) {
+  .os[data-layout='landscape'] .desktop > .widget[data-w][data-cw] {
+    grid-column: span var(--cw);
+  }
+  .os[data-layout='landscape'] .desktop > .widget[data-w][data-ch] {
+    grid-row: span var(--ch);
+  }
+}
+@media (min-width: 1200px) {
+  .os[data-layout='portrait'] .desktop > .widget[data-w][data-cw] {
+    grid-column: span var(--cw);
+  }
+}
+
+.os .desktop.is-editing,
+.os[data-layout] .desktop.is-editing {
+  padding-top: calc(var(--deb-h, 86px) + 22px);
+}
+.desktop.is-editing > .widget {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  overflow: hidden !important;
+  outline: 2px dashed color-mix(in oklab, var(--accent) 55%, transparent);
+  outline-offset: 3px;
+  transition: outline-color 0.15s, opacity 0.15s, box-shadow 0.15s;
+}
+.desktop.is-editing > .widget:hover {
+  outline-color: var(--accent);
+}
+/* the tile's own controls are asleep while editing */
+.desktop.is-editing > .widget > * {
+  pointer-events: none;
+}
+/* size label + resize grip in the bottom-right corner */
+.desktop.is-editing > .widget::after {
+  content: attr(data-size);
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 3;
+  padding: 4px 22px 4px 8px;
+  border-radius: 10px;
+  font: 700 11px/1.2 var(--font-num, inherit);
+  color: #fff;
+  background:
+    linear-gradient(135deg, transparent 52%, rgba(255, 255, 255, 0.9) 52%, rgba(255, 255, 255, 0.9) 60%, transparent 60%, transparent 70%, rgba(255, 255, 255, 0.9) 70%, rgba(255, 255, 255, 0.9) 78%, transparent 78%) right 4px bottom 4px / 14px 14px no-repeat,
+    var(--accent);
+  cursor: nwse-resize;
+  pointer-events: none;
+  box-shadow: 0 4px 12px color-mix(in oklab, var(--accent) 35%, transparent);
+}
+.desktop.is-editing > .widget.is-dragging {
+  opacity: 0.35;
+}
+.desktop.is-editing > .widget.is-resizing {
+  outline-style: solid;
+  outline-color: var(--accent);
+}
+.desktop.is-editing > .widget.is-drop-before {
+  box-shadow: -6px 0 0 0 var(--accent);
+}
+.desktop.is-editing > .widget.is-drop-after {
+  box-shadow: 6px 0 0 0 var(--accent);
+}
+
+.dash-editbar {
+  position: fixed;
+  z-index: 60;
+  top: calc(var(--menubar-h, 34px) + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1180px, calc(100vw - 32px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: var(--shadow-lg, 0 18px 40px rgba(0, 0, 0, 0.18));
+  border: 1px solid var(--line);
+}
+.deb-text {
+  display: grid;
+  gap: 2px;
+}
+.deb-text b {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.deb-actions {
+  display: flex;
+  gap: 8px;
+  grid-row: 1;
+  grid-column: 2;
+}
+.deb-chips {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.deb-chips .chip:not(.is-active) {
+  opacity: 0.55;
+}
+.dash-ghost {
+  position: fixed;
+  z-index: 70;
+  pointer-events: none;
+  transform: translate(12px, 12px);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 10px 26px color-mix(in oklab, var(--accent) 40%, transparent);
+}

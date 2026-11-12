@@ -1,4 +1,5 @@
 import { PALETTE_NAMES } from '../store/defaults';
+import { startDashEdit } from '../os/dashLayout';
 import { ExpectancyInput } from './LifeSettings';
 import { AiSettings } from './AiSettings';
 import { setLayout, setWindowPrefs, useLayout, useWindowPrefs } from '../os/display';
@@ -348,6 +349,9 @@ function DockSettings() {
       </Card>
       <Card title={L('桌面小组件', 'Desktop widgets')} icon="house">
         <p className="muted small">{L('关掉用不上的，桌面会自动重新排布。', 'Turn off what you don’t use — the desktop reflows itself.')}</p>
+        <Button icon="grid" onClick={startDashEdit}>
+          {L('编辑桌面布局：拖动换位置、拖角改大小', 'Edit desktop layout: drag to move, drag a corner to resize')}
+        </Button>
         <div className="toggle-list">
           {WIDGETS.map((w) => {
             const on = !ui.widgets.includes(w.id);

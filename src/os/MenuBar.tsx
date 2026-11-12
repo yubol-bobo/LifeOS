@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { startDashEdit } from './dashLayout';
 import { useL, useLang } from '../lib/i18n';
 import { money } from '../lib/format';
 import { useMetrics } from '../store/hooks';
@@ -52,6 +53,9 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
             </button>
             <button className={layout === 'landscape' ? 'is-check' : ''} onClick={() => (setView(false), setLayout('landscape'))}>
               <Icon name="layout-wide" size={15} /> {L('横版 · 铺满屏幕的仪表盘', 'Landscape · full-screen dashboard')}
+            </button>
+            <button onClick={() => (setView(false), startDashEdit())}>
+              <Icon name="grid" size={15} /> {L('编辑桌面布局…', 'Edit desktop layout…')}
             </button>
             <hr />
             {canFs && (
