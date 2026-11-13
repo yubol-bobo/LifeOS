@@ -38,8 +38,10 @@ export function Quests() {
   const dailies = allDailies.filter((q) => isScheduled(q, day));
   const resting = allDailies.filter((q) => !isScheduled(q, day));
   const once = s.quests.filter((q) => q.kind === 'once' && !q.archived);
-  const openOnce = once.filter((q) => !q.doneAt && onToday(q, day));
-  const doneOnce = once.filter((q) => q.doneAt && onToday(q, day)).sort((a, b) => b.doneAt! - a.doneAt!);
+  // A to-do belongs to the day it was added: finished ones show only on the day they were done;
+  // unfinished ones carry over to the next days (marked past due).
+  const openOnce = once.filter((q) => !q.doneAt && onToday(q, day) && dayKey(q.createdAt) <= day);
+  const doneOnce = once.filter((q) => q.doneAt && onToday(q, day) && dayKey(q.doneAt) === day).sort((a, b) => b.doneAt! - a.doneAt!);
   const dailyDone = dailies.filter((q) => done.has(q.id)).length;
   const week = lastNDays(7);
   const xpToday = dailies.filter((q) => done.has(q.id)).reduce((a, q) => a + QUEST_XP[q.difficulty], 0);
@@ -123,7 +125,7 @@ export function Quests() {
           ) : (
             <ul className="quest-list">
               {openOnce.map((q) => row({ q, done: false, onToggle: () => actions.toggleQuest(q.id), onEdit: () => setEdit(q) }))}
-              {doneOnce.slice(0, 6).map((q) => row({ q, done: true, onToggle: () => actions.toggleQuest(q.id), onEdit: () => setEdit(q) }))}
+              {doneOnce.map((q) => row({ q, done: true, onToggle: () => actions.toggleQuest(q.id), onEdit: () => setEdit(q) }))}
             </ul>
           )}
         </Card>
@@ -164,7 +166,7 @@ export function Quests() {
                 +{q.planAmount ?? 1} {planOf(q.planId)?.unit ?? ''}
               </span>
             ) : null}
-            {!done && <DueChip due={q.due} />}
+            {!done && <DueChip due={q.due} since={q.kind === 'once' ? q.createdAt : undefined} />}
           </span>
         </div>
         {week && (

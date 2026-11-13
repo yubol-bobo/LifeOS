@@ -30,7 +30,8 @@ export function demoState(profile: Partial<State['profile']>): State {
 
   /* ---- quests ---- */
   const q = (title: string, attr: Quest['attr'], difficulty: Quest['difficulty'], kind: Quest['kind'] = 'daily'): Quest => ({
-    id: uid(), title, attr, difficulty, kind, createdAt: Date.now() - 90 * DAY,
+    // habits are old; one-off to-dos were added today (an open to-do from an earlier day shows as past due)
+    id: uid(), title, attr, difficulty, kind, createdAt: kind === 'once' ? Date.now() : Date.now() - 90 * DAY,
   });
   s.quests = [
     q(T('深度写作 90 分钟', 'Deep writing · 90 min'), 'craft', 'hard'),

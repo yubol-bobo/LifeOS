@@ -73,7 +73,7 @@ function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolea
 
   const doneToday = new Set(s.completions[today] ?? []);
   // project steps stay in their project until they're due (or pulled in from a plan)
-  const quests = s.quests.filter((q) => !q.archived && (q.kind === 'daily' ? isScheduled(q, today) : onToday(q, today) && (!q.doneAt || q.doneAt > Date.now() - 86_400_000)));
+  const quests = s.quests.filter((q) => !q.archived && (q.kind === 'daily' ? isScheduled(q, today) : onToday(q, today) && (!q.doneAt || dayKey(q.doneAt) === today)));
   const dailies = s.quests.filter((q) => isScheduled(q, today));
   const dailyDone = dailies.filter((q) => doneToday.has(q.id)).length;
   // Everything on today's list: recurring quests due today, plus to-dos on Today (made today or
@@ -186,7 +186,7 @@ function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolea
               <li key={q.id} className={done ? 'is-done' : ''}>
                 <CheckBubble checked={done} onChange={() => actions.toggleQuest(q.id)} tone={q.attr} label={q.title} />
                 <span className="mq-title">{q.title}</span>
-                {!done && <DueChip due={q.due} />}
+                {!done && <DueChip due={q.due} since={q.kind === 'once' ? q.createdAt : undefined} />}
                 <GoalTag goalId={q.goalId} />
                 <span className="mq-xp num">+{QUEST_XP[q.difficulty]}</span>
               </li>

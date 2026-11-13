@@ -136,15 +136,22 @@ export function ProjectTag({ id }: { id?: string }) {
 }
 
 /** A quest's optional due date: "due today", "3 days left", "2 days late". */
-export function DueChip({ due }: { due?: string }) {
+/**
+ * Due date chip. A to-do without a due date belongs to the day it was added (`since`): it shows
+ * nothing that day, and "past due" from the next day on while it's still open.
+ */
+export function DueChip({ due, since }: { due?: string; since?: number }) {
   const L = useL();
   const lang = useStore((s) => s.profile.lang);
-  if (!due) return null;
-  const n = daysBetween(dayKey(), due);
+  const implicit = !due && since != null ? dayKey(since) : undefined;
+  const d = due ?? implicit;
+  if (!d) return null;
+  const n = daysBetween(dayKey(), d);
+  if (implicit && n >= 0) return null;
   const cls = n < 0 ? 'is-late' : n === 0 ? 'is-today' : n <= 3 ? 'is-soon' : '';
-  const text = n < 0 ? L(`逾期 ${-n} 天`, `${-n}d late`) : n === 0 ? L('今天到期', 'due today') : n <= 14 ? L(`还剩 ${n} 天`, `${n}d left`) : parseDay(due).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'numeric', day: 'numeric' });
+  const text = n < 0 ? L(`逾期 ${-n} 天`, `Past due · ${-n}d`) : n === 0 ? L('今天到期', 'due today') : n <= 14 ? L(`还剩 ${n} 天`, `${n}d left`) : parseDay(d).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'numeric', day: 'numeric' });
   return (
-    <span className={`due-chip num ${cls}`} title={L(`截止 ${due}`, `Due ${due}`)}>
+    <span className={`due-chip num ${cls}`} title={implicit ? L(`${d} 添加的，还没完成`, `Added ${d}, not done yet`) : L(`截止 ${d}`, `Due ${d}`)}>
       <Icon name="calendar" size={11} /> {text}
     </span>
   );
