@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { snapNow } from './snapshot';
+import { notify } from './notify';
 import { startDashEdit } from './dashLayout';
 import { useL, useLang } from '../lib/i18n';
 import { money } from '../lib/format';
@@ -56,6 +58,15 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
             </button>
             <button onClick={() => (setView(false), startDashEdit())}>
               <Icon name="grid" size={15} /> {L('编辑桌面布局…', 'Edit desktop layout…')}
+            </button>
+            <button
+              onClick={async () => {
+                setView(false);
+                const s = await snapNow();
+                notify(s ? { title: L('已保存今天的仪表盘快照', 'Saved today’s dashboard snapshot'), body: L('在 系统设置 → 通用 里查看和下载。', 'See and download it in Settings → General.'), icon: 'camera', tone: 'good' } : { title: L('没拍成功', 'Couldn’t take the snapshot'), body: L('请稍后再试一次。', 'Please try again in a moment.'), icon: 'camera', tone: 'info' });
+              }}
+            >
+              <Icon name="camera" size={15} /> {L('保存仪表盘快照', 'Save a dashboard snapshot')}
             </button>
             <hr />
             {canFs && (

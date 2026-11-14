@@ -1,4 +1,5 @@
 import { PALETTE_NAMES } from '../store/defaults';
+import { SnapshotSettings } from './SnapshotSettings';
 import { startDashEdit } from '../os/dashLayout';
 import { ExpectancyInput } from './LifeSettings';
 import { AiSettings } from './AiSettings';
@@ -203,6 +204,7 @@ function General() {
             </Field>
           </div>
         </Card>
+        <SnapshotSettings />
         <Card title={L('数据', 'Data')} icon="download">
           <p className="muted small">{L('数据保存在本机浏览器（localStorage）。换设备或清理浏览器前，请先导出备份。', 'Data lives in this browser (localStorage). Export a backup before switching devices or clearing your browser.')}</p>
           <div className="row-gap wrap" style={{ marginTop: 12 }}>

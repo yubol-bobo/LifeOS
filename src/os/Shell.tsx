@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { initSnapshots } from './snapshot';
 import { Desktop } from '../apps/Desktop';
 import { Quests } from '../apps/Quests';
 import { Roadmap } from '../apps/Roadmap';
@@ -81,6 +82,7 @@ export function Shell() {
   }, [lang, reduce]);
 
   useEffect(() => initSync(), []);
+  useEffect(() => initSnapshots(), []);
   useEffect(() => void loadDictionary().then(() => actions.localize()), []);
 
   // Pull the Google Scholar feed (if the deployment has one) once per page load.
