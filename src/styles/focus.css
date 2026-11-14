@@ -471,3 +471,167 @@
 .fgoal.is-compact {
   padding: 6px 8px;
 }
+
+/* ---------------- effort history: ranges, daily bars, sessions ---------------- */
+.range-pick select.input {
+  width: auto;
+  height: 30px;
+  padding: 0 28px 0 10px;
+  font-size: 12.5px;
+  border-radius: 10px;
+}
+.range-pick select.is-on {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+.range-dates {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.range-dates .input {
+  width: 138px;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 12.5px;
+}
+.effort-hint {
+  margin: 0 0 6px;
+}
+.sbars-wrap {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.sbars-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 11px;
+  padding-bottom: 20px;
+  text-align: right;
+}
+.sbars {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  height: 170px;
+  border-bottom: 1px solid var(--line);
+}
+.sbar {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: opacity 0.15s, background 0.15s;
+}
+.sbar:hover {
+  background: color-mix(in oklab, var(--ink) 5%, transparent);
+}
+.sbar-stack {
+  display: flex;
+  flex-direction: column-reverse;
+  min-height: 0;
+  margin: 0 auto;
+  width: min(100%, 34px);
+  border-radius: 7px 7px 3px 3px;
+  overflow: hidden;
+}
+.sbar-stack i {
+  display: block;
+  min-height: 2px;
+}
+.sbar small {
+  height: 16px;
+  font-size: 10px;
+  color: var(--ink-3);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.sbar small.is-hidden {
+  visibility: hidden;
+}
+.sbar.is-dim {
+  opacity: 0.35;
+}
+.sbar.is-picked {
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+.sbar.is-picked small {
+  color: var(--accent);
+  font-weight: 800;
+}
+.sbars-tip {
+  position: absolute;
+  top: -6px;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  max-width: 70%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-md, 0 8px 22px rgba(0, 0, 0, 0.14));
+  pointer-events: none;
+}
+.sbars-tip i,
+.sess-list i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+.effort-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 10px;
+}
+.effort-sessions {
+  margin-top: 14px;
+}
+.effort-sessions h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.sess-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.sess-list li {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--ink) 3.5%, transparent);
+}
+.sl-time {
+  font-size: 12px;
+  min-width: 96px;
+}
+.sl-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

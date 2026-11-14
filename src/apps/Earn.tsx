@@ -11,7 +11,8 @@ import { useLiveSession } from '../os/live';
 import { burst, notify } from '../os/notify';
 import { actions, useStore } from '../store/store';
 import type { Attr, WorkSession } from '../store/types';
-import { cssVar, effortRows, sliceColor } from './effort';
+import { cssVar, effortIdOf, effortRows, sliceColor } from './effort';
+import { bucketSegs, buckets, rangeWindow, RangePicker, SessionList, StackedBars, type Bucket, type Range } from './EffortHistory';
 import { Columns } from '../ui/charts';
 import { Bar, Button, Card, Empty, Field, Modal, Ring, Segmented, Stat } from '../ui/kit';
 import { Odometer } from '../ui/Odometer';
@@ -460,30 +461,44 @@ export function clock(ms: number) {
 
 export function EffortCard({ live, initial = 'all' }: { live: ReturnType<typeof useLiveSession>; initial?: 'all' | 'paid' | 'free' }) {
   const L = useL();
+  const lang = useLang();
   const dark = useTheme();
   const sessions = useStore((s) => s.sessions);
   const projects = useStore((s) => s.projects);
   const cur = useStore((s) => s.profile.currency);
   const reduce = useStore((s) => s.profile.reduceMotion);
-  const [range, setRange] = useState<'today' | 'week'>('today');
+  const [range, setRangeRaw] = useState<Range>({ id: 'today' });
+  const [pick, setPick] = useState<Bucket | null>(null);
   const [show, setShow] = useState<'all' | 'paid' | 'free'>(initial);
   const [sel, setSel] = useState<string | null>(null);
   const [hov, setHov] = useState<string | null>(null);
-  const from = range === 'today' ? new Date(new Date().setHours(0, 0, 0, 0)).getTime() : startOfWeek().getTime();
-  const all = effortRows(sessions, projects, live, from, L('专注', 'Focus'));
+  const setRange = (r: Range) => (setRangeRaw(r), setPick(null), setSel(null));
+  const fallback = L('专注', 'Focus');
+  const w = rangeWindow(range, sessions);
+  const target = pick?.win ?? w; // a clicked bar narrows the donut and list to that day / week / month
+  // colours come from the whole range so a bar's segments match the donut
+  const rangeAll = effortRows(sessions, projects, live, w.from, fallback, w.to);
+  const all = pick ? effortRows(sessions, projects, live, target.from, fallback, target.to) : rangeAll;
   const total = all.reduce((a, r) => a + r.ms, 0);
   const paidMs = all.filter((r) => r.paid).reduce((a, r) => a + r.ms, 0);
   const list = all.filter((r) => show === 'all' || (show === 'paid') === r.paid);
   const shown = list.reduce((a, r) => a + r.ms, 0);
-  // stable colour per activity (by first appearance in the full list)
-  const colorOf = (id: string) => sliceColor(all, id);
+  const colorOf = (id: string) => sliceColor(rangeAll, id);
+  const idOf = (x: WorkSession) => effortIdOf(x, projects, fallback);
+  const keep = (x: WorkSession) => show === 'all' || (show === 'paid') === x.rate > 0;
   const paidRim = cssVar('--c-wealth', '#1ba677');
   const freeRim = cssVar('--p-violet', '#7a5ae6');
   const slices = list.map((r) => ({ id: r.id, value: Math.max(1, Math.round(r.ms / 60_000)), color: colorOf(r.id), rim: r.paid ? paidRim : freeRim }));
-  const byId = new Map(all.map((r) => [r.id, r]));
+  const byId = new Map(rangeAll.map((r) => [r.id, r]));
   const h = (ms: number) => (ms / 3_600_000).toFixed(1);
   const focusId = sel ?? hov;
-  const focusRow = focusId ? byId.get(focusId) : undefined;
+  const focusRow = focusId ? all.find((r) => r.id === focusId) : undefined;
+  const multiDay = w.first !== w.last;
+  const bars = multiDay ? bucketSegs(buckets(w, lang), sessions, idOf, colorOf, (id) => byId.get(id)?.label ?? id, keep) : [];
+  const oneDay = target.first === target.last;
+  const daySessions = oneDay ? sessions.filter((x) => x.start >= target.from && x.start < target.to && keep(x)) : [];
+  const rangeTotal = rangeAll.reduce((a, r) => a + r.ms, 0);
+  const pickLabel = pick ? (pick.win.first === pick.win.last ? parseDay(pick.win.first).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { month: 'long', day: 'numeric', weekday: 'short' }) : `${pick.win.first} – ${pick.win.last}`) : '';
 
   return (
     <Card
@@ -501,22 +516,32 @@ export function EffortCard({ live, initial = 'all' }: { live: ReturnType<typeof 
               { value: 'free', label: L('项目', 'Projects'), icon: 'briefcase' },
             ]}
           />
-          <Segmented
-            size="sm"
-            value={range}
-            onChange={(v) => (setRange(v), setSel(null))}
-            options={[
-              { value: 'today', label: L('今天', 'Today') },
-              { value: 'week', label: L('本周', 'This week') },
-            ]}
-          />
+          <RangePicker value={range} onChange={setRange} />
         </div>
       }
     >
-      {total === 0 ? (
-        <p className="muted small">{L('还没有记录。工作、健身、写论文……开始一段专注就会出现在这里。', 'Nothing yet. Work, gym, writing — start a session and it shows up here.')}</p>
+      {rangeTotal === 0 ? (
+        <p className="muted small">{range.id === 'today' ? L('还没有记录。工作、健身、写论文……开始一段专注就会出现在这里。', 'Nothing yet. Work, gym, writing — start a session and it shows up here.') : L('这段时间没有专注记录。', 'No focus sessions in this range.')}</p>
       ) : (
         <>
+          {multiDay && (
+            <>
+              <p className="muted small effort-hint">{pick ? L('再点一次这根柱子，或者点「返回」，回到整段时间。', 'Click the bar again, or “Back”, to see the whole range.') : L('点一根柱子，看那一天（或那一周 / 那个月）的分配和每段专注。', 'Click a bar to see that day (or week / month) and each session.')}</p>
+              <StackedBars data={bars} picked={pick?.key} onPick={(b) => (setPick((p) => (p?.key === b.key ? null : b)), setSel(null))} />
+            </>
+          )}
+          {pick && (
+            <div className="effort-pick">
+              <b>{pickLabel}</b>
+              <button type="button" className="link-btn small" onClick={() => (setPick(null), setSel(null))}>
+                ← {L('返回', 'Back')}
+              </button>
+            </div>
+          )}
+          {total === 0 ? (
+            <p className="muted small">{L('这一天没有专注记录。', 'No focus sessions on this day.')}</p>
+          ) : (
+            <>
           <div className="effort-split">
             <span className="es-paid" style={{ flex: paidMs || 0.0001, opacity: show === 'free' ? 0.25 : 1 }} />
             <span className="es-free" style={{ flex: total - paidMs || 0.0001, opacity: show === 'paid' ? 0.25 : 1 }} />
@@ -551,7 +576,7 @@ export function EffortCard({ live, initial = 'all' }: { live: ReturnType<typeof 
                   </>
                 }
                 tooltip={(id) => {
-                  const r = byId.get(id);
+                  const r = all.find((x) => x.id === id);
                   if (!r) return null;
                   return (
                     <>
@@ -586,6 +611,14 @@ export function EffortCard({ live, initial = 'all' }: { live: ReturnType<typeof 
                 ))}
               </ul>
             </div>
+          )}
+          {oneDay && (
+            <div className="effort-sessions">
+              <h4>{L('每一段专注', 'Each session')}</h4>
+              <SessionList sessions={daySessions} projects={projects} colorOf={colorOf} idOf={idOf} cur={cur} fallback={fallback} />
+            </div>
+          )}
+            </>
           )}
         </>
       )}
