@@ -105,7 +105,7 @@ function mount(
   latest: { current: { slices: PieSlice[]; dark: boolean; still?: boolean } },
   ev: { hover: (id: string | null, x: number, y: number) => void; click: (id: string | null) => void; center: (x: number, y: number) => void },
 ): Api {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }) // keeps the last frame for dashboard snapshots;
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
