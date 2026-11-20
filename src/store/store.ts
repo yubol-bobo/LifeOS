@@ -413,6 +413,13 @@ export const actions = {
       if (q) Object.assign(q, patch);
     });
   },
+  /** Move a one-off to-do to another day (it leaves Today until then). */
+  moveQuest(id: string, day: string) {
+    commit((d) => {
+      const q = d.quests.find((x) => x.id === id);
+      if (q) q.day = day;
+    });
+  },
   removeQuest(id: string) {
     commit((d) => {
       d.quests = d.quests.filter((q) => q.id !== id);
