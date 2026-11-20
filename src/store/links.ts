@@ -25,13 +25,21 @@ export function isScheduled(q: Quest, day: string) {
  * long-running work: they stay in their project (with an optional due date) and never fill up Today —
  * unless you deliberately pulled one in from a week plan.
  */
-export function onToday(q: Quest, _day = dayKey()) {
-  void _day;
+export function onToday(q: Quest, day = dayKey()) {
   if (q.kind !== 'once' || q.archived) return false;
+  if (q.day && q.day > day) return false; // moved to a later day: it shows up then
+
   if (q.planId) return true; // pulled in from a plan on purpose
   if (q.projectId) return q.step === false; // a project's step, unless you added it to Today yourself
   return !q.step;
 }
+
+/** The day a one-off to-do is for: the day it was moved to, or the day it was added. */
+export const questDay = (q: Quest) => q.day ?? dayKey(q.createdAt);
+
+/** One-off to-dos moved to a later day, soonest first. */
+export const laterQuests = (s: State, day = dayKey()) =>
+  s.quests.filter((q) => q.kind === 'once' && !q.archived && !q.doneAt && q.day && q.day > day && (q.planId || (q.projectId ? q.step === false : !q.step))).sort((a, b) => a.day!.localeCompare(b.day!));
 
 export function scheduledDailies(s: State, day = dayKey()) {
   return s.quests.filter((q) => isScheduled(q, day));

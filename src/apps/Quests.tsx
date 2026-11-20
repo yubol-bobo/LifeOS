@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from 'react';
+import { MoveDay, dayLabel } from '../ui/MoveDay';
 import { addDays, dayKey, lastNDays, parseDay, weekOrder } from '../lib/date';
 import { periodOf } from '../lib/period';
 import { smart } from '../lib/format';
@@ -6,7 +7,7 @@ import { useL, useLang } from '../lib/i18n';
 import { open } from '../os/router';
 import { useMetrics } from '../store/hooks';
 import { useAttrs } from '../store/attrs';
-import { isScheduled, onToday } from '../store/links';
+import { isScheduled, laterQuests, onToday, questDay } from '../store/links';
 import { QUEST_XP } from '../store/rules';
 import { actions, getState, useStore } from '../store/store';
 import type { Attr, Difficulty, Quest } from '../store/types';
@@ -40,7 +41,8 @@ export function Quests() {
   const once = s.quests.filter((q) => q.kind === 'once' && !q.archived);
   // A to-do belongs to the day it was added: finished ones show only on the day they were done;
   // unfinished ones carry over to the next days (marked past due).
-  const openOnce = once.filter((q) => !q.doneAt && onToday(q, day) && dayKey(q.createdAt) <= day);
+  const openOnce = once.filter((q) => !q.doneAt && onToday(q, day) && questDay(q) <= day);
+  const later = isToday ? laterQuests(s, day) : [];
   const doneOnce = once.filter((q) => q.doneAt && onToday(q, day) && dayKey(q.doneAt) === day).sort((a, b) => b.doneAt! - a.doneAt!);
   const dailyDone = dailies.filter((q) => done.has(q.id)).length;
   const week = lastNDays(7);
@@ -128,6 +130,24 @@ export function Quests() {
               {doneOnce.map((q) => row({ q, done: true, onToggle: () => actions.toggleQuest(q.id), onEdit: () => setEdit(q) }))}
             </ul>
           )}
+          {later.length > 0 && (
+            <div className="later-list">
+              <h4>
+                <Icon name="calendar" size={14} /> {L('以后', 'Later')} <span className="muted num">{later.length}</span>
+              </h4>
+              <ul>
+                {later.map((q) => (
+                  <li key={q.id}>
+                    <span className="later-day num">{dayLabel(q.day!, lang)}</span>
+                    <button type="button" className="later-title" onClick={() => setEdit(q)}>
+                      {q.title}
+                    </button>
+                    <MoveDay q={q} compact />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </Card>
       </div>
 
@@ -166,7 +186,7 @@ export function Quests() {
                 +{q.planAmount ?? 1} {planOf(q.planId)?.unit ?? ''}
               </span>
             ) : null}
-            {!done && <DueChip due={q.due} since={q.kind === 'once' ? q.createdAt : undefined} />}
+            {!done && <DueChip due={q.due} since={q.kind === 'once' ? parseDay(questDay(q)).getTime() : undefined} />}
           </span>
         </div>
         {week && (
@@ -188,6 +208,7 @@ export function Quests() {
             }}
           />
         ) : null}
+        {!done && q.kind === 'once' && <MoveDay q={q} />}
         <Button size="sm" variant="ghost" icon="pencil" title={L('编辑', 'Edit')} onClick={onEdit} />
       </li>
     );
@@ -245,6 +266,7 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
       log: d.log?.trackerId ? d.log : undefined,
       projectId: d.projectId || undefined,
       due: d.kind === 'once' ? d.due || undefined : undefined,
+      day: d.kind === 'once' ? d.day || undefined : undefined,
       planId: d.planId || undefined,
       planAmount: d.planId && d.planAmount && d.planAmount !== 1 ? d.planAmount : undefined,
       // added here (not inside a project): a to-do for Today even when tagged with a project
@@ -415,6 +437,12 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
               </Field>
             )}
           </div>
+          {/* not for a project's own steps: those live in the project */}
+          {d.kind === 'once' && !(d.id && d.projectId && d.step !== false && !d.planId) && (
+            <Field label={L('哪天做', 'Do it on')} hint={L('选以后的某天，这件事就先不出现在今日任务里，到那天再出现。', 'Pick a later day and it stays off Today until then.')}>
+              <input className="input" type="date" min={dayKey()} value={d.day && d.day > dayKey() ? d.day : ''} onChange={(e) => set({ day: e.target.value || undefined })} />
+            </Field>
+          )}
           <Field label={L('专注满多少分钟自动完成', 'Auto-complete after focusing (min)')} hint={L('点任务旁的 ▶ 开始专注，当天累计够时长就自动打勾。', 'Hit ▶ on the quest to focus; it ticks itself once today’s focus reaches this.')}>
             <input className="input" type="number" min={0} step={5} value={d.focusMin ?? ''} placeholder={L('不设置', 'Off')} onChange={(e) => set({ focusMin: e.target.value ? +e.target.value : undefined })} />
           </Field>

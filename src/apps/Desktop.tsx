@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
+import { MoveDay } from '../ui/MoveDay';
 import { DashLayoutProvider, useDashBox, useDashBoxFn } from '../os/dashLayout';
 import { LifeSettingsModal } from './LifeSettings';
 import { openDay } from './DayXp';
 import { openRoadmap } from './Roadmap';
 import { focusProject, openProject } from './ProjectBoard';
-import { addDays, dayKey, daysBetween, lastNDays, lifeProgress, startOfWeek, weekdayLetters } from '../lib/date';
+import { addDays, dayKey, daysBetween, lastNDays, lifeProgress, parseDay, startOfWeek, weekdayLetters } from '../lib/date';
 import { compact, money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { open } from '../os/router';
@@ -18,7 +19,7 @@ import { Heatmap, Radar, Sparkline } from '../ui/charts';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, CheckBubble, Chip, Ring } from '../ui/kit';
 import { Odometer } from '../ui/Odometer';
-import { isScheduled, onToday, weeklyReview } from '../store/links';
+import { isScheduled, onToday, questDay, weeklyReview } from '../store/links';
 import { DueChip, GoalTag } from './goals';
 import { useStatusLabel } from './Research';
 import type { PaperStatus } from '../store/types';
@@ -186,8 +187,9 @@ function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolea
               <li key={q.id} className={done ? 'is-done' : ''}>
                 <CheckBubble checked={done} onChange={() => actions.toggleQuest(q.id)} tone={q.attr} label={q.title} />
                 <span className="mq-title">{q.title}</span>
-                {!done && <DueChip due={q.due} since={q.kind === 'once' ? q.createdAt : undefined} />}
+                {!done && <DueChip due={q.due} since={q.kind === 'once' ? parseDay(questDay(q)).getTime() : undefined} />}
                 <GoalTag goalId={q.goalId} />
+                {!done && q.kind === 'once' && <MoveDay q={q} compact />}
                 <span className="mq-xp num">+{QUEST_XP[q.difficulty]}</span>
               </li>
             );
