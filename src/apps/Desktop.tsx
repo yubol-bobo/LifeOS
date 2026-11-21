@@ -282,9 +282,15 @@ function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolea
               </div>
               <Sparkline values={assetSeries.slice(-14).map((x) => x.total)} tone="wealth" width={120} height={44} />
             </div>
+            {s.assets.source === 'amp' ? (
+              <p className="muted small amp-note" style={{ marginTop: 12 }}>
+                {L(`来自 Asset Management Pro · 截至 ${s.assets.amp?.asOf ?? '—'}`, `From Asset Management Pro · as of ${s.assets.amp?.asOf ?? '—'}`)}
+              </p>
+            ) : (
             <Button size="sm" variant={checkinDue(s) ? 'primary' : 'soft'} icon="wallet" className={checkinDue(s) ? 'is-due' : 'not-due'} onClick={() => window.dispatchEvent(new Event('lifeos:asset-checkin'))} style={{ marginTop: 14 }}>
               {checkinDue(s) ? L('该盘点了 · 记录此刻', 'Check-in due · record now') : L('记录此刻', 'Record balances')}
             </Button>
+            )}
           </>
         ) : (
           <>

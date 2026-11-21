@@ -170,6 +170,7 @@ export interface Account {
   currency: string;
   color: PaletteKey;
   archived?: boolean;
+  source?: 'amp'; // imported from Asset Management Pro (read-only here)
 }
 
 /** One check-in: the balance of every account at a moment. Debts are stored as positive owed amounts. */
@@ -177,6 +178,7 @@ export interface Snapshot {
   date: string;
   ts: number;
   balances: Record<string, number>;
+  source?: 'amp';
 }
 
 export interface AssetConfig {
@@ -184,6 +186,9 @@ export interface AssetConfig {
   rates: Record<string, number>; // 1 unit of currency = rate × base
   cadence: 'off' | 'daily' | 'weekly' | 'monthly';
   ratesAt?: number;
+  /** Where net worth comes from: your own check-ins (default) or Asset Management Pro. */
+  source?: 'manual' | 'amp';
+  amp?: { url?: string; syncedAt?: number; asOf?: string };
 }
 
 export interface PomoState {

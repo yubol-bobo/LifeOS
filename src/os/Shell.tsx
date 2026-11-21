@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { autoRefreshAmp } from '../apps/AmpSource';
 import { initSnapshots } from './snapshot';
 import { Desktop } from '../apps/Desktop';
 import { Quests } from '../apps/Quests';
@@ -19,7 +20,7 @@ import { attrCss, DEFAULT_ATTRS } from '../store/defaults';
 import { PetLayer } from '../pet/PetLayer';
 import { useLang } from '../lib/i18n';
 import { money } from '../lib/format';
-import { actions, useStore } from '../store/store';
+import { actions, getState, useStore } from '../store/store';
 import { loadFeed } from '../lib/scholarFeed';
 import { initSync } from '../sync/engine';
 import { loadDictionary } from '../store/builtin';
@@ -83,6 +84,8 @@ export function Shell() {
 
   useEffect(() => initSync(), []);
   useEffect(() => initSnapshots(), []);
+  // Asset Management Pro as the net-worth source: refresh quietly when it's a few hours old
+  useEffect(() => autoRefreshAmp(getState()), []);
   useEffect(() => void loadDictionary().then(() => actions.localize()), []);
 
   // Pull the Google Scholar feed (if the deployment has one) once per page load.
