@@ -1,10 +1,11 @@
 import { PALETTE_NAMES } from '../store/defaults';
+import { AmpSource } from './AmpSource';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { addDays, dayKey, parseDay } from '../lib/date';
 import { compact, money } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { notify } from '../os/notify';
-import { CURRENCIES, checkinDue, defaultRates, filledSeries, rateOf, valueIn } from '../store/assets';
+import { CURRENCIES, assetView, checkinDue, defaultRates, filledSeries, rateOf, valueIn } from '../store/assets';
 import { PALETTE } from '../store/attrs';
 import { actions, useStore } from '../store/store';
 import type { Account, AccountKind } from '../store/types';
@@ -43,7 +44,9 @@ export function Assets() {
   const delta = (a?: number, b?: number) => (a != null && b != null ? a - b : null);
   const cut = range === '3m' ? addDays(dayKey(), -92) : range === '1y' ? addDays(dayKey(), -366) : '0000';
   const chart = series.filter((x) => x.snap.date >= cut).map((x) => ({ x: parseDay(x.snap.date).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: '2-digit', month: 'short', day: 'numeric' }), y: Math.round(x.total) }));
-  const active = s.accounts.filter((a) => !a.archived);
+  const view = assetView(s);
+  const amp = view.amp;
+  const active = view.accounts.filter((a) => !a.archived);
 
   // composition by kind (assets only)
   const byKind = new Map<AccountKind, number>();
@@ -62,6 +65,7 @@ export function Assets() {
           <h1>{L('资产', 'Assets')}</h1>
           <p className="muted">{L('定期花一分钟记下每个账户的余额，时间会把它们连成一条曲线。', 'Spend a minute now and then noting each balance — time turns them into a curve.')}</p>
         </div>
+        {!amp && (
         <div className="row-gap">
           <Button icon="plus" onClick={() => setEdit({ name: '', kind: 'bank', currency: base, color: PALETTE[s.accounts.length % PALETTE.length] })}>
             {L('添加账户', 'Add account')}
@@ -70,7 +74,10 @@ export function Assets() {
             {L('记录此刻', 'Check in now')}
           </Button>
         </div>
+        )}
       </div>
+
+      <AmpSource />
 
       {checkinDue(s) && (
         <div className="banner">
@@ -149,6 +156,7 @@ export function Assets() {
         icon="landmark"
         action={
           <div className="row-gap">
+            {!amp && (
             <Segmented
               size="sm"
               value={s.assets.cadence}
@@ -160,6 +168,7 @@ export function Assets() {
                 { value: 'monthly', label: L('每月', 'Monthly') },
               ]}
             />
+            )}
             <Button size="sm" variant="ghost" icon="globe" onClick={() => setRatesOpen(true)}>
               {base}
             </Button>
@@ -196,7 +205,7 @@ export function Assets() {
                       </span>
                     )}
                   </div>
-                  <Button size="sm" variant="ghost" icon="pencil" title={L('编辑', 'Edit')} onClick={() => setEdit(a)} />
+                  {a.source ? <span className="muted small amp-tag">AMP</span> : <Button size="sm" variant="ghost" icon="pencil" title={L('编辑', 'Edit')} onClick={() => setEdit(a)} />}
                 </li>
               );
             })}
@@ -204,8 +213,8 @@ export function Assets() {
         )}
       </Card>
 
-      {s.snapshots.length > 0 && (
-        <Card title={L('盘点记录', 'Check-in history')} icon="clock">
+      {view.snapshots.length > 0 && (
+        <Card title={amp ? L('每月净资产', 'Net worth by month') : L('盘点记录', 'Check-in history')} icon="clock">
           <ul className="xp-log">
             {[...series]
               .reverse()
@@ -365,7 +374,7 @@ export function CheckinSheet() {
   const s = useStore((x) => x);
   const [open, setOpen] = useState(false);
   const [vals, setVals] = useState<Record<string, string>>({});
-  const active = s.accounts.filter((a) => !a.archived);
+  const active = s.accounts.filter((a) => !a.archived && !a.source);
   useEffect(() => {
     const f = () => {
       const last = filledSeries(s).at(-1)?.snap.balances ?? {};

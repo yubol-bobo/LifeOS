@@ -841,6 +841,22 @@ export const actions = {
   },
 
   /* ---- assets ---- */
+  /** Replace the accounts and history imported from Asset Management Pro, and use them for net worth. */
+  importAmp(imp: { accounts: Account[]; snapshots: import('./types').Snapshot[]; asOf: string }, url?: string) {
+    commit(
+      (d) => {
+        d.accounts = [...d.accounts.filter((a) => a.source !== 'amp'), ...imp.accounts];
+        d.snapshots = [...d.snapshots.filter((x) => x.source !== 'amp'), ...imp.snapshots].sort((a, b) => a.ts - b.ts);
+        d.assets.source = 'amp';
+        d.assets.amp = { ...d.assets.amp, url, syncedAt: Date.now(), asOf: imp.asOf };
+      },
+      { silent: true },
+    );
+  },
+  /** Switch where net worth comes from (your own check-ins stay untouched either way). */
+  setAssetSource(source: 'manual' | 'amp') {
+    commit((d) => void (d.assets.source = source), { silent: true });
+  },
   saveAccount(a: Omit<Account, 'id'> & { id?: string }) {
     commit(
       (d) => {

@@ -20,17 +20,28 @@ export function valueIn(cfg: AssetConfig, a: Account, amount: number) {
   return (a.kind === 'debt' ? -1 : 1) * amount * rateOf(cfg, a.currency);
 }
 
-export function netWorth(s: Pick<State, 'accounts' | 'assets'>, snap: Snapshot | undefined) {
-  if (!snap) return 0;
-  return s.accounts.reduce((acc, a) => acc + (snap.balances[a.id] != null ? valueIn(s.assets, a, snap.balances[a.id]) : 0), 0);
+/** The accounts and check-ins of the active source: your own, or the ones imported from Asset Management Pro. */
+export function assetView(s: Pick<State, 'accounts' | 'snapshots' | 'assets'>) {
+  const amp = s.assets.source === 'amp';
+  return {
+    amp,
+    accounts: s.accounts.filter((a) => (a.source === 'amp') === amp),
+    snapshots: s.snapshots.filter((x) => (x.source === 'amp') === amp),
+  };
 }
 
-export const latestSnapshot = (s: Pick<State, 'snapshots'>) => s.snapshots[s.snapshots.length - 1];
+export function netWorth(s: Pick<State, 'accounts' | 'assets'>, snap: Snapshot | undefined) {
+  if (!snap) return 0;
+  const amp = s.assets.source === 'amp';
+  return s.accounts.filter((a) => (a.source === 'amp') === amp).reduce((acc, a) => acc + (snap.balances[a.id] != null ? valueIn(s.assets, a, snap.balances[a.id]) : 0), 0);
+}
+
+export const latestSnapshot = (s: Pick<State, 'accounts' | 'snapshots' | 'assets'>) => assetView(s).snapshots.at(-1);
 
 /** Balance of each account carried forward to every snapshot, so a partial check-in never reads as zero. */
 export function filledSeries(s: Pick<State, 'accounts' | 'snapshots' | 'assets'>) {
   const last: Record<string, number> = {};
-  return s.snapshots.map((snap) => {
+  return assetView(s).snapshots.map((snap) => {
     Object.assign(last, snap.balances);
     const filled = { ...snap, balances: { ...last } };
     return { snap: filled, total: netWorth(s, filled) };
@@ -39,7 +50,7 @@ export function filledSeries(s: Pick<State, 'accounts' | 'snapshots' | 'assets'>
 
 /** Is a check-in due under the chosen cadence? */
 export function checkinDue(s: Pick<State, 'accounts' | 'snapshots' | 'assets'>, today = dayKey()) {
-  if (s.assets.cadence === 'off' || !s.accounts.some((a) => !a.archived)) return false;
+  if (s.assets.source === 'amp' || s.assets.cadence === 'off' || !s.accounts.some((a) => !a.archived && !a.source)) return false;
   const last = latestSnapshot(s)?.date;
   if (!last) return true;
   const gap = s.assets.cadence === 'daily' ? 1 : s.assets.cadence === 'weekly' ? 7 : 30;
