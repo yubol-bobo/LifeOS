@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useBoardDrag } from '../ui/useBoardDrag';
-import { dayKey, parseDay } from '../lib/date';
+import { addDays, dayKey, parseDay, startOfWeek } from '../lib/date';
 import { num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { syncScholar } from '../lib/scholar';
@@ -63,7 +63,41 @@ export function Research() {
   const [sync, setSync] = useState(false);
   const [view, setView] = useState<'board' | 'list'>('board');
 
-  const log = s.citationLog.map((x) => ({ x: parseDay(x.date).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: '2-digit', month: 'short' }), y: x.total }));
+  const [citeView, setCiteView] = useState<'total' | 'daily'>('total');
+  const [citeRange, setCiteRange] = useState<'30' | '90' | 'all'>('90');
+  // one point per day (carried forward between updates), so the x-axis is real time
+  const citeDays = useMemo(() => {
+    const out: { day: string; total: number }[] = [];
+    const log = s.citationLog;
+    if (!log.length) return out;
+    let i = 0;
+    let v = log[0].total;
+    const last = dayKey() > log.at(-1)!.date ? dayKey() : log.at(-1)!.date;
+    for (let d = log[0].date; d <= last && out.length < 20000; d = addDays(d, 1)) {
+      while (i < log.length && log[i].date <= d) v = log[i++].total;
+      out.push({ day: d, total: v });
+    }
+    return out;
+  }, [s.citationLog]);
+  const citeShown = citeRange === 'all' ? citeDays : citeDays.slice(-+citeRange);
+  const fmtCite = (d: string, long: boolean) => parseDay(d).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', long ? { year: 'numeric', month: 'short', day: 'numeric' } : { month: 'numeric', day: 'numeric' });
+  const log = citeShown.map((x) => ({ x: fmtCite(x.day, citeShown.length > 120), y: x.total }));
+  // new citations per day (or per week / month on long ranges); Scholar sometimes recounts down, shown as 0
+  const citeBars = (() => {
+    const per = citeShown.length > 400 ? 'month' : citeShown.length > 92 ? 'week' : 'day';
+    const out: { x: string; y: number }[] = [];
+    let prevTotal = citeDays[citeDays.length - citeShown.length - 1]?.total ?? citeShown[0]?.total ?? 0;
+    for (const p of citeShown) {
+      const k = per === 'day' ? p.day : per === 'week' ? dayKey(startOfWeek(parseDay(p.day))) : p.day.slice(0, 7);
+      const label = per === 'month' ? parseDay(`${k.slice(0, 7)}-01`).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: '2-digit', month: 'short' }) : fmtCite(k, false);
+      const add = Math.max(0, p.total - prevTotal);
+      prevTotal = p.total;
+      if (out.at(-1)?.x === label) out.at(-1)!.y += add;
+      else out.push({ x: label, y: add });
+    }
+    return out;
+  })();
+  const citeGain = citeShown.length ? citeShown.at(-1)!.total - (citeDays[citeDays.length - citeShown.length - 1]?.total ?? citeShown[0].total) : 0;
   const pipeline = s.papers.filter((p) => p.status !== 'published').length;
   const feed = useScholarFeed();
   const bound = useStore((x) => (feed ? scholarBound(x, feed) : false));
@@ -113,8 +147,41 @@ export function Research() {
       ))}
 
       <div className="grid-2-1">
-        <Card title={L('累计引用', 'Citations over time')} icon="chart">
-          {log.length > 1 ? <AreaChart data={log} tone="spirit" height={220} /> : <Empty icon="chart" title={L('更新引用数后这里会出现曲线', 'Update citation counts to see a curve')} />}
+        <Card
+          title={L('累计引用', 'Citations over time')}
+          icon="chart"
+          action={
+            <div className="row-gap wrap">
+              {citeShown.length > 1 && <span className={`num small ${citeGain > 0 ? 'pos' : 'muted'}`}>{citeGain > 0 ? `+${citeGain}` : '±0'}</span>}
+              <Segmented
+                size="sm"
+                value={citeView}
+                onChange={setCiteView}
+                options={[
+                  { value: 'total', label: L('累计', 'Total') },
+                  { value: 'daily', label: L('每天新增', 'New per day') },
+                ]}
+              />
+              <Segmented
+                size="sm"
+                value={citeRange}
+                onChange={setCiteRange}
+                options={[
+                  { value: '30', label: L('30 天', '30D') },
+                  { value: '90', label: L('90 天', '90D') },
+                  { value: 'all', label: L('全部', 'All') },
+                ]}
+              />
+            </div>
+          }
+        >
+          {citeDays.length < 2 ? (
+            <Empty icon="chart" title={L('更新引用数后这里会出现曲线', 'Update citation counts to see a curve')} />
+          ) : citeView === 'total' ? (
+            <AreaChart data={log} tone="spirit" height={220} baseline="auto" />
+          ) : (
+            <Columns data={citeBars} tone="spirit" height={220} highlightLast={false} />
+          )}
         </Card>
         <Card title={L('每年引用', 'Citations per year')} icon="calendar">
           {s.scholar.byYear?.length ? (
