@@ -1,4 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { Report } from '../apps/Report';
+import { announceReports } from '../apps/reportNotice';
 import { autoRefreshAmp } from '../apps/AmpSource';
 import { initSnapshots } from './snapshot';
 import { Desktop } from '../apps/Desktop';
@@ -54,6 +56,7 @@ const APP_VIEWS: Record<Exclude<AppId, 'home'>, () => ReactNode> = {
   mood: () => <Mood />,
   review: () => <Review />,
   timeline: () => <Timeline />,
+  report: () => <Report />,
   plan: () => <Plan />,
   projects: () => <Projects />,
   assets: () => <Assets />,
@@ -86,6 +89,11 @@ export function Shell() {
   useEffect(() => initSnapshots(), []);
   // Asset Management Pro as the net-worth source: refresh quietly when it's a few hours old
   useEffect(() => autoRefreshAmp(getState()), []);
+  // a new month (or year) began: say last one's report is ready
+  useEffect(() => {
+    const t = window.setTimeout(announceReports, 6000);
+    return () => window.clearTimeout(t);
+  }, []);
   useEffect(() => void loadDictionary().then(() => actions.localize()), []);
 
   // Pull the Google Scholar feed (if the deployment has one) once per page load.
@@ -209,7 +217,7 @@ function Notifications() {
   return (
     <div className="notices" aria-live="polite">
       {list.map((n) => (
-        <button key={n.id} className={`notice tone-${n.tone ?? 'info'}`} onClick={() => dismiss(n.id)}>
+        <button key={n.id} className={`notice tone-${n.tone ?? 'info'}`} onClick={() => (n.onOpen?.(), dismiss(n.id))}>
           <span className="notice-ic">
             <Icon name={n.icon ?? 'bell'} size={18} stroke={2.2} />
           </span>

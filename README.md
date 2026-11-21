@@ -47,6 +47,7 @@ LifeOS is a steady rhythm of managing and recording your life, so you can keep y
 | 🐾 **Desktop pets** | Three companions remind you to drink water, stretch and sleep; connect OpenAI, Claude, DeepSeek, Kimi or GLM and your pet writes up your day each night, ending with a ✨ line that wanders to the news, this day in history, a poem or a bit of cheering on |
 | 📝 **Daily review** | One line is enough: highlight, lesson, blocker, gratitude, tomorrow's one thing; a reflection heatmap and "one year ago today" |
 | 🕰️ **Timeline** | Everything LifeOS recorded, in order, searchable and filterable; open any day for a cute 3D XP-blocks view |
+| 📈 **Reports** | A poster-style report for every month and year: achievements, quests, focus hours, where the time went, every day as a heatmap, highlights; save it as an image |
 | 🌱 **Growth** | 100 levels, 20 eras, 199 achievements; unlock pet accessories, wallpapers and planet upgrades |
 | 📊 **And more** | Mood and what drives it, assets and net worth, a paper board you drag from idea to accepted with every stage dated, citations auto-synced from Google Scholar, custom trackers, a reward shop |
 

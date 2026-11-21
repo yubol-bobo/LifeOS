@@ -9,6 +9,7 @@ export interface Notice {
   icon?: string;
   tone?: Tone;
   ts: number;
+  onOpen?: () => void; // clicking the notice does this (and closes it)
 }
 
 let notices: Notice[] = [];

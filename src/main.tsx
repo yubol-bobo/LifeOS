@@ -13,6 +13,7 @@ import './styles/growth.css';
 import './styles/layout.css';
 import './styles/review.css';
 import './styles/focus.css';
+import './styles/report.css';
 import { Shell } from './os/Shell';
 
 createRoot(document.getElementById('root')!).render(
