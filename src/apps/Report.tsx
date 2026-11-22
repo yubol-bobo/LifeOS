@@ -1,4 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Human3View, Ladder, periodName } from './Human3';
+import { QUAD_META, QUADS, assessmentFor, fmtPos, latestBefore, stepOf, LEVEL_NAME, isMetatype } from '../store/h3';
 import { addDays, dayKey, dayOfWeek, parseDay, weekdayLetters } from '../lib/date';
 import { compact, money } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
@@ -76,7 +78,7 @@ export function Report() {
       if (!blob) throw new Error('empty');
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `LifeOS-${kind === 'year' ? 'year' : 'month'}-${key}.png`;
+      a.download = `LifeOS-${kind}-${key}.png`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
     } catch {
@@ -85,21 +87,33 @@ export function Report() {
       setSaving(false);
     }
   };
-  const label = kind === 'year' ? L(`${key} 年`, key) : parseDay(`${key}-01`).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: 'numeric', month: 'long' });
+  const label = periodName(kind, key, lang);
+  const [view, setView] = useState<'report' | 'h3'>('report');
 
   return (
     <div className="app report-app">
       <div className="app-head">
         <div>
           <h1>{L('成就报告', 'Reports')}</h1>
-          <p className="muted">{L('每个月、每一年，做成了什么、时间去了哪里，一张图看清。', 'Every month and every year: what you achieved and where the time went, on one page.')}</p>
+          <p className="muted">{L('每月、每季度、每年：做成了什么、时间去了哪里、在 Human 3.0 地图上走到了哪。', 'Every month, quarter and year: what you achieved, where the time went, and where you stand on the Human 3.0 map.')}</p>
         </div>
         <div className="row-gap wrap">
+          <Segmented
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'report', label: L('报告', 'Report'), icon: 'chart' },
+              { value: 'h3', label: 'Human 3.0', icon: 'target' },
+            ]}
+          />
+          {view === 'report' && (
+          <>
           <Segmented
             value={kind}
             onChange={(k) => (setKind(k), setKey(currentKey(k)))}
             options={[
               { value: 'month', label: L('月报', 'Monthly') },
+              { value: 'quarter', label: L('季报', 'Quarterly') },
               { value: 'year', label: L('年报', 'Yearly') },
             ]}
           />
@@ -111,13 +125,19 @@ export function Report() {
           <Button variant="primary" icon="download" disabled={saving} onClick={() => void save()}>
             {saving ? L('生成中…', 'Rendering…') : L('保存为图片', 'Save as image')}
           </Button>
+          </>
+          )}
         </div>
       </div>
+      {view === 'h3' ? (
+        <Human3View />
+      ) : (
       <div className="rep-stage" ref={wrap} style={{ height: posterH * scale || undefined }}>
         <div className="rep-scale" style={{ transform: `scale(${scale})`, width: POSTER_W }}>
           <Poster r={r} ref_={poster} title={label} />
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -150,7 +170,7 @@ function Poster({ r, ref_, title }: { r: PeriodReport; ref_: React.RefObject<HTM
       <div className="pz-glow g2" />
       <header className="pz-head">
         <div>
-          <p className="pz-eyebrow">LIFEOS · {r.kind === 'year' ? L('年度成就报告', 'YEAR IN REVIEW') : L('月度成就报告', 'MONTHLY REPORT')}</p>
+          <p className="pz-eyebrow">LIFEOS · {r.kind === 'year' ? L('年度成就报告', 'YEAR IN REVIEW') : r.kind === 'quarter' ? L('季度成就报告', 'QUARTER IN REVIEW') : L('月度成就报告', 'MONTHLY REPORT')}</p>
           <h1 className="pz-title">{title}</h1>
           <p className="pz-sub">
             {name ? `${name} · ` : ''}
@@ -247,7 +267,7 @@ function Poster({ r, ref_, title }: { r: PeriodReport; ref_: React.RefObject<HTM
 
           <section className="pz-sec">
             <h2>
-              <Icon name="calendar" size={16} /> {r.kind === 'year' ? L('这一年的每一天', 'Every day of the year') : L('这个月的每一天', 'Every day of the month')}
+              <Icon name="calendar" size={16} /> {r.kind === 'year' ? L('这一年的每一天', 'Every day of the year') : r.kind === 'quarter' ? L('这个季度的每一天', 'Every day of the quarter') : L('这个月的每一天', 'Every day of the month')}
               {r.bestDay && (
                 <span className="pz-h-note">
                   {L('最闪亮的一天', 'Brightest day')}: <b>{dayLabel(r.bestDay.day)}</b> · +{nf(r.bestDay.xp)} XP
@@ -288,6 +308,8 @@ function Poster({ r, ref_, title }: { r: PeriodReport; ref_: React.RefObject<HTM
               {r.reviews > 0 && <Highlight icon="notebook" big={nf(r.reviews)} label={L('天写了复盘', r.reviews > 1 ? 'days reviewed' : 'day reviewed')} />}
             </div>
           </section>
+
+          <PosterH3 r={r} />
 
           {r.xpByAttr.length > 0 && (
             <section className="pz-sec">
@@ -453,7 +475,8 @@ function YearGrid({ r }: { r: PeriodReport }) {
   const lead = dayOfWeek(parseDay(first));
   const cols: (string | null)[][] = [];
   let col: (string | null)[] = Array(lead).fill(null);
-  for (let d = first; d < `${+r.key + 1}-01-01`; d = addDays(d, 1)) {
+  const stop = periodBounds(r.kind, r.key).end;
+  for (let d = first; d < stop; d = addDays(d, 1)) {
     col.push(d);
     if (col.length === 7) (cols.push(col), (col = []));
   }
@@ -490,5 +513,56 @@ function MonthBars({ r }: { r: PeriodReport }) {
         <i className="xp" /> XP <i className="focus" /> {L('专注时长', 'Focus hours')}
       </p>
     </div>
+  );
+}
+
+/** Human 3.0 on the poster: this period's assessment, the change since the one before, and what's next. */
+function PosterH3({ r }: { r: PeriodReport }) {
+  const L = useL();
+  const lang = useLang();
+  const s = useStore((x) => x);
+  if (!s.h3?.assessments.length) return null;
+  const a = assessmentFor(s, r.kind, r.key);
+  const n = (t: [string, string]) => (lang === 'zh' ? t[0] : t[1]);
+  if (!a)
+    return (
+      <section className="pz-sec pz-h3">
+        <h2>
+          <Icon name="target" size={16} /> Human 3.0
+        </h2>
+        <p className="pz-note">{L('这一期还没做 Human 3.0 评估：在「成就报告」→「Human 3.0」里做一次，这里就会显示你在地图上的位置和变化。', 'No Human 3.0 assessment for this period yet: do one under Reports → Human 3.0 and your position and progress show up here.')}</p>
+      </section>
+    );
+  const prev = latestBefore(s, a.date, a.id);
+  return (
+    <section className="pz-sec pz-h3">
+      <h2>
+        <Icon name="target" size={16} /> {L('Human 3.0 · 你在地图上的位置', 'Human 3.0 · where you stand')}
+        {isMetatype(a) && <em>3.0+ Metatype</em>}
+        {prev && <span className="pz-h-note">{L(`对比 ${periodName(prev.kind, prev.key, 'zh')}`, `vs ${periodName(prev.kind, prev.key, 'en')}`)}</span>}
+      </h2>
+      <div className="pz-h3-grid">
+        {QUADS.map((q) => {
+          const p = a.quads[q];
+          const b = prev?.quads[q];
+          const d = b ? stepOf(p) - stepOf(b) : null;
+          return (
+            <div key={q} className="pz-h3-q" style={{ '--q': QUAD_META[q].color } as CSSProperties}>
+              <span className="pz-h3-name">
+                <Icon name={QUAD_META[q].icon} size={15} /> {n(QUAD_META[q].name).split(' ').pop()}
+              </span>
+              <b>
+                {fmtPos(p)}
+                {d != null && d !== 0 && <small className={d > 0 ? 'up' : 'down'}>{d > 0 ? ` ▲${d}` : ` ▼${-d}`}</small>}
+              </b>
+              <span className="pz-h3-lv">{n(LEVEL_NAME[p.level])}</span>
+              <Ladder p={p} before={b} />
+              {p.next && <p>→ {p.next}</p>}
+            </div>
+          );
+        })}
+      </div>
+      {a.summary && <p className="pz-h3-sum">“{a.summary}”</p>}
+    </section>
   );
 }

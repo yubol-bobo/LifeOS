@@ -11,11 +11,11 @@ import type { Attr, State, WorkSession } from './types';
  * achievements, where the time went, plans and goals, papers, mood, reviews and net worth.
  */
 
-export type ReportKind = 'month' | 'year';
+export type ReportKind = 'month' | 'quarter' | 'year';
 
 export interface PeriodReport {
   kind: ReportKind;
-  key: string; // 2026-11 · 2026
+  key: string; // 2026-11 · 2026-Q4 · 2026
   first: string;
   last: string; // last day counted (today if the period isn't over)
   partial: boolean; // the period is still running
@@ -53,16 +53,28 @@ export interface PeriodReport {
   months?: { key: string; xp: number; focusMs: number; quests: number }[]; // year reports
 }
 
+const pad = (n: number) => String(n).padStart(2, '0');
 export function periodBounds(kind: ReportKind, key: string) {
   if (kind === 'year') return { first: `${key}-01-01`, end: `${+key + 1}-01-01` };
+  if (kind === 'quarter') {
+    const [y, q] = [+key.slice(0, 4), +key.slice(6)];
+    const m = (q - 1) * 3 + 1;
+    return { first: `${y}-${pad(m)}-01`, end: q === 4 ? `${y + 1}-01-01` : `${y}-${pad(m + 3)}-01` };
+  }
   const [y, m] = key.split('-').map(Number);
   const end = m === 12 ? `${y + 1}-01-01` : `${y}-${String(m + 1).padStart(2, '0')}-01`;
   return { first: `${key}-01`, end };
 }
 
-export const currentKey = (kind: ReportKind, d = new Date()) => (kind === 'year' ? String(d.getFullYear()) : dayKey(d).slice(0, 7));
+export const currentKey = (kind: ReportKind, d = new Date()) => (kind === 'year' ? String(d.getFullYear()) : kind === 'quarter' ? `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}` : dayKey(d).slice(0, 7));
+/** The period of a kind that contains a given day. */
+export const keyOfDay = (kind: ReportKind, day: string) => currentKey(kind, parseDay(day));
 export function shiftKey(kind: ReportKind, key: string, n: number) {
   if (kind === 'year') return String(+key + n);
+  if (kind === 'quarter') {
+    const i = +key.slice(0, 4) * 4 + +key.slice(6) - 1 + n;
+    return `${Math.floor(i / 4)}-Q${(i % 4) + 1}`;
+  }
   const [y, m] = key.split('-').map(Number);
   const t = new Date(y, m - 1 + n, 1);
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`;
@@ -160,10 +172,9 @@ export function periodReport(s: State, kind: ReportKind, key: string, fallback =
 
   // per month (year reports)
   let months: PeriodReport['months'];
-  if (kind === 'year') {
+  if (kind !== 'month') {
     months = [];
-    for (let m = 1; m <= 12; m++) {
-      const mk = `${key}-${String(m).padStart(2, '0')}`;
+    for (let mk = first.slice(0, 7); `${mk}-01` < end; mk = shiftKey('month', mk, 1)) {
       if (`${mk}-01` > last) break;
       const b = periodBounds('month', mk);
       const f = parseDay(b.first).getTime();

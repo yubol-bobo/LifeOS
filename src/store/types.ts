@@ -380,6 +380,25 @@ export interface XpEvent {
   label: string;
 }
 
+/* ---------------- Human 3.0 (Dan Koe's map: 4 quadrants × 3 levels × 3 phases) ---------------- */
+
+export type H3Quad = 'mind' | 'body' | 'spirit' | 'vocation';
+export interface H3Position {
+  level: 1 | 2 | 3; // 1.0 Conformist · 2.0 Individualist · 3.0 Synthesist
+  phase: 1 | 2 | 3; // Dissonance · Uncertainty · Discovery
+  note?: string; // why you're here
+  next?: string; // what to work on next
+}
+export interface H3Assessment {
+  id: string;
+  kind: 'month' | 'quarter' | 'year';
+  key: string; // 2026-11 · 2026-Q4 · 2026
+  date: string; // when it was made
+  quads: Record<H3Quad, H3Position>;
+  summary?: string;
+  ai?: boolean; // started from the pet's suggestion
+}
+
 export interface State {
   version: 1;
   onboarded: boolean;
@@ -398,6 +417,7 @@ export interface State {
   rewards: Reward[];
   events: XpEvent[];
   achievements: Record<string, number>;
+  h3?: { assessments: H3Assessment[]; map?: Record<string, H3Quad> }; // map: attribute id → quadrant
   attributes: AttrDef[];
   projects: Project[];
   pay: PayConfig;
