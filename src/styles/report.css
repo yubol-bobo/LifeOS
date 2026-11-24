@@ -550,3 +550,400 @@
 .pz-foot span:last-child {
   margin-left: auto;
 }
+
+/* ---------------- Human 3.0 page ---------------- */
+.h3 {
+  display: grid;
+  gap: 16px;
+}
+.h3-intro-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+}
+.h3-intro h3 {
+  margin: 0 0 4px;
+}
+.h3-intro p {
+  margin: 0;
+}
+.h3-start {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+.h3-now {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.h3-meta,
+.pz-h3 em {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  color: #3b2a00;
+  background: linear-gradient(90deg, #ffd166, #ff8ad8);
+}
+.h3-quads {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.h3-quad {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--q) 9%, transparent);
+  border: 1px solid color-mix(in oklab, var(--q) 30%, transparent);
+}
+.h3-quad p {
+  margin: 0;
+}
+.h3-quad-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.h3-quad-top svg {
+  color: color-mix(in oklab, var(--q) 70%, var(--ink));
+}
+.h3-pos {
+  margin-left: auto;
+  font-size: 22px;
+  font-weight: 900;
+  color: color-mix(in oklab, var(--q) 65%, var(--ink));
+}
+.h3-next {
+  color: var(--ink);
+  font-weight: 600;
+}
+.h3-summary {
+  margin: 12px 0 0;
+  font-style: italic;
+  color: var(--ink-2, var(--ink));
+}
+.h3-ladder {
+  display: flex;
+  gap: 6px;
+}
+.h3-rung {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  position: relative;
+  padding-bottom: 14px;
+}
+.h3-rung i {
+  height: 8px;
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--ink) 10%, transparent);
+}
+.h3-rung i.on {
+  background: var(--q, var(--accent));
+}
+.h3-rung i.is-now {
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--q, var(--accent)) 45%, transparent);
+}
+.h3-rung i.is-was {
+  outline: 2px dashed color-mix(in oklab, var(--ink) 45%, transparent);
+  outline-offset: 1px;
+}
+.h3-rung small {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  font-size: 10px;
+  color: var(--ink-3);
+}
+.h3-radar {
+  display: block;
+  max-width: 340px;
+  margin: 0 auto;
+}
+.center {
+  text-align: center;
+}
+.h3-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.h3-steps li {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border-left: 4px solid var(--q);
+  background: color-mix(in oklab, var(--q) 6%, transparent);
+}
+.h3-step-q {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+.h3-focus {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+}
+.h3-hist svg {
+  display: block;
+}
+.h3-legend {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin: 6px 0 0;
+}
+.h3-legend i,
+.h3-list-pos span::before {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 4px;
+}
+.h3-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.h3-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+.h3-list li:hover {
+  background: color-mix(in oklab, var(--ink) 4%, transparent);
+}
+.h3-list-pos {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+}
+.h3-list-pos span::before {
+  content: '';
+  background: var(--q);
+}
+.h3-map {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.h3-map li {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 12px;
+  align-items: center;
+}
+
+/* wizard */
+.h3-wiz {
+  display: grid;
+  gap: 14px;
+}
+.h3-ai {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--accent) 7%, transparent);
+}
+.h3-step {
+  display: grid;
+  gap: 10px;
+}
+.h3-step h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+.h3-step > p {
+  margin: 0;
+}
+.h3-ask {
+  font-weight: 700;
+  margin: 4px 0 0 !important;
+}
+.h3-ev {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--q, var(--accent)) 8%, transparent);
+  font-size: 13px;
+}
+.h3-ev small.pos,
+.h3-ev small.neg {
+  margin-left: 2px;
+}
+.h3-ev > small.muted {
+  margin-left: auto;
+}
+.h3-levels,
+.h3-phases {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.h3-levels button,
+.h3-phases button {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  text-align: left;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink-2, var(--ink));
+  cursor: pointer;
+}
+.h3-levels button b,
+.h3-phases button b {
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.h3-levels button.is-on,
+.h3-phases button.is-on {
+  border-color: var(--q, var(--accent));
+  background: color-mix(in oklab, var(--q, var(--accent)) 12%, var(--surface));
+}
+.h3-sum-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.h3-sum-grid > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--q) 8%, transparent);
+}
+.h3-sum-grid .h3-ladder {
+  grid-column: 1 / -1;
+}
+.h3-dots {
+  display: inline-flex;
+  gap: 6px;
+}
+.h3-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--ink) 18%, transparent);
+  cursor: pointer;
+}
+.h3-dots i.on {
+  background: var(--accent);
+}
+@media (max-width: 900px) {
+  .h3-now,
+  .h3-intro-row {
+    grid-template-columns: 1fr;
+  }
+  .h3-start {
+    justify-items: start;
+  }
+  .h3-levels,
+  .h3-phases,
+  .h3-quads,
+  .h3-sum-grid {
+    grid-template-columns: 1fr;
+  }
+  .h3-steps li {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------------- Human 3.0 on the poster ---------------- */
+.pz-h3-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.pz-h3-q {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 16px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, color-mix(in oklab, var(--q) 22%, transparent), rgba(255, 255, 255, 0.04));
+  border: 1px solid color-mix(in oklab, var(--q) 45%, transparent);
+}
+.pz-h3-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--q);
+}
+.pz-h3-q > b {
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1;
+}
+.pz-h3-q > b small {
+  font-size: 14px;
+  font-weight: 800;
+}
+.pz-h3-q > b small.up {
+  color: #5fe0b4;
+}
+.pz-h3-q > b small.down {
+  color: #ff6b8a;
+}
+.pz-h3-lv {
+  font-size: 12.5px;
+  color: var(--pz-dim);
+}
+.pz-h3-q p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.pz-h3 .h3-rung i {
+  background: rgba(255, 255, 255, 0.12);
+}
+.pz-h3 .h3-rung i.on {
+  background: var(--q);
+}
+.pz-h3 .h3-rung i.is-was {
+  outline-color: rgba(255, 255, 255, 0.6);
+}
+.pz-h3 .h3-rung small {
+  color: var(--pz-dim);
+}
+.pz-h3-sum {
+  margin: 14px 0 0;
+  font-style: italic;
+  color: var(--pz-dim);
+}

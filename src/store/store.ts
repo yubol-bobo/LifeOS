@@ -527,6 +527,25 @@ export const actions = {
       { silent: true },
     );
   },
+  /** Save a Human 3.0 assessment (one per period: a new one replaces that period's). */
+  saveH3(a: Omit<import('./types').H3Assessment, 'id'> & { id?: string }) {
+    commit((d) => {
+      const h = (d.h3 ??= { assessments: [] });
+      h.assessments = h.assessments.filter((x) => x.id !== a.id && !(x.kind === a.kind && x.key === a.key));
+      h.assessments.push({ ...a, id: a.id ?? uid() });
+      h.assessments.sort((x, y) => x.date.localeCompare(y.date));
+      grant(d, `h3:${a.kind}:${a.key}`, 'review', a.kind === 'year' ? 60 : a.kind === 'quarter' ? 30 : 15, tr(`Human 3.0 评估 · ${a.key}`, `Human 3.0 assessment · ${a.key}`));
+    });
+  },
+  deleteH3(id: string) {
+    commit((d) => {
+      if (d.h3) d.h3.assessments = d.h3.assessments.filter((x) => x.id !== id);
+    });
+  },
+  /** Which quadrant each attribute's XP counts toward. */
+  setH3Map(map: Record<string, import('./types').H3Quad>) {
+    commit((d) => void ((d.h3 ??= { assessments: [] }).map = map), { silent: true });
+  },
   /** Save (or reset, with undefined) the desktop layout for one view. */
   setDash(mode: 'landscape' | 'portrait', layout: import('./types').DashLayout | undefined) {
     commit(
