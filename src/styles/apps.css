@@ -1765,3 +1765,31 @@ li:hover > .move-day.is-compact,
   background: color-mix(in oklab, var(--c-wealth) 12%, transparent);
   color: var(--c-wealth);
 }
+
+.cite-who {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--c-spirit) 8%, transparent);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+.cite-who ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+.cite-who li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  font-size: 13px;
+}
+.cite-who li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

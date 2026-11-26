@@ -85,21 +85,38 @@ export function Research() {
   // new citations per day (or per week / month on long ranges); Scholar sometimes recounts down, shown as 0
   const citeBars = (() => {
     const per = citeShown.length > 400 ? 'month' : citeShown.length > 92 ? 'week' : 'day';
-    const out: { x: string; y: number }[] = [];
+    const out: { x: string; y: number; first: string; last: string }[] = [];
     let prevTotal = citeDays[citeDays.length - citeShown.length - 1]?.total ?? citeShown[0]?.total ?? 0;
     for (const p of citeShown) {
       const k = per === 'day' ? p.day : per === 'week' ? dayKey(startOfWeek(parseDay(p.day))) : p.day.slice(0, 7);
       const label = per === 'month' ? parseDay(`${k.slice(0, 7)}-01`).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', { year: '2-digit', month: 'short' }) : fmtCite(k, false);
       const add = Math.max(0, p.total - prevTotal);
       prevTotal = p.total;
-      if (out.at(-1)?.x === label) out.at(-1)!.y += add;
-      else out.push({ x: label, y: add });
+      if (out.at(-1)?.x === label) (out.at(-1)!.y += add), (out.at(-1)!.last = p.day);
+      else out.push({ x: label, y: add, first: p.day, last: p.day });
     }
     return out;
   })();
   const citeGain = citeShown.length ? citeShown.at(-1)!.total - (citeDays[citeDays.length - citeShown.length - 1]?.total ?? citeShown[0].total) : 0;
   const pipeline = s.papers.filter((p) => p.status !== 'published').length;
   const feed = useScholarFeed();
+  const [citePick, setCitePick] = useState<number | null>(null);
+  // which papers gained citations in a bar's days (from each paper's Google Scholar history)
+  const citeWho = (i: number) => {
+    const b = citeBars[i];
+    if (!b || !feed) return [];
+    const at = (h: [string, number][] | undefined, d: string) => h?.findLast((x) => x[0] <= d)?.[1];
+    const before = addDays(b.first, -1);
+    return feed.papers
+      .map((p) => {
+        const v1 = at(p.hist, b.last);
+        const v0 = at(p.hist, before) ?? (p.hist?.[0] && p.hist[0][0] > before ? undefined : v1);
+        return { title: p.title, d: v1 != null && v0 != null ? v1 - v0 : 0 };
+      })
+      .filter((x) => x.d !== 0)
+      .sort((a, z) => z.d - a.d);
+  };
+  const picked = citePick != null && citeBars[citePick] ? { b: citeBars[citePick], who: citeWho(citePick) } : null;
   const bound = useStore((x) => (feed ? scholarBound(x, feed) : false));
   const fmap = new Map((feed?.papers ?? []).map((p) => [p.id, p]));
   const fOf = (p: Paper) => (p.scholarId ? fmap.get(p.scholarId) : undefined);
@@ -180,7 +197,30 @@ export function Research() {
           ) : citeView === 'total' ? (
             <AreaChart data={log} tone="spirit" height={220} baseline="auto" />
           ) : (
-            <Columns data={citeBars} tone="spirit" height={220} highlightLast={false} />
+            <>
+              <Columns data={citeBars} tone="spirit" height={220} highlightLast={false} onPick={(i) => setCitePick((v) => (v === i ? null : i))} />
+              {picked ? (
+                <div className="cite-who">
+                  <b>
+                    {picked.b.x} · +{picked.b.y}
+                  </b>
+                  {picked.who.length ? (
+                    <ul>
+                      {picked.who.map((w) => (
+                        <li key={w.title}>
+                          <span>{w.title}</span>
+                          <strong className={`num ${w.d > 0 ? 'pos' : 'neg'}`}>{w.d > 0 ? `+${w.d}` : w.d}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="muted small">{feed ? L('这段时间没有论文的引用变化。', 'No paper changed in this period.') : L('接入 Google Scholar 同步后能看到是哪篇论文涨的。', 'Connect Google Scholar sync to see which papers grew.')}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="muted small">{L('点一根柱子，看那天是哪些论文涨了引用。', 'Click a bar to see which papers gained citations.')}</p>
+              )}
+            </>
           )}
         </Card>
         <Card title={L('每年引用', 'Citations per year')} icon="calendar">
