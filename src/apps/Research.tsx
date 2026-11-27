@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { SubChip, SubmissionSection } from './Submissions';
 import { useBoardDrag } from '../ui/useBoardDrag';
 import { addDays, dayKey, parseDay, startOfWeek } from '../lib/date';
 import { num } from '../lib/format';
@@ -271,6 +272,7 @@ export function Research() {
                       <button className="link" onClick={() => setEdit(p)}>
                         {p.title}
                       </button>
+                      <SubChip paper={p} />
                       {p.url && (
                         <a href={p.url} target="_blank" rel="noreferrer" className="ext" aria-label="open">
                           <Icon name="external" size={12} />
@@ -353,6 +355,7 @@ function PaperBoard({ papers, onOpen, fOf }: { papers: Paper[]; onOpen: (p: Pape
                     {p.venue && <span>{p.venue}</span>}
                     {p.year && <span className="num">{p.year}</span>}
                     {p.firstAuthor && <Chip tone="spirit">{L('一作', '1st')}</Chip>}
+                    <SubChip paper={p} />
                     {p.removed && <Chip>{L('已从主页消失', 'Gone from profile')}</Chip>}
                     <ProjectTag id={p.projectId} />
                   </div>
@@ -458,6 +461,11 @@ function PaperEditor({ value, onClose }: { value: Partial<Paper> | null; onClose
             ))}
           </select>
         </Field>
+        {p.id && (
+          <Field label={L('投稿与待办', 'Submissions & to-dos')} hint={L('和 arXiv / 引用分开记录：投了哪个会议或期刊、进度如何；也可以直接给这篇论文加今日任务。', 'Tracked separately from arXiv and citations: where it was submitted and how it’s going; you can also add today’s to-dos for this paper.')}>
+            <SubmissionSection paper={p} />
+          </Field>
+        )}
         {p.id && (
           <Field label={L('进展记录', 'Stage history')} hint={hist?.length ? L('日期可以改，比如你晚了几天才拖动卡片', 'Dates are editable, e.g. if you moved the card a few days late') : undefined}>
             {hist?.length ? (

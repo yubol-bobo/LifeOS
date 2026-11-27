@@ -246,6 +246,16 @@ export function useStore<T>(sel: (s: State) => T): T {
 /** Has this LifeOS claimed the site's Google Scholar feed? */
 export const scholarBound = (s: State, f: { authorId: string }) => s.scholar.provider === 'gscholar' && s.scholar.authorId === f.authorId;
 
+export const SUB_LABEL: Record<import('./types').SubStatus, [string, string]> = {
+  planned: ['准备投稿', 'Planned'],
+  submitted: ['已投稿', 'Submitted'],
+  review: ['审稿中', 'Under review'],
+  rebuttal: ['Rebuttal 中', 'Rebuttal'],
+  accepted: ['已接收', 'Accepted'],
+  rejected: ['被拒', 'Rejected'],
+  withdrawn: ['已撤回', 'Withdrawn'],
+};
+const subLabel = (s: import('./types').SubStatus, lang: 'zh' | 'en') => SUB_LABEL[s][lang === 'zh' ? 0 : 1];
 const tr = (zh: string, en: string) => (bi(zh, en), state.profile.lang === 'zh' ? zh : en);
 
 /* ------------------------------------------------------------------ */
@@ -928,6 +938,39 @@ export const actions = {
       }
       syncPaper(d, paper);
       logCitations(d);
+    });
+  },
+  /** Add or update a paper's submission to a venue; status changes are recorded with their time. */
+  saveSubmission(paperId: string, sub: Omit<import('./types').Submission, 'id' | 'history'> & { id?: string }) {
+    let accepted = false;
+    commit((d) => {
+      const p = d.papers.find((x) => x.id === paperId);
+      if (!p) return;
+      const list = (p.submissions ??= []);
+      const now = Date.now();
+      let s = sub.id ? list.find((x) => x.id === sub.id) : undefined;
+      if (s) {
+        const { history: _h, ...rest } = sub as typeof sub & { history?: unknown };
+        void _h;
+        if (sub.status !== s.status) s.history.push({ status: sub.status, at: now });
+        Object.assign(s, rest);
+      } else {
+        s = { ...sub, id: uid(), history: [{ status: sub.status, at: now }] };
+        list.push(s);
+      }
+      const xp: Partial<Record<import('./types').SubStatus, number>> = { submitted: 20, rebuttal: 10, accepted: 100 };
+      if (xp[s.status]) {
+        const gotIt = grant(d, `sub:${s.id}:${s.status}`, 'paper', xp[s.status]!, tr(`${s.venue} · ${subLabel(s.status, 'zh')}`, `${s.venue} · ${subLabel(s.status, 'en')}`), 'craft');
+        if (gotIt && s.status === 'accepted') accepted = true;
+      }
+      p.updatedAt = now;
+    });
+    if (accepted && !state.profile.reduceMotion) celebrate();
+  },
+  removeSubmission(paperId: string, id: string) {
+    commit((d) => {
+      const p = d.papers.find((x) => x.id === paperId);
+      if (p?.submissions) p.submissions = p.submissions.filter((x) => x.id !== id);
     });
   },
   setPaperStatus(id: string, status: PaperStatus) {

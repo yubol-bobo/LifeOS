@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from 'react';
+import { PaperSelect, PaperTag } from './Submissions';
 import { MoveDay, dayLabel } from '../ui/MoveDay';
 import { addDays, dayKey, lastNDays, parseDay, weekOrder } from '../lib/date';
 import { periodOf } from '../lib/period';
@@ -180,6 +181,7 @@ export function Quests() {
             ) : null}
             <GoalTag goalId={q.goalId} />
             <ProjectTag id={q.projectId} />
+            <PaperTag id={q.paperId} />
             <PlanTag id={q.planId} />
             {q.forStep && (
               <span className="link-hint">
@@ -272,6 +274,7 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
       projectId: d.projectId || undefined,
       due: d.kind === 'once' ? d.due || undefined : undefined,
       forStep: d.kind === 'once' && d.projectId ? d.forStep || undefined : undefined,
+      paperId: d.paperId || undefined,
       day: d.kind === 'once' ? d.day || undefined : undefined,
       planId: d.planId || undefined,
       planAmount: d.planId && d.planAmount && d.planAmount !== 1 ? d.planAmount : undefined,
@@ -443,6 +446,9 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
               </Field>
             )}
           </div>
+          <Field label={L('关联论文（可选）', 'Paper (optional)')}>
+            <PaperSelect value={d.paperId} onChange={(v) => set({ paperId: v })} />
+          </Field>
           {d.kind === 'once' && d.projectId && !(d.id && d.step !== false && !d.planId) && (
             <StepPicker projectId={d.projectId} value={d.forStep} selfId={d.id} onPick={(st) => set(st ? { forStep: st.id, title: d.title.trim() ? d.title : st.title, attr: d.title.trim() ? d.attr : st.attr } : { forStep: undefined })} />
           )}

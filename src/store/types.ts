@@ -235,6 +235,7 @@ export interface Quest {
   planId?: string; // feeds this plan (week / month / year); pulled in from a plan, or linked in the editor
   planAmount?: number; // how much each completion adds to a counted plan (default 1), e.g. +3 chapters
   due?: string; // optional due date (YYYY-MM-DD)
+  paperId?: string; // a to-do for this paper (optional, like a project)
   forStep?: string; // a to-do that advances this project step: finishing it finishes the step
   doneVia?: string; // (on a step) the to-do that finished it, so unticking that to-do reopens it
   day?: string; // one-off to-do moved to a later day (YYYY-MM-DD): off Today until then; unset = the day it was added
@@ -307,8 +308,21 @@ export interface Paper {
   projectId?: string;
   removed?: boolean; // no longer on the Scholar profile (kept, not deleted)
   history?: PaperMove[]; // stage changes, oldest first (papers created before 0.8 have none)
+  submissions?: Submission[]; // where it was sent and how it's going (independent of arXiv / Scholar status)
   importedAs?: PaperStatus; // synced from Scholar / OpenAlex / S2 at this stage: earlier stages give no XP
   updatedAt: number;
+}
+
+export type SubStatus = 'planned' | 'submitted' | 'review' | 'rebuttal' | 'accepted' | 'rejected' | 'withdrawn';
+/** One submission of a paper to a venue. */
+export interface Submission {
+  id: string;
+  venue: string;
+  status: SubStatus;
+  deadline?: string; // YYYY-MM-DD: submission deadline
+  decision?: string; // YYYY-MM-DD: expected or actual decision date
+  note?: string;
+  history: { status: SubStatus; at: number }[];
 }
 
 export interface ScholarConfig {
