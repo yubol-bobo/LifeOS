@@ -246,6 +246,20 @@ export function useStore<T>(sel: (s: State) => T): T {
 /** Has this LifeOS claimed the site's Google Scholar feed? */
 export const scholarBound = (s: State, f: { authorId: string }) => s.scholar.provider === 'gscholar' && s.scholar.authorId === f.authorId;
 
+/**
+ * Is the profile owner the first author? Scholar abbreviates names ("Y Li", sometimes "Y LI"),
+ * so compare the first listed author's surname and first initial with the profile name.
+ */
+export function isFirstAuthor(authors: string, name?: string) {
+  if (!name) return false;
+  const first = authors.split(',')[0].trim().toLowerCase().replace(/\./g, '').split(/\s+/).filter(Boolean);
+  const me = name.trim().toLowerCase().replace(/\./g, '').split(/\s+/).filter(Boolean);
+  if (!first.length || !me.length) return false;
+  const [mSur, fSur] = [me.at(-1)!, first.at(-1)!];
+  if (mSur !== fSur) return false;
+  return first.length === 1 || first[0][0] === me[0][0];
+}
+
 export const SUB_LABEL: Record<import('./types').SubStatus, [string, string]> = {
   planned: ['准备投稿', 'Planned'],
   submitted: ['已投稿', 'Submitted'],
@@ -1058,7 +1072,9 @@ export const actions = {
   applyScholarFeed(f: ScholarFeed) {
     // Only for the LifeOS that bound this feed — visitors of someone else's site never get their papers.
     if (!scholarBound(getState(), f)) return null;
-    if (!f.lastFetch || !f.totals || getState().scholar.gsFetch === f.lastFetch) return null;
+    // (also re-run once for papers synced before authors were kept, to work out first authorship)
+    const needAuthors = getState().papers.some((p) => p.scholarId && p.authors == null);
+    if (!f.lastFetch || !f.totals || (getState().scholar.gsFetch === f.lastFetch && !needAuthors)) return null;
     const firstImport = getState().scholar.gsTotal == null;
     let added = 0;
     let gained = 0;
@@ -1075,6 +1091,10 @@ export const actions = {
         }
         p.scholarId = fp.id;
         p.removed = !!fp.removed || undefined;
+        if (fp.authors) {
+          p.authors = fp.authors;
+          if (!p.authorManual) p.firstAuthor = isFirstAuthor(fp.authors, f.profile.name);
+        }
         if (fp.citations != null) p.citations = fp.citations;
         p.venue ||= fp.venue;
         p.year ||= fp.year ?? undefined;

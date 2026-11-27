@@ -302,6 +302,8 @@ export interface Paper {
   status: PaperStatus;
   citations: number;
   firstAuthor: boolean;
+  authors?: string; // author list as Scholar gives it ("Y Li, R Krishnan, R Padman")
+  authorManual?: boolean; // you set first / co-author yourself: syncs leave it alone
   url?: string;
   source?: 'manual' | 'openalex' | 's2' | 'gscholar';
   scholarId?: string; // Google Scholar citation_id

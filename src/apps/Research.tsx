@@ -272,6 +272,7 @@ export function Research() {
                       <button className="link" onClick={() => setEdit(p)}>
                         {p.title}
                       </button>
+                      {p.firstAuthor ? <Chip tone="spirit">{L('一作', '1st author')}</Chip> : p.authors ? <Chip>{L('合作', 'Co-author')}</Chip> : null}
                       <SubChip paper={p} />
                       {p.url && (
                         <a href={p.url} target="_blank" rel="noreferrer" className="ext" aria-label="open">
@@ -354,7 +355,7 @@ function PaperBoard({ papers, onOpen, fOf }: { papers: Paper[]; onOpen: (p: Pape
                   <div className="paper-meta">
                     {p.venue && <span>{p.venue}</span>}
                     {p.year && <span className="num">{p.year}</span>}
-                    {p.firstAuthor && <Chip tone="spirit">{L('一作', '1st')}</Chip>}
+                    {p.firstAuthor ? <Chip tone="spirit">{L('一作', '1st author')}</Chip> : <Chip>{L('合作', 'Co-author')}</Chip>}
                     <SubChip paper={p} />
                     {p.removed && <Chip>{L('已从主页消失', 'Gone from profile')}</Chip>}
                     <ProjectTag id={p.projectId} />
@@ -443,6 +444,7 @@ function PaperEditor({ value, onClose }: { value: Partial<Paper> | null; onClose
         <Field label={L('标题', 'Title')}>
           <input className="input" value={p.title} onChange={(e) => setD({ ...p, title: e.target.value })} />
         </Field>
+        {p.authors && <p className="muted small paper-authors">{L('作者', 'Authors')}: {p.authors}</p>}
         <div className="row2">
           <Field label={L('会议 / 期刊', 'Venue')}>
             <input className="input" value={p.venue ?? ''} onChange={(e) => setD({ ...p, venue: e.target.value })} placeholder="NeurIPS, Nature…" />
@@ -503,7 +505,7 @@ function PaperEditor({ value, onClose }: { value: Partial<Paper> | null; onClose
           <Field label={L('作者身份', 'Authorship')}>
             <Segmented
               value={p.firstAuthor ? 'first' : 'co'}
-              onChange={(v) => setD({ ...p, firstAuthor: v === 'first' })}
+              onChange={(v) => setD({ ...p, firstAuthor: v === 'first', authorManual: true })}
               options={[
                 { value: 'first', label: L('一作', 'First') },
                 { value: 'co', label: L('合作', 'Co-author') },
