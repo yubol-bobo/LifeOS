@@ -1361,6 +1361,17 @@ function setQuestDone(d: State, q: Quest, day: string, on: boolean): number {
     } else revoke(d, `perfect:${day}`);
     if (!d.completions[day].length) delete d.completions[day];
   }
+  // Linkage: a to-do tied to a project step finishes that step too (and reopens it when unticked).
+  const stepQ = q.forStep ? d.quests.find((x) => x.id === q.forStep && x.kind === 'once') : undefined;
+  if (stepQ) {
+    if (on && !stepQ.doneAt) {
+      gained += setQuestDone(d, stepQ, day, true);
+      stepQ.doneVia = q.id;
+    } else if (!on && stepQ.doneAt && stepQ.doneVia === q.id) {
+      setQuestDone(d, stepQ, day, false);
+      delete stepQ.doneVia;
+    }
+  }
   // Linkage: a quest pulled from a counted plan logs +1 there (unticking removes it).
   const plan = q.planId ? d.plans.find((p) => p.id === q.planId) : undefined;
   if (plan?.target) {

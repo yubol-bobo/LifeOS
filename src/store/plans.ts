@@ -95,7 +95,8 @@ export function planPace(s: State, p: Plan, mx?: Metrics) {
 
 /** Project overview numbers. */
 export function projectStats(s: State, pr: Project) {
-  const tasks = s.quests.filter((q) => q.projectId === pr.id && !q.archived);
+  // to-dos that just advance one of the steps aren't steps themselves
+  const tasks = s.quests.filter((q) => q.projectId === pr.id && !q.archived && !q.forStep);
   const open = tasks.filter((q) => q.kind === 'once' && !q.doneAt);
   const doneTasks = tasks.filter((q) => q.kind === 'once' && q.doneAt);
   const sessions = s.sessions.filter((x) => x.projectId === pr.id);
