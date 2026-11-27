@@ -181,6 +181,11 @@ export function Quests() {
             <GoalTag goalId={q.goalId} />
             <ProjectTag id={q.projectId} />
             <PlanTag id={q.planId} />
+            {q.forStep && (
+              <span className="link-hint">
+                <Icon name="list-checks" size={11} /> {L('推进步骤', 'Step')}: {s.quests.find((x) => x.id === q.forStep)?.title ?? '—'}
+              </span>
+            )}
             {q.planId && planOf(q.planId)?.target ? (
               <span className="link-hint num">
                 +{q.planAmount ?? 1} {planOf(q.planId)?.unit ?? ''}
@@ -266,6 +271,7 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
       log: d.log?.trackerId ? d.log : undefined,
       projectId: d.projectId || undefined,
       due: d.kind === 'once' ? d.due || undefined : undefined,
+      forStep: d.kind === 'once' && d.projectId ? d.forStep || undefined : undefined,
       day: d.kind === 'once' ? d.day || undefined : undefined,
       planId: d.planId || undefined,
       planAmount: d.planId && d.planAmount && d.planAmount !== 1 ? d.planAmount : undefined,
@@ -429,7 +435,7 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
           </div>
           <div className="row2">
             <Field label={L('属于哪个项目', 'Project')}>
-              <ProjectSelect value={d.projectId} onChange={(v) => set({ projectId: v })} />
+              <ProjectSelect value={d.projectId} onChange={(v) => set({ projectId: v, forStep: undefined })} />
             </Field>
             {d.kind === 'once' && (
               <Field label={L('截止日期（可选）', 'Due date (optional)')}>
@@ -437,6 +443,9 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
               </Field>
             )}
           </div>
+          {d.kind === 'once' && d.projectId && !(d.id && d.step !== false && !d.planId) && (
+            <StepPicker projectId={d.projectId} value={d.forStep} selfId={d.id} onPick={(st) => set(st ? { forStep: st.id, title: d.title.trim() ? d.title : st.title, attr: d.title.trim() ? d.attr : st.attr } : { forStep: undefined })} />
+          )}
           {/* not for a project's own steps: those live in the project */}
           {d.kind === 'once' && !(d.id && d.projectId && d.step !== false && !d.planId) && (
             <Field label={L('哪天做', 'Do it on')} hint={L('选以后的某天，这件事就先不出现在今日任务里，到那天再出现。', 'Pick a later day and it stays off Today until then.')}>
@@ -463,5 +472,23 @@ export function AttrPicker({ value, onChange }: { value: Attr; onChange: (a: Att
         </button>
       ))}
     </div>
+  );
+}
+
+/** "Which step does this move forward?": the project's open steps as one-tap chips. */
+function StepPicker({ projectId, value, selfId, onPick }: { projectId: string; value?: string; selfId?: string; onPick: (step: Quest | null) => void }) {
+  const L = useL();
+  const steps = useStore((s) => s.quests.filter((q) => q.projectId === projectId && q.kind === 'once' && !q.archived && !q.forStep && q.step !== false && q.id !== selfId && (!q.doneAt || q.id === value)));
+  if (!steps.length) return null;
+  return (
+    <Field label={L('推进这个项目的哪一步（可选）', 'Which step does it move forward? (optional)')} hint={L('选了之后，这个任务完成时，项目里的这一步也会自动完成。', 'Pick one and finishing this to-do finishes that step in the project too.')}>
+      <div className="step-chips">
+        {steps.map((st) => (
+          <button key={st.id} type="button" className={`chip chip-btn ${value === st.id ? 'is-active' : ''}`} onClick={() => onPick(value === st.id ? null : st)}>
+            <Icon name={value === st.id ? 'check' : 'list-checks'} size={12} /> {st.title}
+          </button>
+        ))}
+      </div>
+    </Field>
   );
 }

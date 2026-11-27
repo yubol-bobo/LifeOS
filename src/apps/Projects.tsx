@@ -13,6 +13,7 @@ import { planProgress, projectStats } from '../store/plans';
 import { actions, useStore } from '../store/store';
 import type { Category, Project } from '../store/types';
 import { Icon } from '../ui/Icon';
+import { notify } from '../os/notify';
 import { Bar, Button, Card, CheckBubble, Chip, Empty, Field, Modal, Segmented } from '../ui/kit';
 import { scopeName } from './Plan';
 import { DueChip } from './goals';
@@ -286,6 +287,23 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
                     <CheckBubble checked={!!q.doneAt} onChange={() => actions.toggleQuest(q.id)} tone={p.color as 'blue'} label={q.title} />
                     <span className="pd-step-title">{q.title}</span>
                     {!q.doneAt && <DueChip due={q.due} />}
+                    {!q.doneAt &&
+                      (s.quests.some((x) => x.forStep === q.id && !x.doneAt && !x.archived) ? (
+                        <span className="muted small pd-today-on">{L('今天在做', 'On today')}</span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          icon="plus"
+                          title={L('放进今日任务：完成它，这一步也就完成了', 'Add to today: finishing it finishes this step')}
+                          onClick={() => {
+                            actions.addQuest({ title: q.title, kind: 'once', attr: q.attr, difficulty: q.difficulty, projectId: q.projectId, step: false, forStep: q.id });
+                            notify({ title: L('已放进今日任务', 'Added to today'), body: q.title, icon: 'list-checks', tone: 'good' });
+                          }}
+                        >
+                          {L('今天做', 'Today')}
+                        </Button>
+                      ))}
                     {!q.doneAt && (
                       <input
                         className="input pd-due"

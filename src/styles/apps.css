@@ -1793,3 +1793,13 @@ li:hover > .move-day.is-compact,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.step-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pd-today-on {
+  white-space: nowrap;
+  color: var(--accent);
+}

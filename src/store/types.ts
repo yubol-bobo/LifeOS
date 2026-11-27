@@ -235,6 +235,8 @@ export interface Quest {
   planId?: string; // feeds this plan (week / month / year); pulled in from a plan, or linked in the editor
   planAmount?: number; // how much each completion adds to a counted plan (default 1), e.g. +3 chapters
   due?: string; // optional due date (YYYY-MM-DD)
+  forStep?: string; // a to-do that advances this project step: finishing it finishes the step
+  doneVia?: string; // (on a step) the to-do that finished it, so unticking that to-do reopens it
   day?: string; // one-off to-do moved to a later day (YYYY-MM-DD): off Today until then; unset = the day it was added
   step?: boolean; // a project step (lives in the project, never on today's list). One-off quests with a project
   // count as steps unless this is explicitly false (a to-do you added to Today and tagged with a project).
