@@ -1895,3 +1895,13 @@ li:hover > .move-day.is-compact,
     grid-template-columns: 1fr;
   }
 }
+
+.earn-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -6px 0 14px;
+}
+.earn-month-sum {
+  margin: 0 0 8px;
+}

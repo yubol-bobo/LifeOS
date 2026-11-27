@@ -243,7 +243,9 @@ function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolea
         <div className="earn-row">
           <div className="earn-mini">
             <Odometer value={money(todayEarned, s.profile.currency)} className="odo-lg" />
-            <span className="muted">{L('今天赚到的', 'earned today')}</span>
+            <span className="muted" title={L('只是记录，不计入净资产', 'Just a record: not counted in net worth')}>
+              {L('今天赚到的 · 不计入净资产', 'earned today · not in net worth')}
+            </span>
           </div>
           {live?.paid ? (
             <div className="row-gap">

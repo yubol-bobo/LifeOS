@@ -299,6 +299,9 @@ export function Earn() {
         <Stat label={L('本月', 'This month')} value={money(tMonth.earned + liveEarned, cur, 0)} sub={`${((tMonth.ms + liveMs) / 3_600_000).toFixed(1)} h`} />
         <Stat label={L('累计', 'All time')} value={money(tAll.earned, cur, 0)} sub={`${(tAll.ms / 3_600_000).toFixed(0)} h`} />
       </div>
+      <p className="muted small earn-note">
+        <Icon name="info" size={13} /> {L('这里的收入只是记录，给你一个「今天赚了多少」的感觉，不会计入净资产；资产只看账户余额，避免重复计算。', 'Earnings here are just a record, a sense of what your time is worth. They never go into net worth, which comes only from account balances, so nothing is counted twice.')}
+      </p>
 
 
       {projects.length > 0 && (
@@ -325,6 +328,8 @@ export function Earn() {
           </ul>
         </Card>
       )}
+
+      <MonthlyEarnings sessions={sessions} cur={cur} liveEarned={liveEarned} />
 
       <div className="grid-2-1">
         <Card title={L('近 14 天收入', 'Last 14 days')} icon="chart">
@@ -699,5 +704,56 @@ export function PresetEditor({ open, onClose }: { open: boolean; onClose: () => 
         </Button>
       </div>
     </Modal>
+  );
+}
+
+/** Earnings by month: last 12 months, or every month since you started. */
+function MonthlyEarnings({ sessions, cur, liveEarned }: { sessions: WorkSession[]; cur: string; liveEarned: number }) {
+  const L = useL();
+  const lang = useLang();
+  const [range, setRange] = useState<'12' | 'all'>('12');
+  const paid = sessions.filter((x) => x.rate > 0);
+  if (!paid.length) return null;
+  const now = dayKey().slice(0, 7);
+  const first = range === 'all' ? dayKey(Math.min(...paid.map((x) => x.start))).slice(0, 7) : (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 11, 1);
+    return dayKey(d).slice(0, 7);
+  })();
+  const months: string[] = [];
+  for (let m = first; m <= now; ) {
+    months.push(m);
+    const [y, mo] = m.split('-').map(Number);
+    m = mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, '0')}`;
+  }
+  const data = months.map((m) => {
+    const list = paid.filter((x) => dayKey(x.start).startsWith(m));
+    return { m, earned: list.reduce((a, x) => a + x.earned, 0) + (m === now ? liveEarned : 0), ms: list.reduce((a, x) => a + x.activeMs, 0) };
+  });
+  const total = data.reduce((a, x) => a + x.earned, 0);
+  const best = data.reduce((a, x) => (x.earned > a.earned ? x : a), data[0]);
+  const label = (m: string, long = false) => parseDay(`${m}-01`).toLocaleDateString(lang === 'zh' ? 'zh-CN' : 'en-US', long ? { year: 'numeric', month: 'long' } : months.length > 12 ? { year: '2-digit', month: 'short' } : { month: 'short' });
+  return (
+    <Card
+      title={L('每月收入', 'Earnings by month')}
+      icon="calendar"
+      action={
+        <Segmented
+          size="sm"
+          value={range}
+          onChange={setRange}
+          options={[
+            { value: '12', label: L('近 12 个月', 'Last 12 months') },
+            { value: 'all', label: L('全部', 'All') },
+          ]}
+        />
+      }
+    >
+      <p className="muted small earn-month-sum">
+        {L(`合计 ${money(total, cur, 0)} · ${(data.reduce((a, x) => a + x.ms, 0) / 3_600_000).toFixed(0)} 小时`, `Total ${money(total, cur, 0)} · ${(data.reduce((a, x) => a + x.ms, 0) / 3_600_000).toFixed(0)} h`)}
+        {best.earned > 0 && <> · {L(`最多的一个月：${label(best.m, true)}（${money(best.earned, cur, 0)}）`, `Best month: ${label(best.m, true)} (${money(best.earned, cur, 0)})`)}</>}
+      </p>
+      <Columns data={data.map((x) => ({ x: label(x.m), y: Math.round(x.earned) }))} tone="wealth" height={200} format={(v) => money(v, cur, 0)} />
+    </Card>
   );
 }
