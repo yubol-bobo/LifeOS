@@ -1905,3 +1905,19 @@ li:hover > .move-day.is-compact,
 .earn-month-sum {
   margin: 0 0 8px;
 }
+
+/* ---------- Settings → Data health ---------- */
+.dh-state { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; }
+.dh-state.is-ok { background: color-mix(in srgb, var(--good) 12%, transparent); color: var(--good); }
+.dh-state.is-bad { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+.dh-state span { color: var(--ink); }
+.dh-grid { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+.dh-grid li { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.dh-grid li span { font-size: 11px; color: var(--ink-3, var(--muted)); }
+.dh-grid li b { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dh-counts { margin: 10px 0 0; }
+.dh-tip { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.dh-h { display: flex; gap: 6px; align-items: center; margin: 16px 0 8px; font-size: 13px; }
+.dh-backups { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; }
+.dh-backups li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; background: var(--surface-2); flex-wrap: wrap; }
+.dh-backups .spacer { flex: 1; }

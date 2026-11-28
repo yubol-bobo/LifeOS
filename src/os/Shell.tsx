@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { onSaveError } from '../store/persist';
 import { Report } from '../apps/Report';
 import { announceReports } from '../apps/reportNotice';
 import { autoRefreshAmp } from '../apps/AmpSource';
@@ -34,7 +35,7 @@ import { Dock } from './Dock';
 import { useLiveSession } from './live';
 import { MenuBar } from './MenuBar';
 import { useFullscreen, useLayout, useWindowPrefs } from './display';
-import { dismiss, useBursts, useNotices } from './notify';
+import { dismiss, notify, useBursts, useNotices } from './notify';
 import { Onboarding } from './Onboarding';
 import { LevelUp } from './LevelUp';
 import { SummaryCard } from '../ai/SummaryCard';
@@ -87,6 +88,16 @@ export function Shell() {
 
   useEffect(() => initSync(), []);
   useEffect(() => initSnapshots(), []);
+  // a failed save is never silent: warn once per problem (and again if it keeps failing later)
+  useEffect(() => {
+    let warned = 0;
+    return onSaveError((msg) => {
+      if (Date.now() - warned < 10 * 60_000) return;
+      warned = Date.now();
+      const zh = getState().profile.lang === 'zh';
+      notify({ title: zh ? '保存失败：数据可能没存下来' : 'Save failed: your data may not be stored', body: (zh ? '请到 系统设置 → 通用 → 导出备份。' : 'Go to Settings → General → Export backup.') + ` (${msg})`, icon: 'info', tone: 'warn', onOpen: () => open('settings') }, 30_000);
+    });
+  }, []);
   // Asset Management Pro as the net-worth source: refresh quietly when it's a few hours old
   useEffect(() => autoRefreshAmp(getState()), []);
   // a new month (or year) began: say last one's report is ready
