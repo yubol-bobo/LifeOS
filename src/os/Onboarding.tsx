@@ -56,7 +56,7 @@ export function Onboarding() {
             {L('欢迎来到 ', 'Welcome to ')}
             <b>LifeOS</b>
           </h1>
-          <p>{L('一个为你的人生运行的操作系统：任务、里程碑、学术、专注与收入，全部升级成一场游戏。数据只保存在本机浏览器里。', 'An operating system for your life — quests, milestones, research, focus and income, all turned into a game. Your data never leaves this browser.')}</p>
+          <p>{L('一个为你的人生运行的操作系统：任务、目标、学术、专注与收入，全部升级成一场游戏。数据只保存在本机浏览器里。', 'An operating system for your life — quests, goals, research, focus and income, all turned into a game. Your data never leaves this browser.')}</p>
         </div>
         <div className="onboard-form">
           <Segmented

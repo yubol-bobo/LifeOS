@@ -6,7 +6,10 @@ import { useL, useLang } from '../lib/i18n';
 import { actions, getState, useStore } from '../store/store';
 import { Icon } from '../ui/Icon';
 import { AppGlyph } from '../ui/kit';
-import { APPS } from './apps';
+import { addDays } from '../lib/date';
+import { parseCapture } from '../lib/capture';
+import { notify } from './notify';
+import { APP_GROUPS, APPS } from './apps';
 import { open } from './router';
 
 interface Item {
@@ -34,9 +37,12 @@ export function Spotlight({ onClose, dark }: { onClose: () => void; dark: boolea
   useEffect(() => input.current?.focus(), []);
 
   const items = useMemo<Item[]>(() => {
-    const G = { apps: L('应用', 'Apps'), cmd: L('指令', 'Commands'), quest: L('今日任务', 'Quests'), paper: L('论文', 'Papers'), ms: L('里程碑', 'Milestones') };
+    const needleEmpty = !q.trim();
+    const G = { apps: L('应用', 'Apps'), cmd: L('指令', 'Commands'), quest: L('今日任务', 'Quests'), paper: L('论文', 'Papers'), ms: L('目标', 'Goals') };
+    const groupOf = (id: string) => APP_GROUPS.find((g) => g.apps.includes(id as never));
+    const appsSorted = APP_GROUPS.flatMap((g) => g.apps.map((id) => APPS.find((a) => a.id === id)!)).concat(APPS.filter((a) => !groupOf(a.id)));
     const all: Item[] = [
-      ...APPS.map((a) => ({ id: `app:${a.id}`, group: G.apps, title: lang === 'zh' ? a.zh : a.en, sub: lang === 'zh' ? a.blurbZh : a.blurbEn, icon: a.icon, hue: a.hue, run: () => open(a.id) })),
+      ...appsSorted.map((a) => ({ id: `app:${a.id}`, group: needleEmpty ? (lang === 'zh' ? groupOf(a.id)?.zh : groupOf(a.id)?.en) ?? G.apps : G.apps, title: lang === 'zh' ? a.zh : a.en, sub: lang === 'zh' ? a.blurbZh : a.blurbEn, icon: a.icon, hue: a.hue, run: () => open(a.id) })),
       active
         ? { id: 'cmd:stop', group: G.cmd, title: L('结束专注并结算', 'Stop focus & cash out'), icon: 'square', run: () => actions.stopFocus() }
         : { id: 'cmd:focus', group: G.cmd, title: L('开始赚钱计时', 'Start the paid-work timer'), icon: 'play', run: () => (actions.startFocus(getState().profile.hourlyRate, 'craft'), open('earn')) },
@@ -57,8 +63,28 @@ export function Spotlight({ onClose, dark }: { onClose: () => void; dark: boolea
       ...milestones.map((m) => ({ id: `m:${m.id}`, group: G.ms, title: m.title, sub: m.targetDate, icon: 'flag', run: () => open('roadmap') })),
     ];
     const needle = q.trim().toLowerCase();
-    if (!needle) return all.filter((x) => x.group === G.apps || x.group === G.cmd);
-    return all.filter((x) => (x.title + ' ' + (x.sub ?? '')).toLowerCase().includes(needle)).slice(0, 12);
+    if (!needle) return all.filter((x) => x.id.startsWith('app:') || x.group === G.cmd);
+    const hits = all.filter((x) => (x.title + ' ' + (x.sub ?? '')).toLowerCase().includes(needle)).slice(0, 10);
+    // whatever you type can become a to-do: "约导师 明天 #论文"
+    const s = getState();
+    const c = parseCapture(q, s.projects);
+    if (c.title) {
+      const proj = c.projectId ? s.projects.find((p) => p.id === c.projectId) : undefined;
+      const when = c.day ? (c.day === addDays(dayKey(), 1) ? L('明天', 'tomorrow') : c.day) : L('今天', 'today');
+      // first when nothing matches; after the matches otherwise, so Enter on an existing to-do still ticks it
+      hits.push({
+        id: 'cmd:capture',
+        group: L('快速记录', 'Quick capture'),
+        title: L(`新建待办：${c.title}`, `New to-do: ${c.title}`),
+        sub: [when, proj && `#${proj.name}`, c.difficulty === 'hard' && L('困难', 'hard'), c.difficulty === 'easy' && L('简单', 'easy')].filter(Boolean).join(' · '),
+        icon: 'plus',
+        run: () => {
+          actions.addQuest({ title: c.title, kind: 'once', attr: proj ? (s.quests.find((x) => x.projectId === proj.id)?.attr ?? s.attributes[0]?.id ?? 'craft') : (s.attributes[0]?.id ?? 'craft'), difficulty: c.difficulty ?? 'normal', ...(c.day ? { day: c.day } : {}), ...(proj ? { projectId: proj.id, step: false } : {}) });
+          notify({ title: c.day ? L(`已记下，${when}出现在今日任务里`, `Saved — it shows on Today ${when}`) : L('已加到今日任务', 'Added to today'), body: c.title, icon: 'list-checks', tone: 'good' });
+        },
+      });
+    }
+    return hits;
   }, [q, quests, papers, milestones, active, done, dark, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => setSel(0), [q]);
@@ -78,7 +104,7 @@ export function Spotlight({ onClose, dark }: { onClose: () => void; dark: boolea
             ref={input}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={L('搜索应用、任务、论文，或输入指令…', 'Search apps, quests, papers, or run a command…')}
+            placeholder={L('搜索，或直接记一件事（例：约导师 明天 #论文）…', 'Search, or jot something down (e.g. call mom tomorrow #family)…')}
             onKeyDown={(e) => {
               if (e.key === 'Escape') onClose();
               if (e.key === 'ArrowDown') (e.preventDefault(), setSel((s) => Math.min(items.length - 1, s + 1)));

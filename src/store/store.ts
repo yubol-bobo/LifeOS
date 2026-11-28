@@ -87,6 +87,7 @@ export function defaultState(): State {
     ui: { dock: [...DEFAULT_DOCK], hidden: [], widgets: [] },
     moods: {},
     reviews: {},
+    dayPlans: {},
     focusPresets: FOCUS_PRESETS.map(([p, icon, attr], i) => ({ id: `fp-${i + 1}`, name: zh ? p[0] : p[1], icon, attr, i18n: { name: p } })),
     wellness: {},
     pet: { enabled: true, kind: 'mochi', name: zh ? '团子' : 'Mochi', waterMin: 45, waterGoal: 8, cupMl: 250, wakeHour: 8, sleepHour: 23, sitMin: 45, eye20: false, bedtime: 23 * 60 + 30, pomoWork: 25, pomoBreak: 5, sound: true, sysNotify: false, roam: 'lively', reviewNudge: true, nightSummary: true },
@@ -120,6 +121,7 @@ export function migrate(parsed: Partial<State>): State {
     assets: { ...d.assets, ...parsed.assets },
     stats: { ...parsed.stats },
     reviews: { ...parsed.reviews },
+    dayPlans: { ...parsed.dayPlans },
     focusPresets: parsed.focusPresets ?? d.focusPresets,
     equip: { ...parsed.equip },
     attributes: parsed.attributes?.length ? parsed.attributes : d.attributes,
@@ -688,6 +690,36 @@ export const actions = {
       grant(d, `review:${day}`, 'review', 15, tr(`每日复盘 · ${day}`, `Daily review · ${day}`), spirit);
       if (n >= 3) grant(d, `review+:${day}`, 'review', 10, tr('深度复盘', 'Deep review'), spirit);
       else revoke(d, `review+:${day}`);
+    });
+  },
+  /** Star / unstar one of the day's (up to) three most important things. Returns false when three are already starred. */
+  toggleTop(id: string, day = dayKey()) {
+    let ok = true;
+    commit((d) => {
+      const p = (d.dayPlans[day] ??= {});
+      const top = p.top ?? [];
+      if (top.includes(id)) p.top = top.filter((x) => x !== id);
+      else if (top.length >= 3) ok = false;
+      else p.top = [...top, id];
+      if (!p.top?.length) delete p.top;
+      if (!Object.keys(p).length) delete d.dayPlans[day];
+    });
+    return ok;
+  },
+  /** The morning plan / evening wrap-up is done for this day. */
+  markRitual(kind: 'planned' | 'closed', day = dayKey()) {
+    commit((d) => void ((d.dayPlans[day] ??= {})[kind] = Date.now()));
+  },
+  /** Move several to-dos to another day at once (e.g. everything left at the end of the day). */
+  moveQuests(ids: string[], day: string) {
+    commit((d) => {
+      for (const q of d.quests) if (ids.includes(q.id) && q.kind === 'once' && !q.doneAt) q.day = day;
+      // a moved to-do no longer belongs to today's top three
+      for (const p of Object.values(d.dayPlans))
+        if (p.top) {
+          p.top = p.top.filter((x) => !ids.includes(x));
+          if (!p.top.length) delete p.top;
+        }
     });
   },
   setMoodNote(note: string, day = dayKey()) {

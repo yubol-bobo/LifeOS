@@ -75,7 +75,9 @@ function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolea
 
   const doneToday = new Set(s.completions[today] ?? []);
   // project steps stay in their project until they're due (or pulled in from a plan)
-  const quests = s.quests.filter((q) => !q.archived && (q.kind === 'daily' ? isScheduled(q, today) : onToday(q, today) && (!q.doneAt || dayKey(q.doneAt) === today)));
+  const top = s.dayPlans[today]?.top ?? [];
+  const rank = (id: string) => (top.includes(id) ? top.indexOf(id) : 99);
+  const quests = s.quests.filter((q) => !q.archived && (q.kind === 'daily' ? isScheduled(q, today) : onToday(q, today) && (!q.doneAt || dayKey(q.doneAt) === today))).sort((a, b) => rank(a.id) - rank(b.id));
   const dailies = s.quests.filter((q) => isScheduled(q, today));
   const dailyDone = dailies.filter((q) => doneToday.has(q.id)).length;
   // Everything on today's list: recurring quests due today, plus to-dos on Today (made today or
@@ -134,7 +136,7 @@ function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolea
             still={s.profile.reduceMotion || hidden}
             features={unlockedAt(m.level.level, 'planet').map((u) => u.id)}
           />
-          <span className="planet-hint">{L('拖动旋转 · 树木随等级生长，旗帜是你的里程碑', 'Drag to spin · trees grow with level, flags are milestones')}</span>
+          <span className="planet-hint">{L('拖动旋转 · 树木随等级生长，旗帜是你达成的目标', 'Drag to spin · trees grow with level, flags are goals reached')}</span>
         </div>
         {!hide.has('attrs') && (
           <button className="hero-attrs" onClick={() => open('trophies')} title={L('属性分布 · 点开看升级之路', 'Attributes · open the road')} aria-label={L('属性', 'Attributes')}>
@@ -187,7 +189,10 @@ function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolea
             return (
               <li key={q.id} className={done ? 'is-done' : ''}>
                 <CheckBubble checked={done} onChange={() => actions.toggleQuest(q.id)} tone={q.attr} label={q.title} />
-                <span className="mq-title">{q.title}</span>
+                <span className="mq-title">
+                  {top.includes(q.id) && <Icon name="star" size={11} className="mq-star" />}
+                  {q.title}
+                </span>
                 {!done && <DueChip due={q.due} since={q.kind === 'once' ? parseDay(questDay(q)).getTime() : undefined} />}
                 <Lineage q={q} compact />
                 {!done && q.kind === 'once' && <MoveDay q={q} compact />}

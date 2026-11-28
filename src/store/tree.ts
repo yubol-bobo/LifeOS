@@ -85,7 +85,7 @@ export function projectTree(s: Tree, projectId: string) {
 /* ------------------------------------------------------------------ */
 
 export interface LinkProblem {
-  kind: 'quest' | 'plan' | 'milestone' | 'paper' | 'countdown' | 'session';
+  kind: 'quest' | 'plan' | 'milestone' | 'paper' | 'countdown' | 'session' | 'day';
   id: string;
   field: string;
   target?: string;
@@ -124,6 +124,7 @@ export function linkProblems(s: State): LinkProblem[] {
   check('countdown', s.countdowns as unknown as Ref[], 'projectId', projects);
   check('session', s.sessions as unknown as Ref[], 'projectId', projects);
   for (const q of s.quests) if (q.kind === 'once' && !q.archived && q.step && !q.projectId && !q.planId) out.push({ kind: 'quest', id: q.id, field: 'step' });
+  for (const [day, p] of Object.entries(s.dayPlans ?? {})) for (const id of p.top ?? []) if (!quests.has(id)) out.push({ kind: 'day', id: day, field: 'top', target: id });
   return out;
 }
 
@@ -135,7 +136,7 @@ export function linkProblems(s: State): LinkProblem[] {
 export function repairLinks(d: State): number {
   const problems = linkProblems(d);
   if (!problems.length) return 0;
-  const pools: Record<LinkProblem['kind'], Ref[]> = {
+  const pools: Record<Exclude<LinkProblem['kind'], 'day'>, Ref[]> = {
     quest: d.quests as unknown as Ref[],
     plan: d.plans as unknown as Ref[],
     milestone: d.milestones as unknown as Ref[],
@@ -150,7 +151,13 @@ export function repairLinks(d: State): number {
       if (q.kind === 'once' && !q.planId && q.step !== false) (q.archived = true), (q.step = true);
     }
   for (const p of problems) {
-    const x = pools[p.kind].find((y) => y.id === p.id);
+    if (p.kind === 'day') {
+      const dp = d.dayPlans[p.id];
+      dp.top = dp.top!.filter((x) => x !== p.target);
+      if (!dp.top.length) delete dp.top;
+      continue;
+    }
+    const x = pools[p.kind as Exclude<LinkProblem['kind'], 'day'>].find((y) => y.id === p.id);
     if (!x) continue;
     if (p.field === 'step') (x as unknown as Quest).archived = true;
     else delete x[p.field];

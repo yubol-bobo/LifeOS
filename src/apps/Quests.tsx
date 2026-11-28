@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { PaperSelect } from './Submissions';
 import { Lineage } from './Lineage';
+import { notify } from '../os/notify';
 import { MoveDay, dayLabel } from '../ui/MoveDay';
 import { addDays, dayKey, lastNDays, parseDay, weekOrder } from '../lib/date';
 import { periodOf } from '../lib/period';
@@ -37,13 +38,16 @@ export function Quests() {
   const [edit, setEdit] = useState<Partial<Quest> | null>(null);
   const isToday = day === dayKey();
   const done = new Set(s.completions[day] ?? []);
+  // the day's top three (from the morning plan, or starred here) come first
+  const top = s.dayPlans[day]?.top ?? [];
+  const rank = (q: Quest) => (top.includes(q.id) ? top.indexOf(q.id) : 99);
   const allDailies = s.quests.filter((q) => q.kind === 'daily' && !q.archived);
-  const dailies = allDailies.filter((q) => isScheduled(q, day));
+  const dailies = allDailies.filter((q) => isScheduled(q, day)).sort((a, b) => rank(a) - rank(b));
   const resting = allDailies.filter((q) => !isScheduled(q, day));
   const once = s.quests.filter((q) => q.kind === 'once' && !q.archived);
   // A to-do belongs to the day it was added: finished ones show only on the day they were done;
   // unfinished ones carry over to the next days (marked past due).
-  const openOnce = once.filter((q) => !q.doneAt && onToday(q, day) && questDay(q) <= day);
+  const openOnce = once.filter((q) => !q.doneAt && onToday(q, day) && questDay(q) <= day).sort((a, b) => rank(a) - rank(b));
   const later = isToday ? laterQuests(s, day) : [];
   const doneOnce = once.filter((q) => q.doneAt && onToday(q, day) && dayKey(q.doneAt) === day).sort((a, b) => b.doneAt! - a.doneAt!);
   const dailyDone = dailies.filter((q) => done.has(q.id)).length;
@@ -209,6 +213,18 @@ export function Quests() {
           />
         ) : null}
         {!done && q.kind === 'once' && <MoveDay q={q} />}
+        {(top.includes(q.id) || (!done && isToday)) && (
+          <button
+            type="button"
+            className={`rt-star q-star ${top.includes(q.id) ? 'is-on' : ''}`}
+            aria-pressed={top.includes(q.id)}
+            title={top.includes(q.id) ? L('今天的要事（点击取消）', 'A top thing today (click to unstar)') : L('设为今天的要事（最多 3 件）', 'Make it a top thing today (3 at most)')}
+            aria-label={L(`「${q.title}」设为要事`, `Star “${q.title}”`)}
+            onClick={() => !actions.toggleTop(q.id, day) && notify({ title: L('最多选 3 件', 'Three at most'), body: L('先取消一件，再选这件。', 'Unstar one first.'), icon: 'star', tone: 'info' })}
+          >
+            <Icon name="star" size={15} />
+          </button>
+        )}
         <Button size="sm" variant="ghost" icon="pencil" title={L('编辑', 'Edit')} onClick={onEdit} />
       </li>
     );

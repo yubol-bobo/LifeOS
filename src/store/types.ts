@@ -131,6 +131,13 @@ export interface Review {
   updatedAt: number;
 }
 
+/** A day's plan: the (up to) three things that matter most, and whether you planned / wrapped it up. */
+export interface DayPlan {
+  top?: string[]; // quest ids, most important first (max 3)
+  planned?: number; // when the morning plan was done
+  closed?: number; // when the evening wrap-up was done
+}
+
 export interface Wellness {
   water: number;
   breaks: number;
@@ -213,6 +220,7 @@ export interface Profile {
   theme: ThemePref;
   reduceMotion: boolean;
   weekStart?: 0 | 1; // first day of the week: 1 = Monday (default), 0 = Sunday
+  rituals?: boolean; // offer the morning plan / evening wrap-up (default on)
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
@@ -442,6 +450,7 @@ export interface State {
   ui: UiPrefs;
   moods: Record<string, MoodEntry>;
   reviews: Record<string, Review>; // dayKey -> review
+  dayPlans: Record<string, DayPlan>; // dayKey -> plan for that day
   focusPresets: FocusPreset[]; // unpaid-focus quick picks
   wellness: Record<string, Wellness>;
   pet: PetConfig;

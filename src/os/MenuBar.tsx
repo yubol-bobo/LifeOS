@@ -1,3 +1,4 @@
+import { openRitual, ritualNow } from './Ritual';
 import { useState } from 'react';
 import { snapNow } from './snapshot';
 import { notify } from './notify';
@@ -142,6 +143,14 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
         )}
         <button className="mb-icon" onClick={() => actions.profile({ theme: dark ? 'light' : 'dark' })} aria-label={L('切换主题', 'Toggle theme')}>
           <Icon name={dark ? 'sun' : 'moon'} size={15} />
+        </button>
+        <button
+          className="mb-icon"
+          onClick={() => openRitual(ritualNow())}
+          aria-label={ritualNow() === 'morning' ? L('晨间计划', 'Morning plan') : L('晚间收尾', 'Evening wrap-up')}
+          title={ritualNow() === 'morning' ? L('晨间计划：挑出今天的 3 件要事', 'Morning plan: pick today’s top 3') : L('晚间收尾：回看今天，安排剩下的', 'Evening wrap-up: look back, sort out what’s left')}
+        >
+          <Icon name={ritualNow() === 'morning' ? 'sunrise' : 'moon-star'} size={15} />
         </button>
         <button className="mb-icon" onClick={onSpotlight} aria-label={L('搜索', 'Search')}>
           <Icon name="search" size={15} />

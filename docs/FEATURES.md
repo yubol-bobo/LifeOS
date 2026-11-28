@@ -52,6 +52,26 @@ Three original clay-style companions: **Mochi** (a bouncy orange mochi cat), **B
 - **Day summary**: click your pet → **Day summary**. It reads your day (quests, focus, income, plan progress, mood, body data and upcoming countdowns) and writes a short, fun recap, ending with a **✨ wander** line: starting from something you did today, it drifts to a recent news story, this day in history, a quote or a line of poetry, a romantic or playful thought, some cheering on or a bit of life wisdom, leaning towards different kinds each time (so **Regenerate** gives you a new flavour). Turn on **Go online for inspiration** in Settings → AI and it works with every provider: the browser fetches recent news and "on this day" from Wikipedia, and Claude, OpenAI, Kimi and GLM can also use their own web search. Without a key, the offline summary ends with a hand-picked quote or line of poetry. The text streams in word by word while the pet glows with stars around it; afterwards you can edit it and save it to that day's review with one click. **At midnight** it pops up the day's summary automatically (if you missed it, it offers to write one the next morning), and at 9:30 pm it gently reminds you to review. Both can be turned off. Without AI it writes an offline version.
 - When an app window is open, the pet moves to the side or sits on the Dock so it never covers content; on phones it lives on the Dock. One switch in Settings turns it off.
 
+## The rhythm of a day: morning plan, evening wrap-up, quick capture
+
+- **Morning plan** (☀︎ in the top bar, before 3 pm):
+  - First, sort out to-dos left from before: keep them, push them to tomorrow, or drop them (archived, history and XP kept).
+  - Then star the 3 things that matter most today, or add one right there.
+  - Starred items lead the Quests list and the desktop's Today tile, marked ★.
+- **Evening wrap-up** (☾, after 3 pm):
+  - What got done, XP, focus time, and whether you wrote the review.
+  - How the top three went; move what's left to tomorrow one by one or all at once.
+- **Nudges**: once on the first open of the morning and once after 7 pm, only if not done yet (turn off in Settings → General).
+- **Quick capture**: type a line in `⌘K` / `Ctrl+K` and press Enter for a to-do.
+  - Days: today / tomorrow / fri / next monday / 12-03 / 1/5 (and the Chinese words)
+  - Projects: `#thes` picks the project whose name starts with "thes"
+  - Difficulty: `!` hard, `~` easy
+  - If the line matches an existing quest, Enter still completes that quest; "New to-do" comes after the matches.
+- **One task tree**: goal → project (papers included) → step → today's to-do. Every to-do shows its trail; click any part to go there.
+  - Links inherited from a parent show lighter, e.g. a to-do for a step belongs to that step's project.
+  - A project page keeps its steps and its tagged to-dos apart, and progress follows the steps.
+  - Deleting a project archives its steps (they neither vanish nor flood Today). Deleting a paper, goal, step or plan clears links to it.
+
 ## How small things move big goals
 
 LifeOS isn't a pile of unrelated lists. The smallest check-in travels up this chain automatically, **with no progress to update by hand**:
