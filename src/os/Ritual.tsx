@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { addDays, dayKey } from '../lib/date';
 import { parseCapture } from '../lib/capture';
 import { useL } from '../lib/i18n';
 import { onToday, questDay, scheduledDailies } from '../store/links';
 import { hasReview } from '../store/review';
+import { fmtPos, fromStep, QUAD_META } from '../store/h3';
+import { capacity, feeds, h3Focus, staleTodos } from '../store/planning';
 import { QUEST_XP } from '../store/rules';
 import { actions, useStore } from '../store/store';
 import type { Quest, State } from '../store/types';
@@ -47,12 +49,21 @@ export function Ritual({ kind, onClose }: { kind: RitualKind; onClose: () => voi
     if (!actions.toggleTop(q.id, today)) notify({ title: L('最多选 3 件', 'Three at most'), body: L('先取消一件，再选这件。', 'Unstar one first.'), icon: 'star', tone: 'info' });
   };
   const notDoing = (q: Quest) => actions.updateQuest(q.id, { archived: true });
+  const h3f = kind === 'morning' ? h3Focus(s) : null;
+  const age = new Map(staleTodos(carried, today, 1).map((x) => [x.q.id, x.days]));
   const Row = ({ q, actionsFor }: { q: Quest; actionsFor: 'star' | 'carry' | 'left' }) => {
     const starred = top.includes(q.id);
+    const days = actionsFor === 'carry' ? age.get(q.id) : undefined;
     return (
       <li className={`rt-row ${starred ? 'is-top' : ''}`}>
         <span className="rt-title">{q.title}</span>
         <span className="muted small num">+{QUEST_XP[q.difficulty]}</span>
+        {days ? <span className={`rt-age num ${days >= 7 ? 'is-old' : ''}`}>{L(`拖了 ${days} 天`, `${days}d waiting`)}</span> : null}
+        {h3f && actionsFor === 'star' && feeds(s, q, h3f.quad) && (
+          <span className="rt-quad" style={{ '--tone': QUAD_META[h3f.quad].color } as CSSProperties} title={L('照顾到你这阵子最需要补的一块', 'Feeds the area that needs you most right now')}>
+            {L(QUAD_META[h3f.quad].name[0], QUAD_META[h3f.quad].name[1])}
+          </span>
+        )}
         <span className="spacer" />
         {actionsFor === 'star' && (
           <button type="button" className={`rt-star ${starred ? 'is-on' : ''}`} aria-pressed={starred} aria-label={L(`把「${q.title}」设为要事`, `Make “${q.title}” a top thing`)} onClick={() => star(q)}>
@@ -75,6 +86,8 @@ export function Ritual({ kind, onClose }: { kind: RitualKind; onClose: () => voi
 
   if (kind === 'morning') {
     const candidates = [...todos, ...dailies];
+    const cap = capacity(s, candidates.length, today);
+    const old = staleTodos(carried, today, 7);
     return (
       <Modal
         open
@@ -103,6 +116,34 @@ export function Ritual({ kind, onClose }: { kind: RitualKind; onClose: () => voi
         }
       >
         <div className="ritual">
+          {(cap || h3f || old.length > 0) && (
+            <ul className="rt-insights">
+              {cap && (
+                <li className={cap.over ? 'is-warn' : ''}>
+                  <Icon name={cap.over ? 'info' : 'activity'} size={15} />
+                  <span>
+                    {L(`今天清单上有 ${cap.planned} 件；你最近一天通常完成 ${cap.typical} 件（近 3 周 ${cap.days} 个有记录的日子）。`, `${cap.planned} things on today’s list; lately you finish about ${cap.typical} a day (${cap.days} active days in the last 3 weeks).`)}
+                    {cap.over && L(' 有点多了：挑出要事，其余的可以挪到以后。', ' That’s a lot — star what matters and push the rest.')}
+                  </span>
+                </li>
+              )}
+              {old.length > 0 && (
+                <li className="is-warn">
+                  <Icon name="clock" size={15} />
+                  <span>{L(`「${old[0].q.title}」已经拖了 ${old[0].days} 天${old.length > 1 ? `（还有 ${old.length - 1} 件也超过一周）` : ''}。今天做掉、换个日子，或者放下它？`, `“${old[0].q.title}” has waited ${old[0].days} days${old.length > 1 ? ` (and ${old.length - 1} more over a week)` : ''}. Do it today, reschedule, or let it go?`)}</span>
+                </li>
+              )}
+              {h3f && (
+                <li>
+                  <Icon name="sparkles" size={15} />
+                  <span>
+                    {L(`Human 3.0：最需要补的是「${QUAD_META[h3f.quad].name[0]}」（${fmtPos(fromStep(h3f.step))}）。`, `Human 3.0: ${QUAD_META[h3f.quad].name[1]} needs you most (${fmtPos(fromStep(h3f.step))}).`)}
+                    {h3f.next ? L(` 下一步：${h3f.next}`, ` Next: ${h3f.next}`) : L(' 能照顾到它的事，下面标出来了。', ' Items that feed it are tagged below.')}
+                  </span>
+                </li>
+              )}
+            </ul>
+          )}
           {carried.length > 0 && (
             <section>
               <h4>

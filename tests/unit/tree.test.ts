@@ -150,3 +150,23 @@ describe('fuzz: no operation sequence leaves a dangling link', () => {
     expect(S().quests.length).toBeGreaterThan(20);
   });
 });
+
+describe('project templates', () => {
+  it('creates the project with its steps, all in the project (not on Today)', async () => {
+    const { PROJECT_TEMPLATES } = await import('../../src/store/templates');
+    const tpl = PROJECT_TEMPLATES.find((t) => t.id === 'paper')!;
+    const id = actions.projectFromTemplate(tpl, 'zh', 'blue');
+    const st = projectStats(S(), S().projects.find((p) => p.id === id)!);
+    expect(S().projects.find((p) => p.id === id)!.name).toBe('写一篇论文');
+    expect(st.steps.map((q) => q.title)).toEqual(tpl.steps.map((x) => x[0]));
+    expect(st.steps.every((q) => !onToday(q))).toBe(true);
+  });
+  it('every template has both languages and at least 3 steps', async () => {
+    const { PROJECT_TEMPLATES } = await import('../../src/store/templates');
+    for (const t of PROJECT_TEMPLATES) {
+      expect(t.name.every(Boolean)).toBe(true);
+      expect(t.steps.length).toBeGreaterThanOrEqual(3);
+      for (const s of t.steps) expect(s[0] && s[1]).toBeTruthy();
+    }
+  });
+});

@@ -12,7 +12,7 @@ import { appById, type AppId } from './apps';
 import { useClock, useLiveSession } from './live';
 import { syncNow, useSyncStatus } from '../sync/engine';
 import { open } from './router';
-import { clock } from '../apps/Earn';
+import { clock } from '../lib/format';
 import { fullscreenSupported, setLayout, toggleFullscreen, toggleLayout, useFullscreen, useLayout } from './display';
 
 export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: () => void; dark: boolean }) {
@@ -141,7 +141,7 @@ export function MenuBar({ app, onSpotlight, dark }: { app: AppId; onSpotlight: (
             <PomoLeft endsAt={pomo.endsAt} pausedLeft={pomo.pausedLeft} />
           </span>
         )}
-        <button className="mb-icon" onClick={() => actions.profile({ theme: dark ? 'light' : 'dark' })} aria-label={L('切换主题', 'Toggle theme')}>
+        <button className="mb-icon mb-theme" onClick={() => actions.profile({ theme: dark ? 'light' : 'dark' })} aria-label={L('切换主题', 'Toggle theme')}>
           <Icon name={dark ? 'sun' : 'moon'} size={15} />
         </button>
         <button

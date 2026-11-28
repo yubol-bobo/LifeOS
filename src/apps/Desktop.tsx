@@ -33,7 +33,7 @@ import { periodOf } from '../lib/period';
 import { planProgress, projectStats } from '../store/plans';
 import { upcoming } from '../store/countdowns';
 import { ReviewHeatmap } from './Review';
-import { clock } from './Earn';
+import { clock } from '../lib/format';
 import { cssVar, effortRows, sliceColor } from './effort';
 import { Pie3D } from '../scene/Pie3D';
 import { useTheme } from '../os/theme';

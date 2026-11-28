@@ -51,7 +51,7 @@ LifeOS is a steady rhythm of managing and recording your life, so you can keep y
 | 🌱 **Growth** | 100 levels, 20 eras, 199 achievements; unlock pet accessories, wallpapers and planet upgrades |
 | 📊 **And more** | Mood and what drives it, assets and net worth, a paper board you drag from idea to accepted with every stage dated, citations auto-synced from Google Scholar, custom trackers, a reward shop |
 
-English and Chinese · light and dark themes · weeks start on Monday or Sunday · portrait card feed or full-screen landscape dashboard · works on phones. Every feature in detail: **[Feature guide](docs/FEATURES.md)**.
+English and Chinese · light and dark themes · weeks start on Monday or Sunday · portrait card feed or full-screen landscape dashboard · works on phones · installable as an app that opens offline. Every feature in detail: **[Feature guide](docs/FEATURES.md)**.
 
 ## Screenshots
 

@@ -1,3 +1,4 @@
+import { PROJECT_TEMPLATES } from '../store/templates';
 import { PALETTE_NAMES } from '../store/defaults';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { daysBetween, dayKey, parseDay } from '../lib/date';
@@ -35,6 +36,7 @@ export function useCategories() {
 
 export function Projects() {
   const L = useL();
+  const lang = useLang();
   const s = useStore((x) => x);
   const cats = useCategories();
   const [filter, setFilter] = useState<string>('all');
@@ -90,16 +92,34 @@ export function Projects() {
           <h1>{L('项目', 'Projects')}</h1>
           <p className="muted">{L('论文、工作、生活里的事，都可以是一个项目。在这里直接开始专注；任务、计划、目标、论文、专注时间和收入都会汇总到这里。', 'Papers, work, life — anything can be a project. Start focusing right here; tasks, plans, goals, papers, focus time and income all roll up here.')}</p>
         </div>
-        <Button
-          variant="primary"
-          icon="plus"
-          onClick={() => {
-            const id = actions.upsertProject({ name: L('新项目', 'New project'), category: filter !== 'all' ? filter : cats.list[0]?.id, color: PALETTE[s.projects.length % PALETTE.length] });
-            setOpenId(id);
-          }}
-        >
-          {L('新项目', 'New project')}
-        </Button>
+        <div className="app-head-actions">
+          <Button
+            variant="primary"
+            icon="plus"
+            onClick={() => {
+              const id = actions.upsertProject({ name: L('新项目', 'New project'), category: filter !== 'all' ? filter : cats.list[0]?.id, color: PALETTE[s.projects.length % PALETTE.length] });
+              setOpenId(id);
+            }}
+          >
+            {L('新项目', 'New project')}
+          </Button>
+          <select
+            className="input tpl-pick"
+            value=""
+            aria-label={L('从模板新建', 'New from a template')}
+            onChange={(e) => {
+              const tpl = PROJECT_TEMPLATES.find((x) => x.id === e.target.value);
+              if (tpl) setOpenId(actions.projectFromTemplate(tpl, lang, PALETTE[s.projects.length % PALETTE.length]));
+            }}
+          >
+            <option value="">{L('从模板新建…', 'From a template…')}</option>
+            {PROJECT_TEMPLATES.map((x) => (
+              <option key={x.id} value={x.id}>
+                {L(x.name[0], x.name[1])} · {L(`${x.steps.length} 步`, `${x.steps.length} steps`)}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <LiveFocusBar />

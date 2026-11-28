@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useL, useLang } from '../lib/i18n';
-import { demoState } from '../store/demo';
 import { actions, getState } from '../store/store';
 import { defaultRates } from '../store/assets';
 import { STARTER } from '../store/builtin';
@@ -45,7 +44,8 @@ export function Onboarding() {
     actions.localize();
   };
 
-  const loadDemo = () => actions.replace(demoState({ ...getState().profile, lang }));
+  // the demo data is only downloaded when you ask for it
+  const loadDemo = () => void import('../store/demo').then(({ demoState }) => actions.replace(demoState({ ...getState().profile, lang })));
 
   return (
     <div className="onboard-scrim">

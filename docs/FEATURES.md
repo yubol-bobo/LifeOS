@@ -62,6 +62,9 @@ Three original clay-style companions: **Mochi** (a bouncy orange mochi cat), **B
   - What got done, XP, focus time, and whether you wrote the review.
   - How the top three went; move what's left to tomorrow one by one or all at once.
 - **Nudges**: once on the first open of the morning and once after 7 pm, only if not done yet (turn off in Settings → General).
+- **Hints in the morning plan**: today's list is clearly more than you usually finish (needs 5 active days); something has waited a long time ("Nd waiting", red after a week); the Human 3.0 quadrant that needs you most and the "next" you wrote, with today's items that feed it tagged.
+- **Project templates**: Projects → "From a template…": write a paper, learn a skill, an 8-week fitness plan, job search — steps included.
+- **Install it, use it offline**: "Install" in Chrome / Edge, or "Add to Home Screen" in iPhone Safari; after one visit it opens offline, and a new release is picked up the next time you're online.
 - **Quick capture**: type a line in `⌘K` / `Ctrl+K` and press Enter for a to-do.
   - Days: today / tomorrow / fri / next monday / 12-03 / 1/5 (and the Chinese words)
   - Projects: `#thes` picks the project whose name starts with "thes"

@@ -805,6 +805,18 @@ export const actions = {
     });
     return id;
   },
+  /** A new project from a template, with its steps. Returns the project id. */
+  projectFromTemplate(tpl: import('./templates').ProjectTemplate, lang: 'zh' | 'en', color: Project['color']) {
+    const i = lang === 'zh' ? 0 : 1;
+    const category = state.categories.some((c) => c.id === tpl.category) ? tpl.category : state.categories[0]?.id;
+    const attr = state.attributes.some((a) => a.id === tpl.attr) ? tpl.attr : (state.attributes[0]?.id ?? 'mind');
+    const id = actions.upsertProject({ name: tpl.name[i], category, color });
+    commit((d) => {
+      const now = Date.now();
+      tpl.steps.forEach((st, k) => d.quests.push({ id: uid(), title: st[i], kind: 'once', attr, difficulty: 'normal', projectId: id, step: true, createdAt: now + k }));
+    });
+    return id;
+  },
   /** Move a project on the board (planning → active → done …); the time of each change is kept. */
   setProjectStatus(id: string, status: ProjectStatus) {
     commit((d) => {

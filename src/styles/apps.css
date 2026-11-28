@@ -1954,3 +1954,13 @@ li:hover > .move-day.is-compact,
 @media (hover: none) { .quest .q-star:not(.is-on) { opacity: 0.5; } }
 .mq-star { color: #e0a10c; fill: currentColor; margin-right: 3px; vertical-align: -1px; }
 .ritual .rt-list + .btn { margin-top: 10px; }
+.rt-insights { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rt-insights li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 10px; font-size: 13px; line-height: 1.5; background: color-mix(in oklab, var(--accent, #f0521f) 7%, transparent); }
+.rt-insights li > svg { flex: none; margin-top: 2px; color: var(--ink-3); }
+.rt-insights li.is-warn { background: color-mix(in srgb, var(--warn) 13%, transparent); }
+.rt-insights li.is-warn > svg { color: var(--warn); }
+.rt-age { font-size: 11px; font-weight: 700; color: var(--ink-3); padding: 1px 6px; border-radius: 999px; background: color-mix(in oklab, var(--ink) 6%, transparent); }
+.rt-age.is-old { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }
+.rt-quad { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 999px; color: color-mix(in oklab, var(--tone) 70%, var(--ink)); background: color-mix(in oklab, var(--tone) 16%, transparent); }
+.app-head-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tpl-pick { width: auto; min-width: 0; max-width: 220px; }

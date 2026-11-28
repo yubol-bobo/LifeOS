@@ -47,3 +47,13 @@ export function hours(ms: number, digits = 1): string {
 
 /** Integers without decimals, everything else with one. */
 export const smart = (v: number) => num(v, Number.isInteger(v) ? 0 : 1);
+
+/** A running time: 4:05 or 1:04:05. */
+export function clock(ms: number) {
+  const t = Math.round(ms / 1000);
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const sec = t % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+}

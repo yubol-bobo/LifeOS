@@ -11,7 +11,7 @@ import { Icon } from '../ui/Icon';
 import { Button, Chip } from '../ui/kit';
 import { useBoardDrag } from '../ui/useBoardDrag';
 import { useLiveSession } from '../os/live';
-import { clock } from './Earn';
+import { clock } from '../lib/format';
 import { useStatusLabel } from './Research';
 import { openPaper } from './PaperCitations';
 
