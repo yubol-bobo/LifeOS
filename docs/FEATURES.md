@@ -114,14 +114,18 @@ Every number lives in [`src/store/rules.ts`](../src/store/rules.ts):
 | Milestone step | 15 |
 | Paper progress | writing 40 · submitted 150 · accepted 400 · published 120 |
 | Focus (paid and unpaid) | 1 per minute; finishing a countdown you set adds minutes ÷ 5 (at least 5) |
+| Deep focus (one uninterrupted stretch; a pause or switch starts a new one) | +10% from 1 h · +20% from 2 h · +30% from 3 h (each stretch on its own) |
+| Today's top things (★) | +50% when finished; all three done +30 |
+| Morning plan / evening wrap-up | 10 each (once a day) |
+| Finishing a project | 15 per finished step, at least 50, at most 400 (taken back if reopened) |
 | Daily review | 15; +10 more for 3 or more fields filled |
 | Tracker entry | 5 per tracker per day |
 | Mood check-in | 5 |
 | Asset check-in | 20 |
 | Water / stretch / pomodoro | 2 / 4 / 10 (daily caps apply) |
-| Achievement unlocked | bronze 50 · silver 120 · gold 300 · legendary 800 |
+| Achievement unlocked | bronze 20 · silver 50 · gold 120 · legendary 300 (coins unchanged: 10 / 24 / 60 / 160) |
 
-Reaching level L takes `40 × (L − 1)^2.2` total XP (Lv.100 is the top). Papers synced from Google Scholar / OpenAlex / Semantic Scholar count as past work: 30 XP each, with full stage XP only for stages they reach afterwards in LifeOS. Coins = XP ÷ 5. All XP is recorded in a ledger de-duplicated by `ref`, so un-ticking something takes back exactly the XP it gave.
+Reaching level L takes `40 × (L − 1)^2.2` total XP (Lv.100 is the top). Papers synced from Google Scholar / OpenAlex / Semantic Scholar count as past work: 30 XP each, with full stage XP only for stages they reach afterwards in LifeOS. Coins = XP ÷ 5 (achievements set their own). Rule changes only apply from then on; XP already earned is never taken back. All XP is recorded in a ledger de-duplicated by `ref`, so un-ticking something takes back exactly the XP it gave.
 
 ## Tech stack
 

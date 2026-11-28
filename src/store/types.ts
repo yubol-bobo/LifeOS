@@ -351,6 +351,7 @@ export interface WorkSession {
   activeMs: number;
   rate: number; // 0 = unpaid effort
   targetMin?: number; // countdown it was started with
+  longestRunMs?: number; // the longest uninterrupted stretch in it (for the deep-focus bonus)
   earned: number;
   note?: string;
   attr: Attr;
@@ -368,6 +369,9 @@ export interface ActiveSession {
   attr: Attr;
   pausedMs: number;
   pausedAt?: number;
+  /** Deep-focus tracking: lengths of the finished uninterrupted stretches (ms), and when the current one began. */
+  runs?: number[];
+  runStart?: number;
   goalId?: string;
   questId?: string;
   projectId?: string;
@@ -392,7 +396,7 @@ export interface Reward {
   redeemed: number;
 }
 
-export type EventKind = 'quest' | 'perfect' | 'milestone' | 'step' | 'focus' | 'paper' | 'tracker' | 'reward' | 'achievement' | 'mood' | 'wellness' | 'assets' | 'plan' | 'review';
+export type EventKind = 'quest' | 'perfect' | 'milestone' | 'step' | 'focus' | 'paper' | 'tracker' | 'reward' | 'achievement' | 'mood' | 'wellness' | 'assets' | 'plan' | 'review' | 'project';
 
 /** Single ledger for XP & coins. Idempotent by `ref`. */
 export interface XpEvent {

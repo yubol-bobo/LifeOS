@@ -1,3 +1,4 @@
+import { DeepHint } from './DeepHint';
 import { useMemo, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { dayKey, daysBetween } from '../lib/date';
 import { useL, useLang } from '../lib/i18n';
@@ -229,6 +230,7 @@ export function LiveFocusBar() {
         <span className="muted small num">
           {live.paused ? L('已暂停', 'Paused') : L(`开始于 ${since}`, `since ${since}`)} · +{Math.floor(live.ms / 60_000)} XP
         </span>
+        <DeepHint run={live.run} />
       </div>
       <span className="pl-clock num">{live.left != null ? (live.left > 0 ? `⏳ ${clock(live.left)}` : '🎉') : clock(live.ms)}</span>
       <div className="row-gap wrap">

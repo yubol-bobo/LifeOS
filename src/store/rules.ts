@@ -10,6 +10,13 @@ export const QUEST_XP: Record<Difficulty, number> = { easy: 10, normal: 25, hard
 export const MILESTONE_XP: Record<MilestoneSize, number> = { small: 120, big: 400, epic: 1000 };
 export const STEP_XP = 15;
 export const PERFECT_DAY_XP = 30;
+/** Today's top things: finishing one adds half its XP again; all three done adds a bonus. */
+export const TOP_BONUS = 0.5;
+export const TOP3_XP = 30;
+/** Morning plan and evening wrap-up, once a day each. */
+export const RITUAL_XP = 10;
+/** Finishing a project: 15 XP per finished step, at least 50, at most 400. */
+export const projectDoneXp = (steps: number) => Math.min(400, Math.max(50, steps * 15));
 export const TRACKER_XP = 5;
 export const PAPER_XP: Partial<Record<PaperStatus, number>> = {
   drafting: 40,
@@ -19,6 +26,24 @@ export const PAPER_XP: Partial<Record<PaperStatus, number>> = {
 };
 /** Coins are the spendable currency: 1 coin per 5 XP, rounded. */
 export const coinsFor = (xp: number) => Math.max(1, Math.round(xp / 5));
+
+/**
+ * Deep focus: every uninterrupted stretch (no pause, no switching away) earns a bonus on top of
+ * its 1 XP a minute — +10% from 1 hour, +20% from 2 hours, +30% from 3 hours. Each stretch counts
+ * on its own: 2 h, a break, then 40 min = +20% on the 2 hours, nothing on the 40 minutes.
+ */
+export const DEEP_FOCUS: [minutes: number, bonus: number][] = [
+  [180, 0.3],
+  [120, 0.2],
+  [60, 0.1],
+];
+export const deepRate = (min: number) => DEEP_FOCUS.find(([m]) => min >= m)?.[1] ?? 0;
+export function deepBonus(runsMs: number[]) {
+  return runsMs.reduce((a, ms) => {
+    const min = Math.floor(ms / 60_000);
+    return a + Math.round(min * deepRate(min));
+  }, 0);
+}
 
 /* ------------------------------------------------------------------ */
 /* Levels                                                             */

@@ -63,7 +63,7 @@ export function Quests() {
           <h1>{L('任务', 'Quests')}</h1>
           <p className="muted">{L('每个任务都可以关联到一个目标、自动记录数据、或在专注够时长后自动完成。', 'Each quest can feed a goal, log tracker data, or complete itself after enough focus.')}</p>
         </div>
-        <Button variant="primary" icon="plus" onClick={() => setEdit({ kind: 'daily', attr: 'mind', difficulty: 'normal', title: '' })}>
+        <Button variant="primary" icon="plus" onClick={() => setEdit({ kind: 'once', attr: 'mind', difficulty: 'normal', title: '' })}>
           {L('新任务', 'New quest')}
         </Button>
       </div>
@@ -267,7 +267,7 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
     setLastId(key);
     if (value) setDraft(value);
   }
-  const d = { kind: 'daily', attr: 'mind', difficulty: 'normal', title: '', ...draft } as Quest;
+  const d = { kind: 'once', attr: 'mind', difficulty: 'normal', title: '', ...draft } as Quest;
   const set = (p: Partial<Quest>) => setDraft({ ...d, ...p });
   const save = () => {
     if (!d.title.trim()) return;
@@ -333,10 +333,11 @@ function QuestEditor({ value, onClose }: { value: Partial<Quest> | null; onClose
               value={d.kind}
               onChange={(v) => set({ kind: v })}
               options={[
-                { value: 'daily', label: L('每日习惯', 'Habit'), icon: 'refresh' },
                 { value: 'once', label: L('一次性', 'One-off'), icon: 'target' },
+                { value: 'daily', label: L('每日习惯', 'Habit'), icon: 'refresh' },
               ]}
             />
+            <span className="muted small">{d.kind === 'daily' ? L('每天（或选定的星期几）都会出现，打勾只算当天。', 'Shows up every day (or on the weekdays you pick); a tick counts for that day only.') : L('做完一次就结束；没做完会留到之后几天。', 'Done once and gone; if unfinished it carries over.')}</span>
           </Field>
           <Field label={L('难度', 'Difficulty')}>
             <Segmented

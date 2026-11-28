@@ -30,6 +30,7 @@ const KINDS: Record<EventKind, { zh: string; en: string; icon: string; color: st
   assets: { zh: '资产', en: 'Assets', icon: 'landmark', color: 'jade' },
   plan: { zh: '计划', en: 'Plans', icon: 'calendar', color: 'teal' },
   review: { zh: '复盘', en: 'Review', icon: 'notebook', color: 'violet' },
+  project: { zh: '完成项目', en: 'Projects done', icon: 'briefcase', color: 'indigo' },
 };
 
 const cssVar = (name: string, fallback: string) => {

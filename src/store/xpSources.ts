@@ -10,12 +10,15 @@ import { roleOf } from './tree';
 import type { State, XpEvent } from './types';
 
 export type SourceGroup = 'time' | 'done' | 'care' | 'passive';
-export type SourceId = 'work' | 'focus' | 'pomo' | 'todo' | 'step' | 'daily' | 'perfect' | 'goal' | 'plan' | 'paper' | 'tracker' | 'reflect' | 'wellness' | 'assets' | 'cite' | 'import' | 'achievement';
+export type SourceId = 'work' | 'focus' | 'deep' | 'pomo' | 'top' | 'project' | 'todo' | 'step' | 'daily' | 'perfect' | 'goal' | 'plan' | 'paper' | 'tracker' | 'reflect' | 'wellness' | 'assets' | 'cite' | 'import' | 'achievement';
 
 export const SOURCES: Record<SourceId, { zh: string; en: string; icon: string; color: string; group: SourceGroup }> = {
   work: { zh: '赚钱计时', en: 'Paid work', icon: 'coins', color: 'jade', group: 'time' },
   focus: { zh: '项目专注', en: 'Project focus', icon: 'timer', color: 'teal', group: 'time' },
+  deep: { zh: '深度专注加成', en: 'Deep focus bonus', icon: 'flame', color: 'orange', group: 'time' },
   pomo: { zh: '番茄钟', en: 'Pomodoros', icon: 'hourglass', color: 'red', group: 'time' },
+  top: { zh: '要事加成', en: 'Top-three bonus', icon: 'star', color: 'amber', group: 'done' },
+  project: { zh: '完成项目', en: 'Projects done', icon: 'briefcase', color: 'indigo', group: 'done' },
   todo: { zh: '一次性待办', en: 'To-dos', icon: 'target', color: 'orange', group: 'done' },
   step: { zh: '项目步骤', en: 'Project steps', icon: 'list-checks', color: 'indigo', group: 'done' },
   daily: { zh: '每日习惯', en: 'Daily habits', icon: 'refresh', color: 'amber', group: 'done' },
@@ -43,19 +46,23 @@ export const GROUPS: Record<SourceGroup, { zh: string; en: string }> = {
 export function sourceOf(s: Pick<State, 'quests' | 'sessions'>, e: XpEvent, paid: Set<string>): SourceId | null {
   switch (e.kind) {
     case 'focus': {
+      if (e.ref.startsWith('deep:')) return 'deep';
       const id = e.ref.split(':')[1];
       return paid.has(id) ? 'work' : 'focus';
     }
     case 'wellness':
       return e.ref.startsWith('well:pomos:') ? 'pomo' : 'wellness';
     case 'quest': {
+      if (e.ref.startsWith('top:')) return 'top';
       const [, id, day] = e.ref.split(':');
       if (day) return 'daily';
       const q = s.quests.find((x) => x.id === id);
       return q && q.kind === 'once' && roleOf(q) === 'step' ? 'step' : 'todo';
     }
     case 'perfect':
-      return 'perfect';
+      return e.ref.startsWith('top3:') ? 'top' : 'perfect';
+    case 'project':
+      return 'project';
     case 'milestone':
     case 'step':
       return 'goal';

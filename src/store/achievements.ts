@@ -15,7 +15,13 @@ import type { State } from './types';
 export type Tier = 'bronze' | 'silver' | 'gold' | 'mythic';
 export type AchCat = 'quest' | 'streak' | 'plan' | 'goal' | 'project' | 'research' | 'focus' | 'wealth' | 'health' | 'mood' | 'review' | 'track' | 'level' | 'explore' | 'pet' | 'secret';
 
-export const TIER_XP: Record<Tier, number> = { bronze: 50, silver: 120, gold: 300, mythic: 800 };
+/**
+ * Achievements are a collection, not the main way to level up: since 0.14 they give about 40% of
+ * the XP they used to (bronze 50→20, silver 120→50, gold 300→120, mythic 800→300). Coins and
+ * points stay as before. XP already earned is never taken back.
+ */
+export const TIER_XP: Record<Tier, number> = { bronze: 20, silver: 50, gold: 120, mythic: 300 };
+export const TIER_COINS: Record<Tier, number> = { bronze: 10, silver: 24, gold: 60, mythic: 160 };
 export const TIER_POINTS: Record<Tier, number> = { bronze: 10, silver: 25, gold: 50, mythic: 100 };
 export const TIER_LABEL: Record<Tier, [string, string]> = { bronze: ['青铜', 'Bronze'], silver: ['白银', 'Silver'], gold: ['黄金', 'Gold'], mythic: ['传说', 'Mythic'] };
 
@@ -319,6 +325,7 @@ export interface Achievement {
   zh: [string, string];
   en: [string, string];
   xp: number;
+  coins: number;
   points: number;
   value: (c: AchCtx) => number;
 }
@@ -340,6 +347,7 @@ export const ACHIEVEMENTS: Achievement[] = SERIES.flatMap((s) =>
     zh: [g.zh ?? (s.stages.length > 1 ? `${s.zh[0]} ${ROMAN[i]}` : s.zh[0]), fmt(s.zh[1], g.n)] as [string, string],
     en: [g.en ?? (s.stages.length > 1 ? `${s.en[0]} ${ROMAN[i]}` : s.en[0]), fmt(s.en[1], g.n)] as [string, string],
     xp: TIER_XP[g.tier],
+    coins: TIER_COINS[g.tier],
     points: TIER_POINTS[g.tier],
     value: s.value,
   })),

@@ -1,5 +1,5 @@
 import { useRef, useSyncExternalStore } from 'react';
-import { repairLinks } from './tree';
+import { repairLinks, roleOf } from './tree';
 import { LS_KEY, loadSaved, save, saveNow } from './persist';
 import { dayKey, setWeekStart } from '../lib/date';
 import { getNextCountdown } from '../lib/nextCountdown';
@@ -15,6 +15,11 @@ import {
   STEP_XP,
   TRACKER_XP,
   coinsFor,
+  deepBonus,
+  projectDoneXp,
+  RITUAL_XP,
+  TOP3_XP,
+  TOP_BONUS,
   levelTitle,
   metrics,
 } from './rules';
@@ -333,7 +338,7 @@ export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
     for (const a of ACHIEVEMENTS) {
       if (draft.achievements[a.id] || a.value(ctx) < a.target) continue;
       draft.achievements[a.id] = Date.now();
-      draft.events.push(ev(`ach:${a.id}`, 'achievement', a.xp, tr(`🏆 ${a.zh[0]}`, `🏆 ${a.en[0]}`)));
+      draft.events.push(ev(`ach:${a.id}`, 'achievement', a.xp, tr(`🏆 ${a.zh[0]}`, `🏆 ${a.en[0]}`), undefined, a.coins));
       unlocked.push(a.id);
       added++;
     }
@@ -703,12 +708,17 @@ export const actions = {
       else p.top = [...top, id];
       if (!p.top?.length) delete p.top;
       if (!Object.keys(p).length) delete d.dayPlans[day];
+      syncTop(d, day);
     });
     return ok;
   },
   /** The morning plan / evening wrap-up is done for this day. */
   markRitual(kind: 'planned' | 'closed', day = dayKey()) {
-    commit((d) => void ((d.dayPlans[day] ??= {})[kind] = Date.now()));
+    commit((d) => {
+      (d.dayPlans[day] ??= {})[kind] = Date.now();
+      if (kind === 'planned') grant(d, `ritual:am:${day}`, 'plan', RITUAL_XP, tr('晨间计划', 'Morning plan'));
+      else grant(d, `ritual:pm:${day}`, 'review', RITUAL_XP, tr('晚间收尾', 'Evening wrap-up'));
+    });
   },
   /** Move several to-dos to another day at once (e.g. everything left at the end of the day). */
   moveQuests(ids: string[], day: string) {
@@ -825,6 +835,11 @@ export const actions = {
       if (!p || from === status) return;
       (p.history ??= []).push({ status, from, at: Date.now() });
       p.status = status;
+      // finishing a project: a bonus for its finished steps (taken back if it's reopened)
+      if (status === 'done') {
+        const steps = d.quests.filter((q) => q.projectId === id && q.kind === 'once' && q.doneAt && roleOf(q) === 'step').length;
+        grant(d, `projdone:${id}`, 'project', projectDoneXp(steps), tr(`完成项目「${p.name}」`, `Finished “${p.name}”`));
+      } else revoke(d, `projdone:${id}`);
     });
   },
   deleteProject(id: string) {
@@ -1196,7 +1211,8 @@ export const actions = {
       parkActive(d);
       const { targetMin: _t, ...rest } = link;
       void _t;
-      d.active = { start: Date.now(), rate, attr, note, pausedMs: 0, ...rest, ...(target > 0 ? { targetMin: target } : {}) };
+      const now = Date.now();
+      d.active = { start: now, rate, attr, note, pausedMs: 0, runs: [], runStart: now, ...rest, ...(target > 0 ? { targetMin: target } : {}) };
     });
   },
   /** Pause the running session and set it aside (to switch to something else). */
@@ -1213,6 +1229,8 @@ export const actions = {
       if (p.pausedAt) {
         p.pausedMs += Date.now() - p.pausedAt;
         p.pausedAt = undefined;
+        p.runStart = Date.now();
+        p.runs ??= [];
       }
       d.active = p;
     });
@@ -1274,7 +1292,12 @@ export const actions = {
       if (a.pausedAt) {
         a.pausedMs += Date.now() - a.pausedAt;
         a.pausedAt = undefined;
-      } else a.pausedAt = Date.now();
+        a.runStart = Date.now();
+        a.runs ??= [];
+      } else {
+        a.pausedAt = Date.now();
+        closeRun(a, a.pausedAt);
+      }
     });
   },
   updateActive(patch: Partial<NonNullable<State['active']>>) {
@@ -1414,9 +1437,22 @@ function logCitations(d: State) {
 function parkActive(d: State) {
   const a = d.active;
   if (!a) return;
-  if (!a.pausedAt) a.pausedAt = Date.now();
+  if (!a.pausedAt) {
+    a.pausedAt = Date.now();
+    closeRun(a, a.pausedAt);
+  }
   d.parked = [a, ...(d.parked ?? [])].slice(0, 8);
   d.active = null;
+}
+
+/**
+ * An uninterrupted stretch ends (pause, switch away, stop). Sessions started before deep-focus
+ * tracking only count when they were never paused (then the whole session was one stretch).
+ */
+function closeRun(a: ActiveSession, at: number) {
+  const from = a.runStart ?? (a.runs === undefined && a.pausedMs === 0 ? a.start : undefined);
+  a.runs = [...(a.runs ?? []), ...(from != null && at > from ? [at - from] : [])];
+  a.runStart = undefined;
 }
 
 /** Turn a running / set-aside session into a logged WorkSession with its XP (or drop it). */
@@ -1428,6 +1464,16 @@ function finishSession(d: State, a: ActiveSession, keep: boolean, capToTarget = 
   if (capToTarget && a.targetMin) activeMs = Math.min(activeMs, a.targetMin * 60_000);
   if (!keep || activeMs < 60_000) return null;
   const end = a.pausedAt ? a.pausedAt : a.start + paused + activeMs;
+  // the uninterrupted stretches, trimmed to what's counted (a capped countdown drops the overshoot)
+  const fin = { ...a, runs: a.runs ? [...a.runs] : undefined };
+  if (!fin.pausedAt) closeRun(fin, now);
+  const runs: number[] = [];
+  let left = activeMs;
+  for (const r of fin.runs ?? []) {
+    runs.push(Math.min(r, left));
+    left = Math.max(0, left - r);
+  }
+  const longest = runs.length ? Math.max(...runs) : 0;
   const s: WorkSession = {
     id: uid(),
     start: a.start,
@@ -1441,9 +1487,16 @@ function finishSession(d: State, a: ActiveSession, keep: boolean, capToTarget = 
     questId: a.questId,
     projectId: a.projectId,
     ...(a.targetMin ? { targetMin: a.targetMin } : {}),
+    ...(longest ? { longestRunMs: longest } : {}),
   };
   d.sessions.push(s);
   grant(d, `focus:${s.id}`, 'focus', Math.round(activeMs / 60_000), a.note || tr('专注时段', 'Focus session'), a.attr); // 1 XP per focused minute
+  // Deep focus: long uninterrupted stretches earn +10% / +20% / +30%
+  const deep = deepBonus(runs);
+  if (deep > 0) {
+    const h = (longest / 3_600_000).toFixed(1);
+    grant(d, `deep:${s.id}`, 'focus', deep, tr(`深度专注加成（最长一段 ${h} 小时）`, `Deep focus bonus (longest stretch ${h} h)`), a.attr);
+  }
   // Finished the countdown you set yourself: a small bonus.
   if (a.targetMin && activeMs >= a.targetMin * 60_000 - 5_000) {
     grant(d, `focusgoal:${s.id}`, 'focus', Math.max(5, Math.round(a.targetMin / 5)), tr(`完成 ${a.targetMin} 分钟专注倒计时`, `${a.targetMin}-min countdown complete`), a.attr);
@@ -1461,6 +1514,33 @@ function finishSession(d: State, a: ActiveSession, keep: boolean, capToTarget = 
 
 function isDone(d: State, q: Quest, day: string) {
   return q.kind === 'once' ? !!q.doneAt : (d.completions[day] ?? []).includes(q.id);
+}
+
+/**
+ * Keep the day's top-three bonuses in line with what's starred and done: +50% for each finished
+ * top thing, +30 when all three are done. Returns the XP newly granted.
+ */
+function syncTop(d: State, day: string): number {
+  let gained = 0;
+  const top = d.dayPlans[day]?.top ?? [];
+  const isDoneOn = (id: string) => {
+    const q = d.quests.find((x) => x.id === id);
+    return !!q && (q.kind === 'once' ? !!q.doneAt : (d.completions[day] ?? []).includes(q.id));
+  };
+  for (const e of d.events.filter((e) => e.ref.startsWith('top:') && e.ref.endsWith(`:${day}`))) {
+    const id = e.ref.slice(4, -(day.length + 1));
+    if (!top.includes(id) || !isDoneOn(id)) revoke(d, e.ref);
+  }
+  for (const id of top) {
+    const q = d.quests.find((x) => x.id === id);
+    if (!q || !isDoneOn(id)) continue;
+    const xp = Math.round(QUEST_XP[q.difficulty] * TOP_BONUS);
+    if (grant(d, `top:${id}:${day}`, 'quest', xp, tr(`要事加成 · ${q.title}`, `Top-three bonus · ${q.title}`), q.attr)) gained += xp;
+  }
+  if (top.length === 3 && top.every(isDoneOn)) {
+    if (grant(d, `top3:${day}`, 'perfect', TOP3_XP, tr('三件要事全部完成', 'All three top things done'), 'spirit')) gained += TOP3_XP;
+  } else revoke(d, `top3:${day}`);
+  return gained;
 }
 
 /** Single source of truth for completing / un-completing a quest, including all linked effects. */
@@ -1485,6 +1565,7 @@ function setQuestDone(d: State, q: Quest, day: string, on: boolean): number {
     } else revoke(d, `perfect:${day}`);
     if (!d.completions[day].length) delete d.completions[day];
   }
+  gained += syncTop(d, day);
   // Linkage: a to-do tied to a project step finishes that step too (and reopens it when unticked).
   const stepQ = q.forStep ? d.quests.find((x) => x.id === q.forStep && x.kind === 'once') : undefined;
   if (stepQ) {

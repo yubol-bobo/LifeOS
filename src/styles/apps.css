@@ -1993,3 +1993,5 @@ li:hover > .move-day.is-compact,
   .xps-card .card-head { flex-wrap: wrap; row-gap: 10px; }
   .xps-card .card-head .card-action { order: 3; flex-basis: 100%; }
 }
+.deep-hint { display: inline-block; margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--ink-3); }
+.deep-hint.is-on { color: #e0711c; }
