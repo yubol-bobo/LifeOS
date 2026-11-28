@@ -91,7 +91,7 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
   scene.add(world);
 
   /* ---- terrain ---- */
-  const geo = new THREE.IcosahedronGeometry(1, 5).toNonIndexed();
+  const geo = new THREE.IcosahedronGeometry(1, 5); // already non-indexed (one vertex per face corner)
   const pos = geo.attributes.position as InstanceType<Three['BufferAttribute']>;
   const colors = new Float32Array(pos.count * 3);
   const v = new THREE.Vector3();
@@ -386,7 +386,21 @@ function mount(THREE: Three, el: HTMLDivElement, initial: PlanetProps) {
   io.observe(el);
 
   let raf = 0;
-  const clock = new THREE.Clock();
+  // frame timing (THREE.Clock is deprecated): seconds since the last frame, and in total
+  let last = performance.now();
+  let elapsed = 0;
+  const clock = {
+    getDelta() {
+      const now = performance.now();
+      const dt = (now - last) / 1000;
+      last = now;
+      elapsed += dt;
+      return dt;
+    },
+    get elapsedTime() {
+      return elapsed;
+    },
+  };
   const tick = () => {
     raf = requestAnimationFrame(tick);
     if (!visible || document.hidden) return;

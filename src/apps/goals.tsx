@@ -140,10 +140,10 @@ export function ProjectTag({ id }: { id?: string }) {
  * Due date chip. A to-do without a due date belongs to the day it was added (`since`): it shows
  * nothing that day, and "past due" from the next day on while it's still open.
  */
-export function DueChip({ due, since }: { due?: string; since?: number }) {
+export function DueChip({ due, since }: { due?: string; since?: string }) {
   const L = useL();
   const lang = useStore((s) => s.profile.lang);
-  const implicit = !due && since != null ? dayKey(since) : undefined;
+  const implicit = !due && since ? since : undefined; // the day a to-do was added (or moved to)
   const d = due ?? implicit;
   if (!d) return null;
   const n = daysBetween(dayKey(), d);

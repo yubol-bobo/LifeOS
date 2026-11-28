@@ -1,4 +1,4 @@
-import { addDays, dayKey, parseDay } from '../lib/date';
+import { addDays, dayKey, dayStartTs, parseDay } from '../lib/date';
 import { effortRows, type EffortRow } from '../apps/effort';
 import { ACH_BY_ID, type Achievement } from './achievements';
 import { filledSeries } from './assets';
@@ -66,7 +66,7 @@ export function periodBounds(kind: ReportKind, key: string) {
   return { first: `${key}-01`, end };
 }
 
-export const currentKey = (kind: ReportKind, d = new Date()) => (kind === 'year' ? String(d.getFullYear()) : kind === 'quarter' ? `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}` : dayKey(d).slice(0, 7));
+export const currentKey = (kind: ReportKind, d: Date = parseDay(dayKey())) => (kind === 'year' ? String(d.getFullYear()) : kind === 'quarter' ? `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}` : dayKey(d).slice(0, 7));
 /** The period of a kind that contains a given day. */
 export const keyOfDay = (kind: ReportKind, day: string) => currentKey(kind, parseDay(day));
 export function shiftKey(kind: ReportKind, key: string, n: number) {
@@ -85,11 +85,15 @@ export function periodReport(s: State, kind: ReportKind, key: string, fallback =
   const today = dayKey();
   const partial = today < addDays(end, -1) && today >= first;
   const last = partial ? today : addDays(end, -1);
-  const from = parseDay(first).getTime();
-  const to = parseDay(addDays(last, 1)).getTime();
+  const from = dayStartTs(first);
+  const to = dayStartTs(addDays(last, 1));
   const days: string[] = [];
   for (let d = first; d <= last; d = addDays(d, 1)) days.push(d);
-  const inRange = (ts: number) => ts >= from && ts < to;
+  // by the day a moment belongs to (which respects when your day starts), not by midnight
+  const inRange = (ts: number) => {
+    const k = dayKey(ts);
+    return k >= first && k <= last;
+  };
 
   // XP, coins, levels
   const evs = s.events.filter((e) => inRange(e.ts));
@@ -177,11 +181,11 @@ export function periodReport(s: State, kind: ReportKind, key: string, fallback =
     for (let mk = first.slice(0, 7); `${mk}-01` < end; mk = shiftKey('month', mk, 1)) {
       if (`${mk}-01` > last) break;
       const b = periodBounds('month', mk);
-      const f = parseDay(b.first).getTime();
-      const t = parseDay(b.end).getTime();
+      const f = dayStartTs(b.first);
+      const t = dayStartTs(b.end);
       months.push({
         key: mk,
-        xp: s.events.filter((e) => e.ts >= f && e.ts < t && e.xp > 0).reduce((a, e) => a + e.xp, 0),
+        xp: s.events.filter((e) => e.xp > 0 && dayKey(e.ts) >= b.first && dayKey(e.ts) < b.end).reduce((a, e) => a + e.xp, 0),
         focusMs: s.sessions.filter((x) => x.start >= f && x.start < t).reduce((a, x) => a + x.activeMs, 0),
         quests: Object.entries(s.completions).filter(([d]) => d.startsWith(mk)).reduce((a, [, ids]) => a + ids.length, 0) + s.quests.filter((q) => q.kind === 'once' && q.doneAt && q.doneAt >= f && q.doneAt < t).length,
       });

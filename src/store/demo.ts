@@ -377,7 +377,7 @@ export function demoState(profile: Partial<State['profile']>): State {
       if (s.achievements[a.id] || a.value(ctx) < a.target) continue;
       const ts = at(addDays(today, -2 - ((i++ * 7) % 70)), 21);
       s.achievements[a.id] = ts;
-      s.events.push({ id: uid(), ref: `ach:${a.id}`, ts, kind: 'achievement', xp: a.xp, coins: coinsFor(a.xp), label: T(`🏆 ${a.zh[0]}`, `🏆 ${a.en[0]}`) });
+      s.events.push({ id: uid(), ref: `ach:${a.id}`, ts, kind: 'achievement', xp: a.xp, coins: a.coins, label: T(`🏆 ${a.zh[0]}`, `🏆 ${a.en[0]}`) });
       added++;
     }
     if (!added) break;

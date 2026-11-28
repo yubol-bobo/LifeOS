@@ -1,3 +1,4 @@
+import { DeepHint } from './DeepHint';
 import { clock } from '../lib/format';
 import { open } from '../os/router';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
@@ -10,7 +11,7 @@ import { duration, money } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { useLiveSession } from '../os/live';
 import { burst, notify } from '../os/notify';
-import { actions, useStore } from '../store/store';
+import { actions, getState as getStoreState, useStore } from '../store/store';
 import type { Attr, WorkSession } from '../store/types';
 import { cssVar, effortIdOf, effortRows, sliceColor } from './effort';
 import { bucketSegs, buckets, rangeWindow, RangePicker, SessionList, StackedBars, type Bucket, type Range } from './EffortHistory';
@@ -150,6 +151,7 @@ export function Earn() {
             </span>
           </Ring>
           <span className="earn-rate num">{(live ? live.paid : mode === 'paid') ? `${money(perSec, cur, 4)} / ${L('秒', 'sec')}` : L('📂 项目时间 · 每分钟 +1 XP', '📂 Project time · +1 XP a minute')}</span>
+          {live && <DeepHint run={live.run} />}
         </div>
 
         <div className="earn-controls">
@@ -250,8 +252,8 @@ export function Earn() {
                   icon="square"
                   onClick={() => {
                     const s = actions.stopFocus();
-                    if (s && s.rate > 0) notify({ title: L('已结算', 'Cashed out'), body: `${duration(s.activeMs)} · ${money(s.earned, cur)} · +${Math.round(s.activeMs / 60000)} XP`, icon: 'coins', tone: 'gold' });
-                    else if (s) notify({ title: L('已记录这段努力', 'Effort logged'), body: `${s.note || L('专注', 'Focus')} · ${duration(s.activeMs)} · +${Math.round(s.activeMs / 60000)} XP`, icon: 'sprout', tone: 'good' });
+                    if (s && s.rate > 0) notify({ title: L('已结算', 'Cashed out'), body: `${duration(s.activeMs)} · ${money(s.earned, cur)} · +${sessionXp(s.id, s.activeMs)} XP`, icon: 'coins', tone: 'gold' });
+                    else if (s) notify({ title: L('已记录这段努力', 'Effort logged'), body: `${s.note || L('专注', 'Focus')} · ${duration(s.activeMs)} · +${sessionXp(s.id, s.activeMs)} XP`, icon: 'sprout', tone: 'good' });
                     else notify({ title: L('不足 1 分钟，未记录', 'Under a minute — not logged'), icon: 'info' });
                   }}
                 >
@@ -749,4 +751,9 @@ function MonthlyEarnings({ sessions, cur, liveEarned }: { sessions: WorkSession[
       <Columns data={data.map((x) => ({ x: label(x.m), y: Math.round(x.earned) }))} tone="wealth" height={200} format={(v) => money(v, cur, 0)} />
     </Card>
   );
+}
+
+/** XP a finished session brought: its minutes plus any deep-focus bonus. */
+function sessionXp(id: string, activeMs: number) {
+  return Math.round(activeMs / 60_000) + (getStoreState().events.find((e) => e.ref === `deep:${id}`)?.xp ?? 0);
 }

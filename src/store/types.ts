@@ -221,6 +221,7 @@ export interface Profile {
   reduceMotion: boolean;
   weekStart?: 0 | 1; // first day of the week: 1 = Monday (default), 0 = Sunday
   rituals?: boolean; // offer the morning plan / evening wrap-up (default on)
+  dayStart?: number; // the hour a new day begins (0–6, default 4): later than midnight for night owls
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
@@ -351,6 +352,7 @@ export interface WorkSession {
   activeMs: number;
   rate: number; // 0 = unpaid effort
   targetMin?: number; // countdown it was started with
+  longestRunMs?: number; // the longest uninterrupted stretch in it (for the deep-focus bonus)
   earned: number;
   note?: string;
   attr: Attr;
@@ -368,6 +370,9 @@ export interface ActiveSession {
   attr: Attr;
   pausedMs: number;
   pausedAt?: number;
+  /** Deep-focus tracking: lengths of the finished uninterrupted stretches (ms), and when the current one began. */
+  runs?: number[];
+  runStart?: number;
   goalId?: string;
   questId?: string;
   projectId?: string;
@@ -392,7 +397,7 @@ export interface Reward {
   redeemed: number;
 }
 
-export type EventKind = 'quest' | 'perfect' | 'milestone' | 'step' | 'focus' | 'paper' | 'tracker' | 'reward' | 'achievement' | 'mood' | 'wellness' | 'assets' | 'plan' | 'review';
+export type EventKind = 'quest' | 'perfect' | 'milestone' | 'step' | 'focus' | 'paper' | 'tracker' | 'reward' | 'achievement' | 'mood' | 'wellness' | 'assets' | 'plan' | 'review' | 'project';
 
 /** Single ledger for XP & coins. Idempotent by `ref`. */
 export interface XpEvent {

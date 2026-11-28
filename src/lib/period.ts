@@ -1,4 +1,4 @@
-import { addDays, dayKey, getWeekStart, parseDay } from './date';
+import { addDays, dayKey, dayStartTs, getWeekStart, parseDay } from './date';
 import type { PlanScope } from '../store/types';
 
 /* Periods: '2026' · '2026-11' · '2026-W45'.
@@ -63,8 +63,8 @@ export function parentPeriod(period: string): string | null {
 /** How far through the period we are (0..1). */
 export function elapsed(period: string, now = new Date()): number {
   const [a, b] = range(period);
-  const t0 = parseDay(a).getTime();
-  const t1 = parseDay(addDays(b, 1)).getTime();
+  const t0 = dayStartTs(a);
+  const t1 = dayStartTs(addDays(b, 1));
   return Math.max(0, Math.min(1, (now.getTime() - t0) / (t1 - t0)));
 }
 

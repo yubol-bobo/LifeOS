@@ -1,11 +1,34 @@
 export const DAY = 86_400_000;
 
-/** Local calendar day as YYYY-MM-DD. */
-export function dayKey(d: Date | number = new Date()): string {
-  const x = typeof d === 'number' ? new Date(d) : d;
+/* ---- when a day ends (Settings → General): things done before this hour count for the day before ---- */
+let dayStartHour = 4;
+export const getDayStart = () => dayStartHour;
+export function setDayStart(h: number | undefined) {
+  dayStartHour = h == null || !Number.isFinite(h) ? 4 : Math.max(0, Math.min(6, Math.round(h)));
+}
+
+/**
+ * The day something belongs to, as YYYY-MM-DD.
+ * - A moment (a timestamp, or now): before the day-start hour (default 4:00) it still counts for the
+ *   day before — ticking something off at 1:30 am lands on "last night", not on the new day.
+ * - A Date object: that calendar date as is (used for dates built from y / m / d).
+ */
+export function dayKey(d: Date | number = Date.now()): string {
+  let x: Date;
+  if (typeof d === 'number') {
+    x = new Date(d);
+    if (dayStartHour) x.setHours(x.getHours() - dayStartHour);
+  } else x = d;
   const m = String(x.getMonth() + 1).padStart(2, '0');
   const day = String(x.getDate()).padStart(2, '0');
   return `${x.getFullYear()}-${m}-${day}`;
+}
+
+/** The moment a day begins (its day-start hour, 4:00 by default) — the boundary that matches dayKey(). */
+export function dayStartTs(key: string): number {
+  const d = parseDay(key);
+  d.setHours(dayStartHour);
+  return d.getTime();
 }
 
 export function parseDay(key: string): Date {
@@ -39,7 +62,7 @@ const WD_EN = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 export const weekdayLetters = (lang: 'zh' | 'en') => weekOrder().map((i) => (lang === 'zh' ? WD_ZH : WD_EN)[i]);
 
 /** Start of the week containing `d`, honouring the user's first day of the week. */
-export function startOfWeek(d = new Date()): Date {
+export function startOfWeek(d: Date = parseDay(dayKey())): Date {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   x.setDate(x.getDate() - dayOfWeek(x));
   return x;

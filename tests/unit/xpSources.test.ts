@@ -24,6 +24,7 @@ function state(): State {
   s.events = [
     ev('focus', 'focus:paid', 540),
     ev('focus', 'focus:deep', 120, addDays(T, -1)),
+    ev('focus', 'deep:deep', 24, addDays(T, -1)),
     ev('wellness', `well:pomos:${T}:1`, 10, T, 10), // during the paid session
     ev('wellness', `well:pomos:${T}:2`, 10, T, 20), // after it
     ev('wellness', `well:water:${T}:1`, 2),
@@ -44,12 +45,12 @@ describe('XP sources', () => {
   it('splits time, done, care and passive, and leaves out what’s outside the range', () => {
     const r = xpSources(state(), 30, T);
     const x = Object.fromEntries(r.sources.map((s) => [s.id, s.xp]));
-    expect(x).toMatchObject({ work: 540, focus: 120, pomo: 20, wellness: 2, todo: 25, step: 25, daily: 10, cite: 60, paper: 150, achievement: 50, reflect: 15 });
-    expect(r.total).toBe(1017);
+    expect(x).toMatchObject({ work: 540, focus: 120, deep: 24, pomo: 20, wellness: 2, todo: 25, step: 25, daily: 10, cite: 60, paper: 150, achievement: 50, reflect: 15 });
+    expect(r.total).toBe(1041);
     expect(r.activeDays).toBe(2);
-    expect(r.perDay).toBe(509);
+    expect(r.perDay).toBe(521);
     expect(r.sources[0].id).toBe('work');
-    expect(r.groups.find((g) => g.id === 'time')!.xp).toBe(680);
+    expect(r.groups.find((g) => g.id === 'time')!.xp).toBe(704);
   });
   it('covers only as many days as there is history', () => {
     const r = xpSources(state(), 30, T);
