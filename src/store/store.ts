@@ -1,7 +1,7 @@
 import { useRef, useSyncExternalStore } from 'react';
 import { repairLinks, roleOf } from './tree';
 import { LS_KEY, loadSaved, save, saveNow } from './persist';
-import { dayKey, setWeekStart } from '../lib/date';
+import { dayKey, setDayStart, setWeekStart } from '../lib/date';
 import { getNextCountdown } from '../lib/nextCountdown';
 import { uid } from '../lib/id';
 import { burst, notify } from '../os/notify';
@@ -181,6 +181,7 @@ export async function hydrateStorage() {
     try {
       state = migrate(JSON.parse(json) as Partial<State>);
       setWeekStart(state.profile.weekStart);
+      setDayStart(state.profile.dayStart);
       subs.forEach((f) => f());
     } catch {
       /* keep what we have */
@@ -189,6 +190,7 @@ export async function hydrateStorage() {
   void save(JSON.stringify(state)); // first run after upgrading: this moves everything into IndexedDB
 }
 setWeekStart(state.profile.weekStart);
+setDayStart(state.profile.dayStart);
 // One-time note for existing users when the level road grew to Lv.100 (0.9).
 try {
   // only for people who were already using LifeOS before this change (new users never saw the old road)
@@ -306,6 +308,7 @@ export function commit(mutate: (draft: State) => void, opts: CommitOpts = {}) {
   const draft: State = structuredClone(state);
   mutate(draft);
   setWeekStart(draft.profile.weekStart);
+  setDayStart(draft.profile.dayStart);
 
   // Plans complete themselves when everything attached to them is done (and reopen if that changes).
   const planDone: string[] = [];

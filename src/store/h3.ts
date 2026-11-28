@@ -1,4 +1,4 @@
-import { addDays, dayKey, parseDay } from '../lib/date';
+import { addDays, dayKey, dayStartTs } from '../lib/date';
 import { filledSeries } from './assets';
 import { isScheduled } from './links';
 import { periodBounds, type ReportKind } from './report';
@@ -97,17 +97,21 @@ export function h3Evidence(s: State, kind: ReportKind, key: string): Record<H3Qu
   const { first, end } = periodBounds(kind, key);
   const today = dayKey();
   const last = end <= today ? addDays(end, -1) : today;
-  const from = parseDay(first).getTime();
-  const to = parseDay(addDays(last, 1)).getTime();
+  const from = dayStartTs(first);
+  const to = dayStartTs(addDays(last, 1));
+  const inP = (ts: number) => {
+    const k = dayKey(ts);
+    return k >= first && k <= last;
+  };
   const out = Object.fromEntries(QUADS.map((q) => [q, { xp: 0, quests: 0, due: 0, rate: null, extra: [] }])) as unknown as Record<H3Quad, QuadEvidence>;
-  for (const e of s.events) if (e.ts >= from && e.ts < to && e.xp > 0 && e.attr) out[quadOf(s, e.attr)].xp += e.xp;
+  for (const e of s.events) if (inP(e.ts) && e.xp > 0 && e.attr) out[quadOf(s, e.attr)].xp += e.xp;
   const qAttr = new Map(s.quests.map((q) => [q.id, q.attr]));
   for (let d = first; d <= last; d = addDays(d, 1)) {
     for (const id of s.completions[d] ?? []) {
       const a = qAttr.get(id);
       if (a) out[quadOf(s, a)].quests++;
     }
-    for (const q of s.quests) if (isScheduled(q, d) && q.createdAt < parseDay(addDays(d, 1)).getTime()) out[quadOf(s, q.attr)].due++;
+    for (const q of s.quests) if (isScheduled(q, d) && q.createdAt < dayStartTs(addDays(d, 1))) out[quadOf(s, q.attr)].due++;
   }
   for (const q of s.quests) if (q.kind === 'once' && q.doneAt && q.doneAt >= from && q.doneAt < to) out[quadOf(s, q.attr)].quests++;
   for (const q of QUADS) {

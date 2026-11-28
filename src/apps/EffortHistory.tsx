@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { addDays, dayKey, parseDay, startOfWeek } from '../lib/date';
+import { addDays, dayKey, dayStartTs, parseDay, startOfWeek } from '../lib/date';
 import { money } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import type { Project, WorkSession } from '../store/types';
@@ -21,7 +21,7 @@ export interface Win {
   last: string;
 }
 
-const dayStart = (k: string) => parseDay(k).getTime();
+const dayStart = (k: string) => dayStartTs(k); // when the day begins (matches dayKey)
 const win = (first: string, last: string): Win => ({ from: dayStart(first), to: dayStart(addDays(last, 1)), first, last });
 const monthFirst = (d: Date) => dayKey(new Date(d.getFullYear(), d.getMonth(), 1));
 const monthLast = (d: Date) => dayKey(new Date(d.getFullYear(), d.getMonth() + 1, 0));

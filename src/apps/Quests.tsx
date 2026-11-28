@@ -190,7 +190,7 @@ export function Quests() {
                 +{q.planAmount ?? 1} {planOf(q.planId)?.unit ?? ''}
               </span>
             ) : null}
-            {!done && <DueChip due={q.due} since={q.kind === 'once' ? parseDay(questDay(q)).getTime() : undefined} />}
+            {!done && <DueChip due={q.due} since={q.kind === 'once' ? questDay(q) : undefined} />}
           </span>
         </div>
         {week && (

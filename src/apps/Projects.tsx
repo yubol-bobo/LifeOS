@@ -1,7 +1,7 @@
 import { PROJECT_TEMPLATES } from '../store/templates';
 import { PALETTE_NAMES } from '../store/defaults';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { daysBetween, dayKey, parseDay } from '../lib/date';
+import { daysBetween, dayKey } from '../lib/date';
 import { money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { periodLabel } from '../lib/period';
@@ -374,7 +374,7 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
                   <li key={q.id} className={`pd-step ${q.doneAt ? 'is-done' : ''}`}>
                     <CheckBubble checked={!!q.doneAt} onChange={() => actions.toggleQuest(q.id)} tone={p.color as 'blue'} label={q.title} />
                     <span className="pd-step-title">{q.title}</span>
-                    {!q.doneAt && <DueChip due={q.due} since={parseDay(questDay(q)).getTime()} />}
+                    {!q.doneAt && <DueChip due={q.due} since={questDay(q)} />}
                   </li>
                 ))}
               </ul>

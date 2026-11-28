@@ -125,6 +125,8 @@ Every number lives in [`src/store/rules.ts`](../src/store/rules.ts):
 | Water / stretch / pomodoro | 2 / 4 / 10 (daily caps apply) |
 | Achievement unlocked | bronze 20 · silver 50 · gold 120 · legendary 300 (coins unchanged: 10 / 24 / 60 / 160) |
 
+**A day starts at 4 am** (0–6 am in Settings): anything done, and any XP earned, before then counts for the day before.
+
 Reaching level L takes `40 × (L − 1)^2.2` total XP (Lv.100 is the top). Papers synced from Google Scholar / OpenAlex / Semantic Scholar count as past work: 30 XP each, with full stage XP only for stages they reach afterwards in LifeOS. Coins = XP ÷ 5 (achievements set their own). Rule changes only apply from then on; XP already earned is never taken back. All XP is recorded in a ledger de-duplicated by `ref`, so un-ticking something takes back exactly the XP it gave.
 
 ## Tech stack

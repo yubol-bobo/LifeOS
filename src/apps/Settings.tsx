@@ -193,6 +193,16 @@ function General() {
                 ]}
               />
             </Field>
+            <Field label={L('一天从几点开始', 'A new day starts at')} hint={L('这个时间之前做的事算前一天。比如凌晨 1 点勾掉的任务、写的复盘，都还算「昨晚」。', 'Anything before this hour counts for the day before — a to-do ticked at 1 am still belongs to last night.')}>
+              <select className="input" value={p.dayStart ?? 4} onChange={(e) => actions.profile({ dayStart: Number(e.target.value) })}>
+                {[0, 1, 2, 3, 4, 5, 6].map((h) => (
+                  <option key={h} value={h}>
+                    {h === 0 ? L('午夜 0:00', 'Midnight') : `${h}:00`}
+                    {h === 4 ? L('（默认）', ' (default)') : ''}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <Field label={L('晨间计划 / 晚间收尾', 'Morning plan / evening wrap-up')} hint={L('每天第一次打开（上午）提醒你挑出 3 件要事；晚上 7 点后提醒你收尾。随时可以从顶栏的 ☀︎ / ☾ 按钮打开。', 'A nudge to pick your top 3 on the first open of the morning, and to wrap up after 7 pm. Always available from the ☀︎ / ☾ button in the top bar.')}>
               <Segmented
                 value={p.rituals === false ? 'off' : 'on'}

@@ -221,6 +221,7 @@ export interface Profile {
   reduceMotion: boolean;
   weekStart?: 0 | 1; // first day of the week: 1 = Monday (default), 0 = Sunday
   rituals?: boolean; // offer the morning plan / evening wrap-up (default on)
+  dayStart?: number; // the hour a new day begins (0–6, default 4): later than midnight for night owls
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';

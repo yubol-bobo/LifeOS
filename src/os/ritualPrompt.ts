@@ -12,7 +12,7 @@ const KEY = 'lifeos:ritual-offered'; // per device: "2026-11-28:morning,2026-11-
 export function offerRitual(now = new Date()) {
   const s = getState();
   if (!s.onboarded || s.profile.rituals === false) return;
-  const day = dayKey(now);
+  const day = dayKey(now.getTime());
   const h = now.getHours();
   const plan = s.dayPlans?.[day];
   const kind = h >= 5 && h < 12 && !plan?.planned ? 'morning' : h >= 19 && !plan?.closed ? 'evening' : null;
