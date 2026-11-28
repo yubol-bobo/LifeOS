@@ -1,3 +1,4 @@
+import { XpSources } from './XpSources';
 import { openDay } from './DayXp';
 import { dayKey } from '../lib/date';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
@@ -13,7 +14,7 @@ import { actions, useStore } from '../store/store';
 import { Icon } from '../ui/Icon';
 import { Bar, Card, Ring, Segmented } from '../ui/kit';
 
-type Tab = 'road' | 'hall' | 'style';
+type Tab = 'road' | 'hall' | 'style' | 'xp';
 
 const HINTS: Record<string, [string, string]> = {
   'sec-night': ['和深夜有关', 'Something about late nights'],
@@ -52,6 +53,7 @@ export function Trophies() {
             ['road', 'route', L('升级之路', 'The Road')],
             ['hall', 'trophy', L('成就馆', 'Trophy Hall')],
             ['style', 'sparkles', L('装扮', 'Style')],
+            ['xp', 'chart', L('经验值来源', 'XP sources')],
           ] as [Tab, string, string][]
         ).map(([id, icon, label]) => (
           <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'is-on' : ''} onClick={() => go(id)}>
@@ -63,6 +65,7 @@ export function Trophies() {
       {tab === 'road' && <Road />}
       {tab === 'hall' && <Hall />}
       {tab === 'style' && <Style />}
+      {tab === 'xp' && <XpSources />}
     </div>
   );
 }
