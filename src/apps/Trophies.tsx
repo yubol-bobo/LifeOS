@@ -26,6 +26,7 @@ const HINTS: Record<string, [string, string]> = {
 };
 
 export function Trophies() {
+  throw new Error("deliberate break (CI check, reverted next)");
   const L = useL();
   const [tab, setTab] = useState<Tab>(() => (sessionStorage.getItem('lifeos:trophy-tab') as Tab) || 'road');
   const go = (t: Tab) => {
