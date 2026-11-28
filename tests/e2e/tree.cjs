@@ -32,5 +32,5 @@ const URL = process.env.LIFEOS_URL || 'http://localhost:5173/';
   const s = await run(`const s=m.getState(); return {steps:s.quests.filter(q=>q.title.startsWith('第')).map(q=>!!q.archived), todo:s.quests.find(q=>q.title==='约导师开会')}`);
   ok(s.steps.every(Boolean) && !s.todo.archived && !s.todo.projectId, 'deleting the project archives its steps, keeps to-dos');
   ok(!errs.length, 'no errors', errs.join('|'));
-  console.log(fails ? `${fails} FAILED` : 'ALL PASS'); await b.close();
+  console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exitCode = fails ? 1 : 0; await b.close();
 })();

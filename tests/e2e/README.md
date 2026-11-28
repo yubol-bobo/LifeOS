@@ -12,3 +12,7 @@ Scripts: `storage.cjs` (IndexedDB, backups, save warnings), `tree.cjs` (task tre
 
 Each prints `PASS` / `FAIL` per check and `ALL PASS` at the end. Screenshots go to `$SHOTS` (default: the temp folder).
 Playwright isn't a project dependency; install it yourself (`npm i -g playwright && npx playwright install chromium`) if you don't have it.
+
+`tests/e2e/run.sh <script.cjs>...` runs scripts and fails unless each exits 0, prints no `FAIL` line and prints `ALL PASS`.
+CI (`browser` job in `.github/workflows/ci.yml`, pull requests only) runs `smoke.cjs` against `vite preview` on :5192 and
+`storage.cjs`, `tree.cjs`, `ritual.cjs` against the dev server on :5173 (they import `/src/store/store.ts` from the page).

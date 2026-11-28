@@ -21,5 +21,5 @@ const URL = process.env.LIFEOS_URL || 'http://localhost:5192/';
     if (errs.length) (fails++, console.log('FAIL errors', errs));
     await ctx.close();
   }
-  console.log(fails ? `${fails} FAILED` : 'ALL PASS'); await b.close();
+  console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exitCode = fails ? 1 : 0; await b.close();
 })();

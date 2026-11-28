@@ -61,6 +61,6 @@ const URL = process.env.LIFEOS_URL || 'http://localhost:5173/';
   ok(await card.locator('.dh-state.is-bad').count() === 1, 'card turns red');
   await p.screenshot({ path: SHOT + 'savefail.png' });
   ok(!errs.length, 'no errors', errs.join('|'));
-  console.log(fails ? `${fails} FAILED` : 'ALL PASS');
+  console.log(fails ? `${fails} FAILED` : 'ALL PASS'); process.exitCode = fails ? 1 : 0;
   await b.close();
 })();

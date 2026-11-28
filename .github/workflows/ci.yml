@@ -29,3 +29,66 @@ jobs:
         run: npm test
       - name: Build
         run: npx vite build
+
+  # Drive the real app in Chromium (tests/e2e). Pull requests only; the deploy workflow doesn't wait for this.
+  browser:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PLAYWRIGHT_VERSION: 1.63.0
+      SHOTS: ${{ github.workspace }}/e2e-shots/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Playwright isn't a project dependency (see tests/e2e/README.md); pin it so the browser cache stays valid.
+      - name: Install Playwright
+        run: npm i --no-save "playwright@$PLAYWRIGHT_VERSION"
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}-chromium
+      - name: Install Chromium
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install Chromium system libraries
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Build
+        run: npx vite build
+      - name: Start servers (preview :5192, dev :5173)
+        id: servers
+        run: |
+          mkdir -p "$SHOTS"
+          nohup npx vite preview --port 5192 --strictPort > preview.log 2>&1 &
+          nohup npx vite --port 5173 --strictPort > dev.log 2>&1 &
+          for url in http://localhost:5192/ http://localhost:5173/; do
+            for i in $(seq 60); do curl -sf -o /dev/null "$url" && break; sleep 1; done
+            curl -sf -o /dev/null "$url" || { echo "::error::$url did not start"; cat preview.log dev.log; exit 1; }
+          done
+
+      # Production build: opens every app, so a broken lazy-loaded chunk fails here.
+      - name: Smoke test (production build)
+        run: LIFEOS_URL=http://localhost:5192/ tests/e2e/run.sh tests/e2e/smoke.cjs
+      # These import /src/store/store.ts from the page, so they need the dev server.
+      - name: Storage, task tree, rituals (dev server)
+        if: (success() || failure()) && steps.servers.outcome == 'success'
+        run: LIFEOS_URL=http://localhost:5173/ tests/e2e/run.sh tests/e2e/storage.cjs tests/e2e/tree.cjs tests/e2e/ritual.cjs
+
+      - name: Upload screenshots and server logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-shots
+          path: |
+            e2e-shots/
+            preview.log
+            dev.log
+          retention-days: 7
