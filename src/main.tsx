@@ -16,8 +16,13 @@ import './styles/focus.css';
 import './styles/report.css';
 import { Shell } from './os/Shell';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Shell />
-  </StrictMode>,
+import { hydrateStorage } from './store/store';
+
+// Load saved data from IndexedDB before the first render (never wait more than a moment).
+void Promise.race([hydrateStorage().catch(() => {}), new Promise((r) => setTimeout(r, 2500))]).then(() =>
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <Shell />
+    </StrictMode>,
+  ),
 );

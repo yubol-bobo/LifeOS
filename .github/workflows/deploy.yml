@@ -92,6 +92,9 @@ jobs:
 
       - if: steps.gate.outputs.deploy == 'true'
         run: npm ci
+      # a broken build of main never goes live
+      - if: steps.gate.outputs.deploy == 'true'
+        run: npm test
       - if: steps.gate.outputs.deploy == 'true'
         run: npm run build
       - if: steps.gate.outputs.deploy == 'true'

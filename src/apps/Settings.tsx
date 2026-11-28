@@ -1,4 +1,5 @@
 import { PALETTE_NAMES } from '../store/defaults';
+import { DataHealth } from './DataHealth';
 import { SnapshotSettings } from './SnapshotSettings';
 import { startDashEdit } from '../os/dashLayout';
 import { ExpectancyInput } from './LifeSettings';
@@ -204,9 +205,10 @@ function General() {
             </Field>
           </div>
         </Card>
+        <DataHealth />
         <SnapshotSettings />
         <Card title={L('数据', 'Data')} icon="download">
-          <p className="muted small">{L('数据保存在本机浏览器（localStorage）。换设备或清理浏览器前，请先导出备份。', 'Data lives in this browser (localStorage). Export a backup before switching devices or clearing your browser.')}</p>
+          <p className="muted small">{L('数据保存在本机浏览器（IndexedDB），每天自动备份。换设备或清理浏览器前，请先导出备份或打开同步。', 'Data lives in this browser (IndexedDB), backed up daily. Export a backup or turn on Sync before switching devices or clearing your browser.')}</p>
           <div className="row-gap wrap" style={{ marginTop: 12 }}>
             <Button icon="download" onClick={exportData}>
               {L('导出备份', 'Export backup')}

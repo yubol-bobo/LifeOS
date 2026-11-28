@@ -1,4 +1,5 @@
 import { useRef, useSyncExternalStore } from 'react';
+import { LS_KEY, loadSaved, save, saveNow } from './persist';
 import { dayKey, setWeekStart } from '../lib/date';
 import { getNextCountdown } from '../lib/nextCountdown';
 import { uid } from '../lib/id';
@@ -48,7 +49,7 @@ import type {
 import { REVIEW_FIELDS, reviewFilled } from './review';
 import { bi, FOCUS_PRESETS, localizeState, pairOf } from './builtin';
 
-const KEY = 'lifeos:v1';
+const KEY = LS_KEY;
 
 export function defaultState(): State {
   const zh = (navigator.language || '').toLowerCase().startsWith('zh');
@@ -146,17 +147,37 @@ export function migrate(parsed: Partial<State>): State {
   return s;
 }
 
+/** Fast first guess from the localStorage copy; hydrateStorage() then loads the real thing from IndexedDB. */
+let bootRaw: string | null = null;
 function load(): State {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return defaultState();
-    return migrate(JSON.parse(raw) as Partial<State>);
+    bootRaw = localStorage.getItem(KEY);
+    if (!bootRaw) return defaultState();
+    return migrate(JSON.parse(bootRaw) as Partial<State>);
   } catch {
     return defaultState();
   }
 }
 
 let state: State = load();
+
+/**
+ * Load the newest saved state (IndexedDB, or the localStorage copy if that's newer) before the
+ * first render. On the first run after upgrading, this also moves the data into IndexedDB.
+ */
+export async function hydrateStorage() {
+  const json = await loadSaved();
+  if (json && json !== bootRaw) {
+    try {
+      state = migrate(JSON.parse(json) as Partial<State>);
+      setWeekStart(state.profile.weekStart);
+      subs.forEach((f) => f());
+    } catch {
+      /* keep what we have */
+    }
+  }
+  void save(JSON.stringify(state)); // first run after upgrading: this moves everything into IndexedDB
+}
 setWeekStart(state.profile.weekStart);
 // One-time note for existing users when the level road grew to Lv.100 (0.9).
 try {
@@ -194,21 +215,10 @@ let saveTimer = 0;
 
 function persist() {
   window.clearTimeout(saveTimer);
-  saveTimer = window.setTimeout(() => {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(state));
-    } catch {
-      /* storage full or blocked — keep running in memory */
-    }
-  }, 150);
+  // IndexedDB first (with a localStorage copy while it fits); a failure is reported, never swallowed
+  saveTimer = window.setTimeout(() => void save(JSON.stringify(state)), 150);
 }
-window.addEventListener('beforeunload', () => {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state));
-  } catch {
-    /* ignore */
-  }
-});
+window.addEventListener('beforeunload', () => saveNow(JSON.stringify(state)));
 
 export const getState = () => state;
 

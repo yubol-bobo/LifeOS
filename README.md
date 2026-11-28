@@ -114,7 +114,7 @@ Your data lives in the browser. Before switching computers or clearing browser d
 
 ## Data & privacy
 
-- **No backend, no account.** Data is stored in your browser's `localStorage`.
+- **No backend, no account.** Data is stored in your browser (IndexedDB, with a localStorage copy while it fits), with an automatic daily backup kept for 30 days. Settings → General → Data health shows where it is and restores any backup. A failed save always shows a warning.
 - **Sync is end-to-end encrypted.** Data is encrypted on your device before it goes into your own private Gist; GitHub can't read it.
 - **AI is optional.** Your key stays in the current browser. When generating a summary, the browser sends that day's digest directly to the provider you chose, with no server in between.
 - **Safe to fork.** The repo contains only code and fictional demo data. Your records, keys and passwords are never in it ([details](SETUP.md#10-use-it-yourself-while-others-fork-it-privacy)).
@@ -129,6 +129,8 @@ npm run dev
 ```
 
 `npm run build` outputs a fully static site in `dist/` that can be hosted anywhere. Pushing to `main` publishes to GitHub Pages via GitHub Actions.
+
+`npm test` runs the unit tests (Vitest: Today's rules, XP, migrations, report periods, storage and backups). Every pull request is type-checked, tested and built automatically, and `main` only goes live if the tests pass. Browser checks live in `tests/e2e/`.
 
 Want to tweak the game balance? Every number is in [`src/store/rules.ts`](src/store/rules.ts). Code layout and tech stack: [Feature guide](docs/FEATURES.md#tech-stack).
 
