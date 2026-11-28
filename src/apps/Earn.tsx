@@ -1,3 +1,4 @@
+import { clock } from '../lib/format';
 import { open } from '../os/router';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useAttrs } from '../store/attrs';
@@ -453,14 +454,6 @@ function ManualSession({ open, onClose }: { open: boolean; onClose: () => void }
 
 
 /** h:mm:ss or m:ss */
-export function clock(ms: number) {
-  const t = Math.round(ms / 1000);
-  const h = Math.floor(t / 3600);
-  const m = Math.floor((t % 3600) / 60);
-  const sec = t % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
-}
 
 /** Today (and this week): where the focused time went — paid work and project time, as an interactive 3D donut. */
 

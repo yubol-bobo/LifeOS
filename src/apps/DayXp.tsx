@@ -18,7 +18,7 @@ import { Button, Modal, Segmented } from '../ui/kit';
 const KINDS: Record<EventKind, { zh: string; en: string; icon: string; color: string }> = {
   quest: { zh: '任务', en: 'Quests', icon: 'list-checks', color: 'orange' },
   perfect: { zh: '全勤', en: 'Perfect day', icon: 'star', color: 'amber' },
-  milestone: { zh: '里程碑', en: 'Milestones', icon: 'flag', color: 'indigo' },
+  milestone: { zh: '目标', en: 'Goals', icon: 'flag', color: 'indigo' },
   step: { zh: '目标步骤', en: 'Goal steps', icon: 'route', color: 'blue' },
   focus: { zh: '专注', en: 'Focus', icon: 'timer', color: 'jade' },
   paper: { zh: '论文', en: 'Papers', icon: 'graduation', color: 'violet' },

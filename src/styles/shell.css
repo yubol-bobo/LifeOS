@@ -1709,6 +1709,10 @@
   .mb-app {
     display: none;
   }
+  /* room for the clock: the theme switch is also in the logo menu */
+  .mb-theme {
+    display: none;
+  }
   .mb-item:not(.mb-level) {
     padding: 0 5px;
   }

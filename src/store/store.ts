@@ -1,4 +1,5 @@
 import { useRef, useSyncExternalStore } from 'react';
+import { repairLinks } from './tree';
 import { LS_KEY, loadSaved, save, saveNow } from './persist';
 import { dayKey, setWeekStart } from '../lib/date';
 import { getNextCountdown } from '../lib/nextCountdown';
@@ -86,6 +87,7 @@ export function defaultState(): State {
     ui: { dock: [...DEFAULT_DOCK], hidden: [], widgets: [] },
     moods: {},
     reviews: {},
+    dayPlans: {},
     focusPresets: FOCUS_PRESETS.map(([p, icon, attr], i) => ({ id: `fp-${i + 1}`, name: zh ? p[0] : p[1], icon, attr, i18n: { name: p } })),
     wellness: {},
     pet: { enabled: true, kind: 'mochi', name: zh ? '团子' : 'Mochi', waterMin: 45, waterGoal: 8, cupMl: 250, wakeHour: 8, sleepHour: 23, sitMin: 45, eye20: false, bedtime: 23 * 60 + 30, pomoWork: 25, pomoBreak: 5, sound: true, sysNotify: false, roam: 'lively', reviewNudge: true, nightSummary: true },
@@ -119,6 +121,7 @@ export function migrate(parsed: Partial<State>): State {
     assets: { ...d.assets, ...parsed.assets },
     stats: { ...parsed.stats },
     reviews: { ...parsed.reviews },
+    dayPlans: { ...parsed.dayPlans },
     focusPresets: parsed.focusPresets ?? d.focusPresets,
     equip: { ...parsed.equip },
     attributes: parsed.attributes?.length ? parsed.attributes : d.attributes,
@@ -144,6 +147,8 @@ export function migrate(parsed: Partial<State>): State {
         p.importedAs = p.history?.[0]?.from ?? p.history?.[0]?.status ?? p.status;
         syncPaper(s, p);
       }
+  // links to things deleted on another device (or by an older version) are cleared
+  repairLinks(s);
   return s;
 }
 
@@ -438,7 +443,9 @@ export const actions = {
   /* ---- quests ---- */
   addQuest(q: Omit<Quest, 'id' | 'createdAt'>) {
     const id = uid();
-    commit((d) => void d.quests.push({ ...q, id, createdAt: Date.now() }));
+    // a "step" needs a project to live in; without one it would show nowhere, so it's a plain to-do
+    const fixed = q.step && !q.projectId && !q.planId ? { ...q, step: undefined } : q;
+    commit((d) => void d.quests.push({ ...fixed, id, createdAt: Date.now() }));
     return id;
   },
   updateQuest(id: string, patch: Partial<Quest>) {
@@ -457,6 +464,7 @@ export const actions = {
   removeQuest(id: string) {
     commit((d) => {
       d.quests = d.quests.filter((q) => q.id !== id);
+      repairLinks(d);
     });
   },
   toggleQuest(id: string, day = dayKey()) {
@@ -502,8 +510,8 @@ export const actions = {
   removeMilestone(id: string) {
     commit((d) => {
       d.milestones = d.milestones.filter((m) => m.id !== id);
-      for (const q of d.quests) if (q.goalId === id) q.goalId = undefined;
       d.events = d.events.filter((e) => !e.ref.startsWith(`ms:${id}`));
+      repairLinks(d);
     });
   },
   setMilestoneStatus(id: string, status: Milestone['status']) {
@@ -684,6 +692,36 @@ export const actions = {
       else revoke(d, `review+:${day}`);
     });
   },
+  /** Star / unstar one of the day's (up to) three most important things. Returns false when three are already starred. */
+  toggleTop(id: string, day = dayKey()) {
+    let ok = true;
+    commit((d) => {
+      const p = (d.dayPlans[day] ??= {});
+      const top = p.top ?? [];
+      if (top.includes(id)) p.top = top.filter((x) => x !== id);
+      else if (top.length >= 3) ok = false;
+      else p.top = [...top, id];
+      if (!p.top?.length) delete p.top;
+      if (!Object.keys(p).length) delete d.dayPlans[day];
+    });
+    return ok;
+  },
+  /** The morning plan / evening wrap-up is done for this day. */
+  markRitual(kind: 'planned' | 'closed', day = dayKey()) {
+    commit((d) => void ((d.dayPlans[day] ??= {})[kind] = Date.now()));
+  },
+  /** Move several to-dos to another day at once (e.g. everything left at the end of the day). */
+  moveQuests(ids: string[], day: string) {
+    commit((d) => {
+      for (const q of d.quests) if (ids.includes(q.id) && q.kind === 'once' && !q.doneAt) q.day = day;
+      // a moved to-do no longer belongs to today's top three
+      for (const p of Object.values(d.dayPlans))
+        if (p.top) {
+          p.top = p.top.filter((x) => !ids.includes(x));
+          if (!p.top.length) delete p.top;
+        }
+    });
+  },
   setMoodNote(note: string, day = dayKey()) {
     commit(
       (d) => {
@@ -767,6 +805,18 @@ export const actions = {
     });
     return id;
   },
+  /** A new project from a template, with its steps. Returns the project id. */
+  projectFromTemplate(tpl: import('./templates').ProjectTemplate, lang: 'zh' | 'en', color: Project['color']) {
+    const i = lang === 'zh' ? 0 : 1;
+    const category = state.categories.some((c) => c.id === tpl.category) ? tpl.category : state.categories[0]?.id;
+    const attr = state.attributes.some((a) => a.id === tpl.attr) ? tpl.attr : (state.attributes[0]?.id ?? 'mind');
+    const id = actions.upsertProject({ name: tpl.name[i], category, color });
+    commit((d) => {
+      const now = Date.now();
+      tpl.steps.forEach((st, k) => d.quests.push({ id: uid(), title: st[i], kind: 'once', attr, difficulty: 'normal', projectId: id, step: true, createdAt: now + k }));
+    });
+    return id;
+  },
   /** Move a project on the board (planning → active → done …); the time of each change is kept. */
   setProjectStatus(id: string, status: ProjectStatus) {
     commit((d) => {
@@ -780,7 +830,7 @@ export const actions = {
   deleteProject(id: string) {
     commit((d) => {
       d.projects = d.projects.filter((p) => p.id !== id);
-      for (const x of [...d.quests, ...d.milestones, ...d.papers, ...d.plans, ...d.countdowns, ...d.sessions] as { projectId?: string }[]) if (x.projectId === id) x.projectId = undefined;
+      repairLinks(d); // its steps are archived (kept, off every list); everything else just loses the link
       if (d.active?.projectId === id) d.active.projectId = undefined;
     });
   },
@@ -861,7 +911,7 @@ export const actions = {
         for (const p of d.plans) if (p.parentId && kill.has(p.parentId) && !kill.has(p.id)) (kill.add(p.id), (grew = true));
       }
       d.plans = d.plans.filter((p) => !kill.has(p.id));
-      for (const q of d.quests) if (q.planId && kill.has(q.planId)) q.planId = undefined;
+      repairLinks(d);
       for (const k of kill) revoke(d, `plan:${k}`);
     });
   },
@@ -1041,6 +1091,7 @@ export const actions = {
     commit((d) => {
       d.papers = d.papers.filter((p) => p.id !== id);
       d.events = d.events.filter((e) => !e.ref.startsWith(`paper:${id}:`) && e.ref !== `paperimp:${id}`);
+      repairLinks(d);
       logCitations(d);
     });
   },

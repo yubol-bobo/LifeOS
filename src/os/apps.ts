@@ -12,12 +12,27 @@ export interface AppDef {
   width?: number; // natural content width of its window (px)
 }
 
+/**
+ * The apps in four groups, by what you come to do:
+ *   today  — run the day (desktop, quests, plans, mood, review)
+ *   build  — long-term work (projects, goals, research, earn)
+ *   record — what happened (trackers, assets, timeline, reports)
+ *   grow   — rewards & settings
+ */
+export type AppGroup = 'today' | 'build' | 'record' | 'grow';
+export const APP_GROUPS: { id: AppGroup; zh: string; en: string; apps: AppId[] }[] = [
+  { id: 'today', zh: '过好今天', en: 'Today', apps: ['home', 'quests', 'plan', 'mood', 'review'] },
+  { id: 'build', zh: '长期目标与工作', en: 'Goals & work', apps: ['projects', 'roadmap', 'research', 'earn'] },
+  { id: 'record', zh: '记录与回顾', en: 'Records & look-backs', apps: ['trackers', 'assets', 'timeline', 'report'] },
+  { id: 'grow', zh: '成长与设置', en: 'Growth & settings', apps: ['trophies', 'shop', 'settings'] },
+];
+
 export const APPS: AppDef[] = [
   { id: 'home', icon: 'house', hue: '#FF6A3D', zh: '桌面', en: 'Desktop', blurbZh: '今日总览与小组件', blurbEn: 'Today at a glance', key: '1' },
   { id: 'quests', icon: 'list-checks', hue: '#F2683C', zh: '任务', en: 'Quests', blurbZh: '每日清单与一次性任务', blurbEn: 'Daily habits & to-dos', key: '2', width: 940 },
   { id: 'plan', icon: 'calendar', hue: '#1497A8', zh: '计划', en: 'Plans', blurbZh: '年 / 月 / 周计划与倒计时', blurbEn: 'Year, month, week plans & countdowns', key: '3', width: 1180 },
   { id: 'projects', icon: 'briefcase', hue: '#5161D6', zh: '项目', en: 'Projects', blurbZh: '学术、工作、生活，一切项目；在这里直接开始专注', blurbEn: 'Every project — and start focusing on one right here', key: '3', width: 1180 },
-  { id: 'roadmap', icon: 'route', hue: '#3F7BE0', zh: '人生地图', en: 'Roadmap', blurbZh: '里程碑与人生周格', blurbEn: 'Milestones & life in weeks', key: '3', width: 1200 },
+  { id: 'roadmap', icon: 'route', hue: '#3F7BE0', zh: '人生地图', en: 'Roadmap', blurbZh: '人生目标与人生周格', blurbEn: 'Life goals & life in weeks', key: '3', width: 1200 },
   { id: 'research', icon: 'graduation', hue: '#7A5AE6', zh: '学术', en: 'Research', blurbZh: '论文管线与引用追踪', blurbEn: 'Papers & citations', key: '4', width: 1160 },
   { id: 'earn', icon: 'coins', hue: '#1BA677', zh: '赚钱', en: 'Earn', blurbZh: '时薪计时：赚钱的工作，实时看见收入', blurbEn: 'Paid work, with live earnings', key: '5', width: 1180 },
   { id: 'trackers', icon: 'activity', hue: '#E2689A', zh: '追踪', en: 'Trackers', blurbZh: '任何你想量化的指标', blurbEn: 'Quantify anything', key: '6', width: 1020 },

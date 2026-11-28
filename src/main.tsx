@@ -26,3 +26,8 @@ void Promise.race([hydrateStorage().catch(() => {}), new Promise((r) => setTimeo
     </StrictMode>,
   ),
 );
+
+// Offline + "install as an app": only in the built site (the dev server must never be cached).
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => void navigator.serviceWorker.register('./sw.js').catch(() => {}));
+}

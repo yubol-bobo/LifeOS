@@ -15,6 +15,14 @@ export function useTheme() {
   }, []);
   const dark = pref === 'dark' || (pref === 'system' && sysDark);
   useEffect(() => {
+    // index.html reads this before first paint (the full state may live only in IndexedDB)
+    try {
+      localStorage.setItem('lifeos:theme', pref);
+    } catch {
+      /* blocked */
+    }
+  }, [pref]);
+  useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute('content', dark ? '#0F0E15' : '#EEE8DE'));
   }, [dark]);

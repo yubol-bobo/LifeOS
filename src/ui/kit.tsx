@@ -215,7 +215,7 @@ export function Modal({ open, onClose, title, children, footer, width = 520 }: {
     if (!open) return;
     const k = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current();
     window.addEventListener('keydown', k);
-    const t = window.setTimeout(() => ref.current?.querySelector<HTMLElement>('input,select,textarea,button.btn-primary')?.focus(), 60);
+    const t = window.setTimeout(() => ref.current?.querySelector<HTMLElement>('input,select,textarea,button.btn-primary')?.focus({ preventScroll: true }), 60);
     return () => {
       window.removeEventListener('keydown', k);
       window.clearTimeout(t);

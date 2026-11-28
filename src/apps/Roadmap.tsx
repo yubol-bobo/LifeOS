@@ -88,7 +88,7 @@ export function Roadmap() {
           <p className="muted">{L('人生不是一张待办清单，而是一张地图。标记你到过的地方，和你想去的地方。', "Life isn't a to-do list, it's a map. Mark where you've been and where you're heading.")}</p>
         </div>
         <Button variant="primary" icon="plus" onClick={() => setEdit({ attr: 'mind', size: 'big', status: 'planned', steps: [], title: '' })}>
-          {L('新里程碑', 'New milestone')}
+          {L('新目标', 'New goal')}
         </Button>
       </div>
 
@@ -131,14 +131,14 @@ export function Roadmap() {
               </Button>
             }
           >
-            <p className="muted small">{L(`每一格是一周，每一行是一年。共 ${s.profile.lifeExpectancy} 行。彩色圆点是里程碑。`, `Each cell is a week, each row a year — ${s.profile.lifeExpectancy} rows. Colored dots are milestones.`)}</p>
+            <p className="muted small">{L(`每一格是一周，每一行是一年。共 ${s.profile.lifeExpectancy} 行。彩色圆点是目标。`, `Each cell is a week, each row a year — ${s.profile.lifeExpectancy} rows. Colored dots are goals.`)}</p>
             <LifeWeeks />
             <LifeSettingsModal open={lifeOpen} onClose={() => setLifeOpen(false)} />
           </Card>
           </div>
           <Card title={L('已抵达', 'Reached')} icon="mountain">
             {past.length === 0 ? (
-              <p className="muted small">{L('达成的里程碑会收藏在这里。', 'Reached milestones are collected here.')}</p>
+              <p className="muted small">{L('达成的目标会收藏在这里。', 'Reached goals are collected here.')}</p>
             ) : (
               <ul className="reached">
                 {[...past].reverse().map((m) => (
@@ -409,7 +409,7 @@ function MilestoneEditor({ value, onClose }: { value: Partial<Milestone> | null;
     <Modal
       open={!!value}
       onClose={onClose}
-      title={m.id ? L('编辑里程碑', 'Edit milestone') : L('新里程碑', 'New milestone')}
+      title={m.id ? L('编辑目标', 'Edit goal') : L('新目标', 'New goal')}
       width={560}
       footer={
         <>
@@ -429,7 +429,7 @@ function MilestoneEditor({ value, onClose }: { value: Partial<Milestone> | null;
       }
     >
       <div className="form">
-        <Field label={L('里程碑', 'Milestone')}>
+        <Field label={L('目标', 'Goal')}>
           <input className="input" value={m.title} onChange={(e) => setD({ ...m, title: e.target.value })} placeholder={L('例如：博士毕业', 'e.g. Defend the PhD')} />
         </Field>
         <Field label={L('备注', 'Note')}>

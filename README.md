@@ -42,7 +42,7 @@ LifeOS is a steady rhythm of managing and recording your life, so you can keep y
 | --- | --- |
 | 🖥️ **Desktop** | An OS-style dashboard: your level with the attribute radar, today's quests, today's earnings, a 3D donut of where your time went, the projects you're pushing forward, life progress, an XP heatmap, and a 3D planet that grows as you level up |
 | ✅ **Quests & plans** | Daily habits and one-off tasks; break the year into months, weeks and today, with progress flowing upward. Link today's quest to a plan by an amount ("Read the book · +3 chapters") and the week, month and year move with it; log a note at every step |
-| 📁 **Projects** | Split a project into steps, each with an optional due date; steps stay off Today until you schedule them. A board with Planning / In progress / Done columns (your papers included), drag to move, every move recorded. Start focusing from any card, and pick which projects show on the desktop |
+| 📁 **Projects** | Goal → project (papers included) → step → today's to-do is one tree, and every to-do shows where it belongs. Split a project into steps, each with an optional due date; steps stay off Today until you schedule them. A board with Planning / In progress / Done columns (your papers included), drag to move, every move recorded. Start focusing from any card, and pick which projects show on the desktop |
 | ⏱️ **Earn & focus** | **Earn**: time paid work and watch earnings tick up by the second. **Project focus**: one tap on any project (or the gym, reading…). Stack countdowns with +15m / +30m / +1h; at zero the session settles itself and the confetti flies. Pause one task, switch to another, resume it later. Optional daily goals for paid work and for project focus |
 | 🐾 **Desktop pets** | Three companions remind you to drink water, stretch and sleep; connect OpenAI, Claude, DeepSeek, Kimi or GLM and your pet writes up your day each night, ending with a ✨ line that wanders to the news, this day in history, a poem or a bit of cheering on |
 | 📝 **Daily review** | One line is enough: highlight, lesson, blocker, gratitude, tomorrow's one thing; a reflection heatmap and "one year ago today" |
@@ -51,7 +51,7 @@ LifeOS is a steady rhythm of managing and recording your life, so you can keep y
 | 🌱 **Growth** | 100 levels, 20 eras, 199 achievements; unlock pet accessories, wallpapers and planet upgrades |
 | 📊 **And more** | Mood and what drives it, assets and net worth, a paper board you drag from idea to accepted with every stage dated, citations auto-synced from Google Scholar, custom trackers, a reward shop |
 
-English and Chinese · light and dark themes · weeks start on Monday or Sunday · portrait card feed or full-screen landscape dashboard · works on phones. Every feature in detail: **[Feature guide](docs/FEATURES.md)**.
+English and Chinese · light and dark themes · weeks start on Monday or Sunday · portrait card feed or full-screen landscape dashboard · works on phones · installable as an app that opens offline. Every feature in detail: **[Feature guide](docs/FEATURES.md)**.
 
 ## Screenshots
 
@@ -99,12 +99,12 @@ Keys and tokens go **only into the web page or GitHub Secrets**, never into code
 
 ### 4. A day with LifeOS
 
-- **Morning**: glance at today's quests and countdowns; in Plans, send this week's items to today, or add a quest like "Read · +3 chapters" that feeds your monthly reading plan.
+- **Morning**: open the morning plan (☀︎ in the top bar; it also offers itself on the first open of the morning), sort out what was left from before, and star the 3 things that matter most; in Plans, send this week's items to today, or add a quest like "Read · +3 chapters" that feeds your monthly reading plan.
 - **During the day**: hit ▶ on a project card (or Start work in Earn), add +30m or +1h if you want a countdown, and let it settle itself at zero. Something urgent? Pause, switch, and resume from the menu bar later. Drag a project or paper to its next column when it moves.
-- **Evening**: tap your mood, spend a minute on the review, or click your pet → "Day summary", tweak it and save it to your review.
+- **Evening**: open the evening wrap-up (☾), see what got done and move what's left to tomorrow in one click; tap your mood, spend a minute on the review, or click your pet → "Day summary", tweak it and save it to your review.
 - **Looking back**: open Timeline, or click any day on any heatmap.
 
-Tip: `⌘K` / `Ctrl+K` searches and opens everything; the top-right buttons switch to the landscape dashboard and full screen.
+Tip: `⌘K` / `Ctrl+K` searches and opens everything, and captures too: type "call advisor tomorrow #Thesis !" and press Enter for a hard to-do tomorrow in the Thesis project; the top-right buttons switch to the landscape dashboard and full screen.
 
 ### 5. Backups
 

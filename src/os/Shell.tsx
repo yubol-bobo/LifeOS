@@ -1,24 +1,12 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { offerRitual } from './ritualPrompt';
+import { Ritual, type RitualKind } from './Ritual';
+import { lazy, Suspense, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { onSaveError } from '../store/persist';
-import { Report } from '../apps/Report';
 import { announceReports } from '../apps/reportNotice';
 import { autoRefreshAmp } from '../apps/AmpSource';
 import { initSnapshots } from './snapshot';
 import { Desktop } from '../apps/Desktop';
-import { Quests } from '../apps/Quests';
-import { Roadmap } from '../apps/Roadmap';
-import { Research } from '../apps/Research';
-import { Earn } from '../apps/Earn';
-import { Trackers } from '../apps/Trackers';
-import { Shop } from '../apps/Shop';
-import { Trophies } from '../apps/Trophies';
-import { Settings } from '../apps/Settings';
-import { Mood } from '../apps/Mood';
-import { Review } from '../apps/Review';
-import { Timeline } from '../apps/Timeline';
-import { Plan } from '../apps/Plan';
-import { Projects } from '../apps/Projects';
-import { Assets, CheckinSheet } from '../apps/Assets';
+import { CheckinSheet } from '../apps/Assets';
 import { attrCss, DEFAULT_ATTRS } from '../store/defaults';
 import { PetLayer } from '../pet/PetLayer';
 import { useLang } from '../lib/i18n';
@@ -43,10 +31,27 @@ import { closeSummary } from '../ai/summary';
 import { FocusCelebrate } from './FocusCelebrate';
 import { PlanNoteSheet } from '../apps/PlanNote';
 import { DayHost } from '../apps/DayXp';
-import { clock } from '../apps/Earn';
+import { clock } from '../lib/format';
 import { open, useRoute } from './router';
 import { Spotlight } from './Spotlight';
 import { useTheme } from './theme';
+
+// Each app's code loads the first time you open it (the desktop loads right away).
+const Quests = lazy(() => import('../apps/Quests').then((m) => ({ default: m.Quests })));
+const Roadmap = lazy(() => import('../apps/Roadmap').then((m) => ({ default: m.Roadmap })));
+const Research = lazy(() => import('../apps/Research').then((m) => ({ default: m.Research })));
+const Earn = lazy(() => import('../apps/Earn').then((m) => ({ default: m.Earn })));
+const Trackers = lazy(() => import('../apps/Trackers').then((m) => ({ default: m.Trackers })));
+const Mood = lazy(() => import('../apps/Mood').then((m) => ({ default: m.Mood })));
+const Review = lazy(() => import('../apps/Review').then((m) => ({ default: m.Review })));
+const Timeline = lazy(() => import('../apps/Timeline').then((m) => ({ default: m.Timeline })));
+const Report = lazy(() => import('../apps/Report').then((m) => ({ default: m.Report })));
+const Plan = lazy(() => import('../apps/Plan').then((m) => ({ default: m.Plan })));
+const Projects = lazy(() => import('../apps/Projects').then((m) => ({ default: m.Projects })));
+const Shop = lazy(() => import('../apps/Shop').then((m) => ({ default: m.Shop })));
+const Trophies = lazy(() => import('../apps/Trophies').then((m) => ({ default: m.Trophies })));
+const Settings = lazy(() => import('../apps/Settings').then((m) => ({ default: m.Settings })));
+const Assets = lazy(() => import('../apps/Assets').then((m) => ({ default: m.Assets })));
 
 const APP_VIEWS: Record<Exclude<AppId, 'home'>, () => ReactNode> = {
   quests: () => <Quests />,
@@ -73,6 +78,7 @@ export function Shell() {
   const reduce = useStore((s) => s.profile.reduceMotion);
   const [booted, setBooted] = useState(() => sessionStorage.getItem('lifeos:booted') === '1');
   const [spot, setSpot] = useState(false);
+  const [ritual, setRitual] = useState<RitualKind | null>(null);
   const [zoom, setZoom] = useState(false);
   const live = useLiveSession(1000);
   const currency = useStore((s) => s.profile.currency);
@@ -97,6 +103,14 @@ export function Shell() {
       const zh = getState().profile.lang === 'zh';
       notify({ title: zh ? '保存失败：数据可能没存下来' : 'Save failed: your data may not be stored', body: (zh ? '请到 系统设置 → 通用 → 导出备份。' : 'Go to Settings → General → Export backup.') + ` (${msg})`, icon: 'info', tone: 'warn', onOpen: () => open('settings') }, 30_000);
     });
+  }, []);
+  // morning plan / evening wrap-up: open on request, and offer each once a day
+  useEffect(() => {
+    const on = (e: Event) => setRitual((e as CustomEvent<RitualKind>).detail);
+    window.addEventListener('lifeos:ritual', on);
+    const t = window.setTimeout(offerRitual, 4000);
+    const iv = window.setInterval(offerRitual, 15 * 60_000);
+    return () => (window.removeEventListener('lifeos:ritual', on), clearTimeout(t), clearInterval(iv));
   }, []);
   // Asset Management Pro as the net-worth source: refresh quietly when it's a few hours old
   useEffect(() => autoRefreshAmp(getState()), []);
@@ -192,7 +206,9 @@ export function Shell() {
               </div>
               <div className="win-bar-end" />
             </div>
-            <div className="win-body">{APP_VIEWS[app as Exclude<AppId, 'home'>]()}</div>
+            <div className="win-body">
+              <Suspense fallback={<div className="win-loading" aria-busy="true" />}>{APP_VIEWS[app as Exclude<AppId, 'home'>]()}</Suspense>
+            </div>
           </div>
         )}
       </main>
@@ -207,6 +223,7 @@ export function Shell() {
       <Notifications />
       <Bursts />
       {spot && <Spotlight dark={dark} onClose={() => setSpot(false)} />}
+      {ritual && <Ritual kind={ritual} onClose={() => setRitual(null)} />}
       {!onboarded && <Onboarding />}
     </div>
   );

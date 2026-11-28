@@ -69,7 +69,8 @@
     min-width: 5em;
   }
 
-  .os[data-layout='landscape'] .mini-quests .goal-tag {
+  .os[data-layout='landscape'] .mini-quests .goal-tag,
+  .os[data-layout='landscape'] .mini-quests .lineage {
     flex-shrink: 1;
     max-width: 38%;
   }
@@ -128,7 +129,8 @@
 
 /* narrow tiles (≈1440px screens): drop secondary bits before squeezing the main text */
 @container (max-width: 270px) {
-  .mini-quests .goal-tag {
+  .mini-quests .goal-tag,
+  .mini-quests .lineage {
     display: none;
   }
   .research-mini .big-num {

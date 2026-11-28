@@ -35,7 +35,7 @@ const ARRAYS: { name: keyof State; key: (x: Keyed) => string; ordered: boolean; 
   { name: 'snapshots', key: (x) => String(x.date), ordered: false, sort: (a, b) => String(a.date).localeCompare(String(b.date)) },
   { name: 'citationLog', key: (x) => String(x.date), ordered: false, sort: (a, b) => String(a.date).localeCompare(String(b.date)) },
 ];
-const RECORDS: (keyof State)[] = ['completions', 'moods', 'wellness', 'achievements', 'stats', 'reviews'];
+const RECORDS: (keyof State)[] = ['completions', 'moods', 'wellness', 'achievements', 'stats', 'reviews', 'dayPlans'];
 const SKIP = new Set<string>([...ARRAYS.map((a) => a.name), ...RECORDS]);
 
 export function toCells(s: State): Cells {

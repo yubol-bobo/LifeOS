@@ -193,6 +193,16 @@ function General() {
                 ]}
               />
             </Field>
+            <Field label={L('晨间计划 / 晚间收尾', 'Morning plan / evening wrap-up')} hint={L('每天第一次打开（上午）提醒你挑出 3 件要事；晚上 7 点后提醒你收尾。随时可以从顶栏的 ☀︎ / ☾ 按钮打开。', 'A nudge to pick your top 3 on the first open of the morning, and to wrap up after 7 pm. Always available from the ☀︎ / ☾ button in the top bar.')}>
+              <Segmented
+                value={p.rituals === false ? 'off' : 'on'}
+                onChange={(v) => actions.profile({ rituals: v === 'on' })}
+                options={[
+                  { value: 'on', label: L('提醒我', 'Remind me') },
+                  { value: 'off', label: L('不提醒', 'Off') },
+                ]}
+              />
+            </Field>
             <Field label={L('动效', 'Motion')}>
               <Segmented
                 value={p.reduceMotion ? 'reduce' : 'full'}

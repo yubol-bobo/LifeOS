@@ -20,7 +20,8 @@ import { Icon } from '../ui/Icon';
 import { Bar, Button, CheckBubble, Chip, Ring } from '../ui/kit';
 import { Odometer } from '../ui/Odometer';
 import { isScheduled, onToday, questDay, weeklyReview } from '../store/links';
-import { DueChip, GoalTag } from './goals';
+import { DueChip } from './goals';
+import { Lineage } from './Lineage';
 import { useStatusLabel } from './Research';
 import type { PaperStatus } from '../store/types';
 import { QuickAdd } from './Quests';
@@ -32,7 +33,7 @@ import { periodOf } from '../lib/period';
 import { planProgress, projectStats } from '../store/plans';
 import { upcoming } from '../store/countdowns';
 import { ReviewHeatmap } from './Review';
-import { clock } from './Earn';
+import { clock } from '../lib/format';
 import { cssVar, effortRows, sliceColor } from './effort';
 import { Pie3D } from '../scene/Pie3D';
 import { useTheme } from '../os/theme';
@@ -74,7 +75,9 @@ function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolea
 
   const doneToday = new Set(s.completions[today] ?? []);
   // project steps stay in their project until they're due (or pulled in from a plan)
-  const quests = s.quests.filter((q) => !q.archived && (q.kind === 'daily' ? isScheduled(q, today) : onToday(q, today) && (!q.doneAt || dayKey(q.doneAt) === today)));
+  const top = s.dayPlans[today]?.top ?? [];
+  const rank = (id: string) => (top.includes(id) ? top.indexOf(id) : 99);
+  const quests = s.quests.filter((q) => !q.archived && (q.kind === 'daily' ? isScheduled(q, today) : onToday(q, today) && (!q.doneAt || dayKey(q.doneAt) === today))).sort((a, b) => rank(a.id) - rank(b.id));
   const dailies = s.quests.filter((q) => isScheduled(q, today));
   const dailyDone = dailies.filter((q) => doneToday.has(q.id)).length;
   // Everything on today's list: recurring quests due today, plus to-dos on Today (made today or
@@ -133,7 +136,7 @@ function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolea
             still={s.profile.reduceMotion || hidden}
             features={unlockedAt(m.level.level, 'planet').map((u) => u.id)}
           />
-          <span className="planet-hint">{L('拖动旋转 · 树木随等级生长，旗帜是你的里程碑', 'Drag to spin · trees grow with level, flags are milestones')}</span>
+          <span className="planet-hint">{L('拖动旋转 · 树木随等级生长，旗帜是你达成的目标', 'Drag to spin · trees grow with level, flags are goals reached')}</span>
         </div>
         {!hide.has('attrs') && (
           <button className="hero-attrs" onClick={() => open('trophies')} title={L('属性分布 · 点开看升级之路', 'Attributes · open the road')} aria-label={L('属性', 'Attributes')}>
@@ -186,9 +189,12 @@ function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolea
             return (
               <li key={q.id} className={done ? 'is-done' : ''}>
                 <CheckBubble checked={done} onChange={() => actions.toggleQuest(q.id)} tone={q.attr} label={q.title} />
-                <span className="mq-title">{q.title}</span>
+                <span className="mq-title">
+                  {top.includes(q.id) && <Icon name="star" size={11} className="mq-star" />}
+                  {q.title}
+                </span>
                 {!done && <DueChip due={q.due} since={q.kind === 'once' ? parseDay(questDay(q)).getTime() : undefined} />}
-                <GoalTag goalId={q.goalId} />
+                <Lineage q={q} compact />
                 {!done && q.kind === 'once' && <MoveDay q={q} compact />}
                 <span className="mq-xp num">+{QUEST_XP[q.difficulty]}</span>
               </li>
@@ -661,8 +667,11 @@ function ProjectProgressWidget({ live }: { live: ReturnType<typeof useLiveSessio
         <ul className="pp-list">
           {shown.map((p) => {
             const st = projectStats(s, p);
-            const total = st.open.length + st.doneTasks.length;
-            const pct = st.pct ?? (total ? st.doneTasks.length / total : null);
+            // steps when the project has them; otherwise every to-do tagged with it
+            const base = st.steps.length ? st.steps : [...st.open, ...st.doneTasks];
+            const total = base.length;
+            const doneN = base.filter((q) => q.doneAt).length;
+            const pct = st.pct ?? (total ? doneN / total : null);
             const ms = todayMs(p.id);
             const days = p.deadline ? daysBetween(today, p.deadline) : null;
             const next = [...st.open].sort((a, b) => (a.due ?? '9').localeCompare(b.due ?? '9'))[0];
@@ -679,7 +688,7 @@ function ProjectProgressWidget({ live }: { live: ReturnType<typeof useLiveSessio
                   <i style={{ width: `${Math.round((pct ?? 0) * 100)}%` }} />
                 </span>
                 <span className="pp-meta muted small num">
-                  {total ? L(`步骤 ${st.doneTasks.length}/${total}`, `${st.doneTasks.length}/${total} steps`) : L('还没拆分步骤', 'No steps yet')}
+                  {total ? L(`步骤 ${doneN}/${total}`, `${doneN}/${total} steps`) : L('还没拆分步骤', 'No steps yet')}
                   {' · '}
                   {L(`今天 ${(ms / 3_600_000).toFixed(1)}h`, `today ${(ms / 3_600_000).toFixed(1)}h`)}
                   {days != null && <> · {days >= 0 ? L(`还剩 ${days} 天`, `${days}d left`) : L('已逾期', 'overdue')}</>}

@@ -1921,3 +1921,46 @@ li:hover > .move-day.is-compact,
 .dh-backups { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; }
 .dh-backups li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; background: var(--surface-2); flex-wrap: wrap; }
 .dh-backups .spacer { flex: 1; }
+
+/* ---------- the to-do's place in the tree: goal › project › paper › step ---------- */
+.lineage { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 3px; min-width: 0; }
+.lineage-part { display: inline-flex; align-items: center; gap: 3px; min-width: 0; }
+.lineage-sep { color: var(--ink-3); opacity: 0.6; flex: none; }
+.goal-tag.is-inherited { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--tone) 18%, transparent); opacity: 0.85; }
+
+/* ---------- morning plan / evening wrap-up ---------- */
+.rt-head { display: inline-flex; align-items: center; gap: 8px; }
+.ritual { display: flex; flex-direction: column; gap: 16px; }
+.ritual h4 { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; font-size: 14px; }
+.ritual section > p { margin: 0 0 8px; }
+.rt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.rt-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; border-radius: 10px; background: var(--surface-2); min-height: 40px; flex-wrap: wrap; }
+.rt-row .spacer { flex: 1; }
+.rt-row.is-top { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--gold, #e0a10c) 55%, transparent); }
+.rt-row.is-done .rt-title { text-decoration: line-through; color: var(--ink-3); }
+.rt-title { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.rt-star { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; color: var(--ink-3); flex: none; }
+.rt-star:hover { background: color-mix(in oklab, var(--ink) 6%, transparent); color: var(--ink-2, var(--ink)); }
+.rt-star.is-on { color: #e0a10c; }
+.rt-star.is-on svg { fill: currentColor; }
+.rt-add { margin-top: 8px; }
+.rt-stats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.rt-stats li { display: flex; flex-direction: column; align-items: center; padding: 10px 4px; border-radius: 12px; background: var(--surface-2); }
+.rt-stats b { font-size: 20px; }
+.rt-stats span { font-size: 12px; color: var(--ink-3); }
+/* in the Quests list the star stays out of the way until hovered (unless it's on) */
+.quest .q-star:not(.is-on) { opacity: 0; }
+.quest:hover .q-star, .quest .q-star:focus-visible { opacity: 1; }
+@media (hover: none) { .quest .q-star:not(.is-on) { opacity: 0.5; } }
+.mq-star { color: #e0a10c; fill: currentColor; margin-right: 3px; vertical-align: -1px; }
+.ritual .rt-list + .btn { margin-top: 10px; }
+.rt-insights { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rt-insights li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 10px; font-size: 13px; line-height: 1.5; background: color-mix(in oklab, var(--accent, #f0521f) 7%, transparent); }
+.rt-insights li > svg { flex: none; margin-top: 2px; color: var(--ink-3); }
+.rt-insights li.is-warn { background: color-mix(in srgb, var(--warn) 13%, transparent); }
+.rt-insights li.is-warn > svg { color: var(--warn); }
+.rt-age { font-size: 11px; font-weight: 700; color: var(--ink-3); padding: 1px 6px; border-radius: 999px; background: color-mix(in oklab, var(--ink) 6%, transparent); }
+.rt-age.is-old { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }
+.rt-quad { font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 999px; color: color-mix(in oklab, var(--tone) 70%, var(--ink)); background: color-mix(in oklab, var(--tone) 16%, transparent); }
+.app-head-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tpl-pick { width: auto; min-width: 0; max-width: 220px; }
