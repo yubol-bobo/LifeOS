@@ -7,6 +7,7 @@
  *   - a linked goal (that goal's key-result progress)
  * With nothing attached it is simply done or not. Reaching 100% completes it automatically.
  */
+import { roleOf } from './tree';
 import { addDays, dayKey } from '../lib/date';
 import { elapsed, range } from '../lib/period';
 import { goalProgress, isScheduled } from './links';
@@ -107,11 +108,17 @@ export function projectStats(s: State, pr: Project) {
   const mx = metrics(s);
   const parts: number[] = [];
   const once = tasks.filter((q) => q.kind === 'once');
-  if (once.length) parts.push(doneTasks.length / once.length);
+  // progress follows the project's steps; to-dos you tagged with it only count when it has no steps
+  const steps = once.filter((q) => roleOf(q) === 'step');
+  const todos = tasks.filter((q) => roleOf(q) === 'todo');
+  const base = steps.length ? steps : once;
+  if (base.length) parts.push(base.filter((q) => q.doneAt).length / base.length);
   for (const g of goals) parts.push(g.status === 'done' ? 1 : (goalProgress(s, g, mx).pct ?? 0));
   for (const p of plans.filter((x) => !x.parentId || !plans.some((y) => y.id === x.parentId))) parts.push(planProgress(s, p, mx).pct);
   return {
     tasks,
+    steps,
+    todos,
     open,
     doneTasks,
     plans,

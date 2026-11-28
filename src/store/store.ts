@@ -1,4 +1,5 @@
 import { useRef, useSyncExternalStore } from 'react';
+import { repairLinks } from './tree';
 import { LS_KEY, loadSaved, save, saveNow } from './persist';
 import { dayKey, setWeekStart } from '../lib/date';
 import { getNextCountdown } from '../lib/nextCountdown';
@@ -144,6 +145,8 @@ export function migrate(parsed: Partial<State>): State {
         p.importedAs = p.history?.[0]?.from ?? p.history?.[0]?.status ?? p.status;
         syncPaper(s, p);
       }
+  // links to things deleted on another device (or by an older version) are cleared
+  repairLinks(s);
   return s;
 }
 
@@ -438,7 +441,9 @@ export const actions = {
   /* ---- quests ---- */
   addQuest(q: Omit<Quest, 'id' | 'createdAt'>) {
     const id = uid();
-    commit((d) => void d.quests.push({ ...q, id, createdAt: Date.now() }));
+    // a "step" needs a project to live in; without one it would show nowhere, so it's a plain to-do
+    const fixed = q.step && !q.projectId && !q.planId ? { ...q, step: undefined } : q;
+    commit((d) => void d.quests.push({ ...fixed, id, createdAt: Date.now() }));
     return id;
   },
   updateQuest(id: string, patch: Partial<Quest>) {
@@ -457,6 +462,7 @@ export const actions = {
   removeQuest(id: string) {
     commit((d) => {
       d.quests = d.quests.filter((q) => q.id !== id);
+      repairLinks(d);
     });
   },
   toggleQuest(id: string, day = dayKey()) {
@@ -502,8 +508,8 @@ export const actions = {
   removeMilestone(id: string) {
     commit((d) => {
       d.milestones = d.milestones.filter((m) => m.id !== id);
-      for (const q of d.quests) if (q.goalId === id) q.goalId = undefined;
       d.events = d.events.filter((e) => !e.ref.startsWith(`ms:${id}`));
+      repairLinks(d);
     });
   },
   setMilestoneStatus(id: string, status: Milestone['status']) {
@@ -780,7 +786,7 @@ export const actions = {
   deleteProject(id: string) {
     commit((d) => {
       d.projects = d.projects.filter((p) => p.id !== id);
-      for (const x of [...d.quests, ...d.milestones, ...d.papers, ...d.plans, ...d.countdowns, ...d.sessions] as { projectId?: string }[]) if (x.projectId === id) x.projectId = undefined;
+      repairLinks(d); // its steps are archived (kept, off every list); everything else just loses the link
       if (d.active?.projectId === id) d.active.projectId = undefined;
     });
   },
@@ -861,7 +867,7 @@ export const actions = {
         for (const p of d.plans) if (p.parentId && kill.has(p.parentId) && !kill.has(p.id)) (kill.add(p.id), (grew = true));
       }
       d.plans = d.plans.filter((p) => !kill.has(p.id));
-      for (const q of d.quests) if (q.planId && kill.has(q.planId)) q.planId = undefined;
+      repairLinks(d);
       for (const k of kill) revoke(d, `plan:${k}`);
     });
   },
@@ -1041,6 +1047,7 @@ export const actions = {
     commit((d) => {
       d.papers = d.papers.filter((p) => p.id !== id);
       d.events = d.events.filter((e) => !e.ref.startsWith(`paper:${id}:`) && e.ref !== `paperimp:${id}`);
+      repairLinks(d);
       logCitations(d);
     });
   },

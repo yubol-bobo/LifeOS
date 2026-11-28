@@ -1,0 +1,36 @@
+const { chromium } = require('playwright');
+let fails = 0; const ok = (c, m, x = '') => { console.log(`${c ? 'PASS' : 'FAIL'} ${m} ${x}`); if (!c) fails++; };
+const SHOT = process.env.SHOTS || require('os').tmpdir() + '/';
+const URL = process.env.LIFEOS_URL || 'http://localhost:5173/';
+(async () => {
+  const b = await chromium.launch();
+  const ctx = await b.newContext({ viewport: { width: 1500, height: 1000 }, locale: 'zh-CN' });
+  await ctx.addInitScript(() => sessionStorage.setItem('lifeos:booted', '1'));
+  const p = await ctx.newPage(); const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+  await p.goto(URL); await p.getByRole('button', { name: /示例数据/ }).first().click(); await p.waitForTimeout(1500);
+  const run = (fn) => p.evaluate(async (fn) => { const url = performance.getEntriesByType('resource').map((r) => r.name).find((n) => n.includes('/src/store/store.ts')); const m = await import(url); return new Function('m', fn)(m); }, fn);
+  await run(`const a=m.actions; const pid=a.upsertProject({name:'毕业论文'}); a.saveMilestone({title:'顺利毕业',attr:'craft',size:'big',status:'active',steps:[],projectId:pid});
+    const st=a.addQuest({title:'第三章：实验',kind:'once',attr:'craft',difficulty:'hard',projectId:pid,step:true});
+    a.addQuest({title:'第四章：讨论',kind:'once',attr:'craft',difficulty:'hard',projectId:pid,step:true});
+    a.addQuest({title:'跑完消融实验',kind:'once',attr:'craft',difficulty:'normal',projectId:pid,step:false,forStep:st});
+    a.addQuest({title:'约导师开会',kind:'once',attr:'bond',difficulty:'easy',projectId:pid,step:false}); window.__pid=pid; return 1`);
+  await p.locator('[aria-label="程序坞"] [aria-label="任务"]').click(); await p.waitForTimeout(700);
+  const row = p.locator('.quest', { hasText: '跑完消融实验' });
+  const txt = await row.locator('.lineage').innerText();
+  ok(/顺利毕业/.test(txt) && /毕业论文/.test(txt) && /第三章/.test(txt), 'trail: goal › project › step', txt.replace(/\s+/g, ' '));
+  ok(await row.locator('.goal-tag.is-inherited').count() === 1, 'goal shown as inherited (project is its own)');
+  await row.scrollIntoViewIfNeeded(); await p.locator('.quest-list').first().screenshot({ path: SHOT + 'tree-quests.png' });
+  await p.locator('[aria-label="程序坞"] [aria-label="项目"]').click(); await p.waitForTimeout(700);
+  await p.locator('.window[aria-label="项目"] button.paper-title', { hasText: '毕业论文' }).click(); await p.waitForTimeout(700);
+  const dlg = p.getByRole('dialog');
+  ok(/步骤\s*0\/2/.test(await dlg.innerText()), 'steps count only steps');
+  ok(await dlg.locator('.pd-sec', { hasText: '今日待办' }).locator('li', { hasText: '约导师开会' }).count() === 1, 'tagged to-do in its own section');
+  ok(await dlg.locator('.pd-sec', { hasText: '今日待办' }).locator('li', { hasText: '跑完消融实验' }).count() === 0, 'step to-do not duplicated there');
+  await dlg.screenshot({ path: SHOT + 'tree-project.png' });
+  // delete the project: steps archived, to-dos stay on Today
+  await run(`m.actions.deleteProject(window.__pid); return 1`); await p.keyboard.press('Escape');
+  const s = await run(`const s=m.getState(); return {steps:s.quests.filter(q=>q.title.startsWith('第')).map(q=>!!q.archived), todo:s.quests.find(q=>q.title==='约导师开会')}`);
+  ok(s.steps.every(Boolean) && !s.todo.archived && !s.todo.projectId, 'deleting the project archives its steps, keeps to-dos');
+  ok(!errs.length, 'no errors', errs.join('|'));
+  console.log(fails ? `${fails} FAILED` : 'ALL PASS'); await b.close();
+})();

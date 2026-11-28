@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from 'react';
-import { PaperSelect, PaperTag } from './Submissions';
+import { PaperSelect } from './Submissions';
+import { Lineage } from './Lineage';
 import { MoveDay, dayLabel } from '../ui/MoveDay';
 import { addDays, dayKey, lastNDays, parseDay, weekOrder } from '../lib/date';
 import { periodOf } from '../lib/period';
@@ -14,7 +15,7 @@ import { actions, getState, useStore } from '../store/store';
 import type { Attr, Difficulty, Quest } from '../store/types';
 import { Icon } from '../ui/Icon';
 import { Bar, Button, Card, CheckBubble, Chip, Empty, Field, Modal, Segmented, Stat } from '../ui/kit';
-import { GoalTag, PlanTag, ProjectSelect, ProjectTag, DueChip } from './goals';
+import { ProjectSelect, DueChip } from './goals';
 
 export const WEEKDAYS: [string, string][] = [
   ['一', 'M'],
@@ -179,15 +180,7 @@ export function Quests() {
                 <Icon name="timer" size={11} /> {q.focusMin}′
               </span>
             ) : null}
-            <GoalTag goalId={q.goalId} />
-            <ProjectTag id={q.projectId} />
-            <PaperTag id={q.paperId} />
-            <PlanTag id={q.planId} />
-            {q.forStep && (
-              <span className="link-hint">
-                <Icon name="list-checks" size={11} /> {L('推进步骤', 'Step')}: {s.quests.find((x) => x.id === q.forStep)?.title ?? '—'}
-              </span>
-            )}
+            <Lineage q={q} />
             {q.planId && planOf(q.planId)?.target ? (
               <span className="link-hint num">
                 +{q.planAmount ?? 1} {planOf(q.planId)?.unit ?? ''}

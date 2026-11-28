@@ -20,7 +20,8 @@ import { Icon } from '../ui/Icon';
 import { Bar, Button, CheckBubble, Chip, Ring } from '../ui/kit';
 import { Odometer } from '../ui/Odometer';
 import { isScheduled, onToday, questDay, weeklyReview } from '../store/links';
-import { DueChip, GoalTag } from './goals';
+import { DueChip } from './goals';
+import { Lineage } from './Lineage';
 import { useStatusLabel } from './Research';
 import type { PaperStatus } from '../store/types';
 import { QuickAdd } from './Quests';
@@ -188,7 +189,7 @@ function DesktopTiles({ dark, hidden, deskRef }: { dark: boolean; hidden: boolea
                 <CheckBubble checked={done} onChange={() => actions.toggleQuest(q.id)} tone={q.attr} label={q.title} />
                 <span className="mq-title">{q.title}</span>
                 {!done && <DueChip due={q.due} since={q.kind === 'once' ? parseDay(questDay(q)).getTime() : undefined} />}
-                <GoalTag goalId={q.goalId} />
+                <Lineage q={q} compact />
                 {!done && q.kind === 'once' && <MoveDay q={q} compact />}
                 <span className="mq-xp num">+{QUEST_XP[q.difficulty]}</span>
               </li>
@@ -661,8 +662,11 @@ function ProjectProgressWidget({ live }: { live: ReturnType<typeof useLiveSessio
         <ul className="pp-list">
           {shown.map((p) => {
             const st = projectStats(s, p);
-            const total = st.open.length + st.doneTasks.length;
-            const pct = st.pct ?? (total ? st.doneTasks.length / total : null);
+            // steps when the project has them; otherwise every to-do tagged with it
+            const base = st.steps.length ? st.steps : [...st.open, ...st.doneTasks];
+            const total = base.length;
+            const doneN = base.filter((q) => q.doneAt).length;
+            const pct = st.pct ?? (total ? doneN / total : null);
             const ms = todayMs(p.id);
             const days = p.deadline ? daysBetween(today, p.deadline) : null;
             const next = [...st.open].sort((a, b) => (a.due ?? '9').localeCompare(b.due ?? '9'))[0];
@@ -679,7 +683,7 @@ function ProjectProgressWidget({ live }: { live: ReturnType<typeof useLiveSessio
                   <i style={{ width: `${Math.round((pct ?? 0) * 100)}%` }} />
                 </span>
                 <span className="pp-meta muted small num">
-                  {total ? L(`步骤 ${st.doneTasks.length}/${total}`, `${st.doneTasks.length}/${total} steps`) : L('还没拆分步骤', 'No steps yet')}
+                  {total ? L(`步骤 ${doneN}/${total}`, `${doneN}/${total} steps`) : L('还没拆分步骤', 'No steps yet')}
                   {' · '}
                   {L(`今天 ${(ms / 3_600_000).toFixed(1)}h`, `today ${(ms / 3_600_000).toFixed(1)}h`)}
                   {days != null && <> · {days >= 0 ? L(`还剩 ${days} 天`, `${days}d left`) : L('已逾期', 'overdue')}</>}

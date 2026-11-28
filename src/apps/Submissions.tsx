@@ -156,14 +156,3 @@ export function PaperSelect({ value, onChange }: { value?: string; onChange: (id
     </select>
   );
 }
-
-/** Small "📄 paper" tag on a to-do. */
-export function PaperTag({ id }: { id?: string }) {
-  const p = useStore((s) => (id ? s.papers.find((x) => x.id === id) : undefined));
-  if (!p) return null;
-  return (
-    <span className="link-hint paper-tag" title={p.title}>
-      <Icon name="graduation" size={11} /> {p.title.length > 36 ? `${p.title.slice(0, 34)}…` : p.title}
-    </span>
-  );
-}

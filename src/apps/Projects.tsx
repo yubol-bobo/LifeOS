@@ -1,6 +1,6 @@
 import { PALETTE_NAMES } from '../store/defaults';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { daysBetween, dayKey } from '../lib/date';
+import { daysBetween, dayKey, parseDay } from '../lib/date';
 import { money, num } from '../lib/format';
 import { useL, useLang } from '../lib/i18n';
 import { periodLabel } from '../lib/period';
@@ -8,7 +8,7 @@ import { open } from '../os/router';
 import { ATTR_ICONS, PALETTE } from '../store/attrs';
 import { upcoming } from '../store/countdowns';
 import { useMetrics } from '../store/hooks';
-import { goalProgress } from '../store/links';
+import { goalProgress, questDay } from '../store/links';
 import { planProgress, projectStats } from '../store/plans';
 import { actions, useStore } from '../store/store';
 import type { Category, Project } from '../store/types';
@@ -261,6 +261,9 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
   const [confirmDel, setConfirmDel] = useState(false);
   if (!p) return null;
   const st = projectStats(s, p);
+  // to-dos tagged with the project: the open ones, and the ones finished in the last week
+  const weekAgo = Date.now() - 7 * 86_400_000;
+  const todosShown = st.todos.filter((q) => q.kind === 'once' && !q.forStep && (!q.doneAt || q.doneAt >= weekAgo)).sort((a, b) => Number(!!a.doneAt) - Number(!!b.doneAt));
   const cds = upcoming(s).filter((c) => c.projectId === p.id);
   const set = (patch: Partial<Project>) => actions.upsertProject({ ...p, ...patch });
   const linkable = <T extends { id: string; projectId?: string }>(xs: T[]) => xs.filter((x) => !x.projectId);
@@ -275,11 +278,10 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
 
           <section className="pd-sec">
             <h4>
-              <Icon name="list-checks" size={15} /> {L('步骤', 'Steps')} <span className="muted num">{st.doneTasks.length}/{st.tasks.filter((q) => q.kind === 'once').length}</span>
+              <Icon name="list-checks" size={15} /> {L('步骤', 'Steps')} <span className="muted num">{st.steps.filter((q) => q.doneAt).length}/{st.steps.length}</span>
             </h4>
             <ul className="pd-list">
-              {st.tasks
-                .filter((q) => q.kind === 'once')
+              {st.steps
                 // open steps first, by due date (undated last); done ones at the bottom
                 .sort((a, b) => Number(!!a.doneAt) - Number(!!b.doneAt) || (a.due ?? '9').localeCompare(b.due ?? '9'))
                 .map((q) => (
@@ -340,6 +342,24 @@ function ProjectDetail({ id, onClose }: { id: string; onClose: () => void }) {
               <input className="input pd-due" type="date" value={taskDue} onChange={(e) => setTaskDue(e.target.value)} title={L('截止日期（可选）', 'Due date (optional)')} aria-label={L('新步骤的截止日期（可选）', 'Due date for the new step (optional)')} />
             </form>
           </section>
+
+          {todosShown.length > 0 && (
+            <section className="pd-sec">
+              <h4>
+                <Icon name="target" size={15} /> {L('今日待办', 'To-dos')} <span className="muted num">{todosShown.filter((q) => q.doneAt).length}/{todosShown.length}</span>
+              </h4>
+              <p className="muted small">{L('你在今日任务里标了这个项目的事（推进某个步骤的，显示在那一步上）。', 'Things on Today tagged with this project (ones that advance a step show on that step).')}</p>
+              <ul className="pd-list">
+                {todosShown.map((q) => (
+                  <li key={q.id} className={`pd-step ${q.doneAt ? 'is-done' : ''}`}>
+                    <CheckBubble checked={!!q.doneAt} onChange={() => actions.toggleQuest(q.id)} tone={p.color as 'blue'} label={q.title} />
+                    <span className="pd-step-title">{q.title}</span>
+                    {!q.doneAt && <DueChip due={q.due} since={parseDay(questDay(q)).getTime()} />}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="pd-sec">
             <h4>

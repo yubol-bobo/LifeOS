@@ -1921,3 +1921,9 @@ li:hover > .move-day.is-compact,
 .dh-backups { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; }
 .dh-backups li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 10px; background: var(--surface-2); flex-wrap: wrap; }
 .dh-backups .spacer { flex: 1; }
+
+/* ---------- the to-do's place in the tree: goal › project › paper › step ---------- */
+.lineage { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 3px; min-width: 0; }
+.lineage-part { display: inline-flex; align-items: center; gap: 3px; min-width: 0; }
+.lineage-sep { color: var(--ink-3); opacity: 0.6; flex: none; }
+.goal-tag.is-inherited { background: transparent; box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--tone) 18%, transparent); opacity: 0.85; }
